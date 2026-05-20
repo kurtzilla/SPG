@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "GDScript: Attach to Editor",
+      "type": "godot",
+      "request": "attach",
+      "address": "127.0.0.1",
+      "port": 6007
+    },
+    {
+      "name": "GDScript: Launch Main Project",
+      "type": "godot",
+      "request": "launch",
+      "project": "${workspaceFolder}",
+      "port": 6007
+    },
+    {
+      "name": "GDScript: Launch Current Scene",
+      "type": "godot",
+      "request": "launch",
+      "project": "${workspaceFolder}",
+      "port": 6007,
+      "additional_options": "res://${relativeFile}"
+    }
+  ]
+}
