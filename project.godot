@@ -11,5 +11,5 @@ config_version=5
 [application]
 
 config/name="SPG"
-run/main_scene="res://src/Godot/IntegrationTest.tscn"
+run/main_scene="res://src/Godot/Scenes/MainSandbox.tscn"
 config/features=PackedStringArray("4.3", "Forward Plus")

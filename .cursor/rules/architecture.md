@@ -50,6 +50,8 @@ flowchart TB
 | Thin **adapter** scripts | Copy Core state in/out; never duplicate rules in the view layer |
 | `class_name` prefixed e.g. `RiftsGodot_*` (future) | Clear grep boundary vs `RiftsCore_*` in Core |
 
+**View metric scale (canonical):** `src/Godot/Scripts/ObliqueBridge.gd` is the single source of truth for screen-space world units. **32 pixels = 1 meter.** One logical Core grid cell = **2 meters** = **64 pixels** (`CELL_SIZE_PX`). All grid-to-screen, meter-to-pixel, and speed conversions must go through `ObliqueBridge`—do not hardcode `32` or `64` for positioning elsewhere in the Godot layer.
+
 ## Naming convention (future)
 
 - Core: `class_name` prefix `RiftsCore_*`
