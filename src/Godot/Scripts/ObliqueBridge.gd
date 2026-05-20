@@ -25,6 +25,12 @@ static func grid_to_meters(x: int, y: int) -> Vector2:
 	)
 
 
+## Flat orthographic grid-to-screen offset (no viewport center). One Core cell = CELL_SIZE_PX.
+static func data_to_screen(x: int, y: int) -> Vector2:
+	# Future: subtract Z height from .y (e.g. via HEIGHT_OFFSET_PX per meter of elevation).
+	return Vector2(x * CELL_SIZE_PX, y * CELL_SIZE_PX)
+
+
 static func grid_to_screen(x: int, y: int, z: int = 0) -> Vector2:
 	var meters: Vector2 = grid_to_meters(x, y)
 	return Vector2(

@@ -7,7 +7,8 @@ const ObliqueBridge = preload("res://src/Godot/Scripts/ObliqueBridge.gd")
 const PlaceholderTextureGenerator = preload("res://src/Godot/Assets/PlaceholderTextureGenerator.gd")
 
 const GRID_PATCH_RADIUS: int = 5
-const MOVE_TWEEN_DURATION: float = 0.12
+const MOVE_LERP_WEIGHT: float = 10.0
+const MOVE_REPEAT_INTERVAL: float = 0.12
 
 @onready var _tiles: Node2D = $Tiles
 @onready var _player_sprite: Sprite2D = $Characters/PlayerSprite
@@ -15,7 +16,7 @@ const MOVE_TWEEN_DURATION: float = 0.12
 var _grid: GridModel
 var _party: PartyModel
 var _viewport_center: Vector2 = Vector2.ZERO
-var _move_tween: Tween
+var _move_repeat_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -27,7 +28,28 @@ func _ready() -> void:
 	_viewport_center = get_viewport_rect().size * 0.5
 	_setup_player_sprite()
 	_spawn_tile_patch()
-	_sync_character_visual(player, false)
+	_player_sprite.global_position = _world_screen_pos(player.x, player.y)
+
+
+func _process(delta: float) -> void:
+	var character: CharacterModel = _party.get_selected_character() as CharacterModel
+	if character == null:
+		return
+
+	var move_delta: Vector2i = _get_held_move_delta()
+	if move_delta != Vector2i.ZERO:
+		_move_repeat_timer -= delta
+		if _move_repeat_timer <= 0.0:
+			character.move_relative(move_delta.x, move_delta.y)
+			_move_repeat_timer = MOVE_REPEAT_INTERVAL
+	else:
+		_move_repeat_timer = 0.0
+
+	var target: Vector2 = _world_screen_pos(character.x, character.y)
+	_player_sprite.global_position = _player_sprite.global_position.lerp(
+		target,
+		MOVE_LERP_WEIGHT * delta
+	)
 
 
 func _notification(what: int) -> void:
@@ -36,33 +58,18 @@ func _notification(what: int) -> void:
 		_reposition_all()
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if not event is InputEventKey:
-		return
-	var key_event: InputEventKey = event as InputEventKey
-	if not key_event.pressed or key_event.echo:
-		return
-
+func _get_held_move_delta() -> Vector2i:
 	var dx: int = 0
 	var dy: int = 0
-	match key_event.keycode:
-		KEY_D, KEY_RIGHT:
-			dx = 1
-		KEY_A, KEY_LEFT:
-			dx = -1
-		KEY_S, KEY_DOWN:
-			dy = 1
-		KEY_W, KEY_UP:
-			dy = -1
-		_:
-			return
-
-	var character: CharacterModel = _party.get_selected_character() as CharacterModel
-	if character == null:
-		return
-
-	character.move_relative(dx, dy)
-	_sync_character_visual(character, true)
+	if Input.is_physical_key_pressed(KEY_D):
+		dx = 1
+	elif Input.is_physical_key_pressed(KEY_A):
+		dx = -1
+	if Input.is_physical_key_pressed(KEY_S):
+		dy = 1
+	elif Input.is_physical_key_pressed(KEY_W):
+		dy = -1
+	return Vector2i(dx, dy)
 
 
 func _setup_player_sprite() -> void:
@@ -84,7 +91,7 @@ func _spawn_tile_patch() -> void:
 			var tile: Sprite2D = Sprite2D.new()
 			tile.texture = ground_texture
 			tile.centered = true
-			tile.position = _tile_screen_position(gx, gy)
+			tile.global_position = _world_screen_pos(gx, gy)
 			if _grid.get_cell_state(gx, gy) == GridModel.CellState.BLOCKED:
 				tile.modulate = Color(0.45, 0.45, 0.45)
 			tile.set_meta("grid_x", gx)
@@ -92,29 +99,8 @@ func _spawn_tile_patch() -> void:
 			_tiles.add_child(tile)
 
 
-func _tile_screen_position(gx: int, gy: int) -> Vector2:
-	return ObliqueBridge.grid_to_screen_centered(gx, gy, _viewport_center, 0)
-
-
-func _sync_character_visual(character: CharacterModel, animate: bool) -> void:
-	var target: Vector2 = ObliqueBridge.grid_to_screen_centered(
-		character.x,
-		character.y,
-		_viewport_center,
-		0
-	)
-
-	if _move_tween != null:
-		_move_tween.kill()
-
-	if not animate:
-		_player_sprite.position = target
-		return
-
-	_move_tween = create_tween()
-	_move_tween.set_trans(Tween.TRANS_QUAD)
-	_move_tween.set_ease(Tween.EASE_OUT)
-	_move_tween.tween_property(_player_sprite, "position", target, MOVE_TWEEN_DURATION)
+func _world_screen_pos(gx: int, gy: int) -> Vector2:
+	return _viewport_center + ObliqueBridge.data_to_screen(gx, gy)
 
 
 func _reposition_all() -> void:
@@ -124,8 +110,4 @@ func _reposition_all() -> void:
 			if sprite.has_meta("grid_x") and sprite.has_meta("grid_y"):
 				var gx: int = sprite.get_meta("grid_x") as int
 				var gy: int = sprite.get_meta("grid_y") as int
-				sprite.position = _tile_screen_position(gx, gy)
-
-	var character: CharacterModel = _party.get_selected_character() as CharacterModel
-	if character != null:
-		_sync_character_visual(character, false)
+				sprite.global_position = _world_screen_pos(gx, gy)
