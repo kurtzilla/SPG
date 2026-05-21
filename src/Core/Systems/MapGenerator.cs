@@ -14,14 +14,17 @@ public sealed class MapGenerator
 
 	public MapGenerator(int seed) => _seed = seed;
 
+	/// <summary>
+	/// Fills every cell where max(|x - centerX|, |y - centerY|) &lt;= radius (inclusive patch).
+	/// </summary>
 	public void GenerateRegion(GridModel grid, int centerX, int centerY, int radius)
 	{
 		_centerX = centerX;
 		_centerY = centerY;
 		int minX = centerX - radius;
-		int maxX = centerX + radius - 1;
+		int maxX = centerX + radius;
 		int minY = centerY - radius;
-		int maxY = centerY + radius - 1;
+		int maxY = centerY + radius;
 
 		for (int gx = minX; gx <= maxX; gx++)
 		{

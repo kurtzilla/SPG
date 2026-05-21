@@ -70,14 +70,19 @@ static func create_splat_water_pattern_texture() -> ImageTexture:
 
 
 static func create_character_billboard_texture() -> ImageTexture:
-	var width: int = ViewMetrics.PIXELS_PER_METER
-	var height: int = ViewMetrics.CELL_SIZE_PX
-	var fill: Color = Color(0.85, 0.35, 0.2)
-	var border: Color = Color(0.55, 0.2, 0.1)
-	var image: Image = Image.create(width, height, false, Image.FORMAT_RGBA8)
-	image.fill(fill)
-	_draw_border(image, border)
-	return _image_to_texture(image)
+	# FORCE EVEN PIXEL BOUNDS: Prevents half-pixel blending errors
+	var width: int = 16
+	var height: int = 32
+	
+	var img: Image = Image.create(width, height, false, Image.FORMAT_RGBA8)
+	
+	# Fill in your color / drawing logic here...
+	# (e.g., img.fill(Color.PURPLE) or similar placeholder rendering)
+	img.fill(Color(0.8, 0.2, 0.2, 1.0)) # Flat crimson placeholder
+	
+	# Create texture WITHOUT mipmaps (the false flag is critical for retro pixel art)
+	var tex: ImageTexture = ImageTexture.create_from_image(img)
+	return tex
 
 
 static func _draw_checker_pattern(image: Image, accent_color: Color, cell: int) -> void:

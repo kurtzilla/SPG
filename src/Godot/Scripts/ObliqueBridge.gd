@@ -6,6 +6,7 @@ extends RefCounted
 ## One logical grid cell (Core x/y step) = METERS_PER_CELL meters (2m x 2m) = CELL_SIZE_PX pixels.
 
 const ViewMetrics = preload("res://src/Godot/Scripts/ViewMetrics.gd")
+const TerrainTileTextures = preload("res://src/Godot/Scripts/TerrainTileTextures.gd")
 
 # Mirror CoreGridModel.TerrainType ordinals for IDE analysis (LAND=0, WATER=1, MUD=2).
 const TERRAIN_LAND: int = 0
@@ -33,18 +34,23 @@ static func grid_to_meters(x: int, y: int) -> Vector2:
 	)
 
 
-## Flat orthographic grid-to-screen offset (no viewport center). One Core cell = CELL_SIZE_PX.
-static func data_to_screen(x: int, y: int) -> Vector2:
-	# Future: subtract Z height from .y (e.g. via HEIGHT_OFFSET_PX per meter of elevation).
-	return Vector2(x * CELL_SIZE_PX, y * CELL_SIZE_PX)
+## Compressed profile 2.5D projection matrix conversion.
+## Rows stay completely flat horizontally, eliminating diagonal stair-step jitter.
+static func data_to_screen(x: float, y: float) -> Vector2:
+	var screen_x = float(x) * CELL_SIZE_PX
+	# Compress the Y-axis by 0.75 to give a tilted presentation 
+	# without introducing horizontal drift or diagonal chattering.
+	var screen_y = float(y) * CELL_SIZE_PX * 0.75
+	return Vector2(screen_x, screen_y)
 
 
 static func grid_to_screen(x: int, y: int, z: int = 0) -> Vector2:
 	var meters: Vector2 = grid_to_meters(x, y)
-	return Vector2(
-		meters_to_pixels(meters.x),
-		meters_to_pixels(meters.y) - meters_to_pixels(float(z))
-	)
+	
+	var screen_x = meters_to_pixels(meters.x)
+	var screen_y = (meters_to_pixels(meters.y) * 0.75) - meters_to_pixels(float(z))
+	
+	return Vector2(screen_x, screen_y)
 
 
 static func grid_to_screen_centered(
@@ -120,28 +126,38 @@ static func resolve_transition_terrain_type(
 	return best_type
 
 
-static func spawn_cell_visuals(
+static func find_base_sprite(parent: Node2D, gx: int, gy: int) -> Sprite2D:
+	for child in parent.get_children():
+		if child is Sprite2D:
+			var sprite: Sprite2D = child as Sprite2D
+			if not sprite.get_meta("is_transition", false):
+				if sprite.get_meta("grid_x") == gx and sprite.get_meta("grid_y") == gy:
+					return sprite
+	return null
+
+
+static func remove_transition_sprites(parent: Node2D, gx: int, gy: int) -> void:
+	var to_remove: Array[Sprite2D] = []
+	for child in parent.get_children():
+		if child is Sprite2D:
+			var sprite: Sprite2D = child as Sprite2D
+			if sprite.get_meta("is_transition", false):
+				if sprite.get_meta("grid_x") == gx and sprite.get_meta("grid_y") == gy:
+					to_remove.append(sprite)
+	for sprite in to_remove:
+		sprite.free()
+
+
+static func spawn_transition_overlay(
 	parent: Node2D,
 	grid,
 	gx: int,
 	gy: int,
-	world_position: Vector2,
-	solid_texture_map: Dictionary,
+	local_position: Vector2,
+	primary: int,
 	color_map: Dictionary,
 	noise_mask: Texture2D
 ) -> void:
-	var primary: int = grid.GetCellPrimary(gx, gy)
-
-	var base_sprite: Sprite2D = Sprite2D.new()
-	base_sprite.texture = solid_texture_map[primary] as Texture2D
-	base_sprite.centered = true
-	base_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	base_sprite.global_position = world_position
-	base_sprite.set_meta("grid_x", gx)
-	base_sprite.set_meta("grid_y", gy)
-	base_sprite.set_meta("is_transition", false)
-	parent.add_child(base_sprite)
-
 	var mismatch_flags: Vector4 = compute_neighbor_mismatch_flags(grid, gx, gy, primary)
 	var max_mismatch: float = maxf(
 		maxf(mismatch_flags.x, mismatch_flags.y),
@@ -165,11 +181,64 @@ static func spawn_cell_visuals(
 	transition_sprite.centered = true
 	transition_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	transition_sprite.z_index = 1
-	transition_sprite.global_position = world_position
 	transition_sprite.set_meta("grid_x", gx)
 	transition_sprite.set_meta("grid_y", gy)
 	transition_sprite.set_meta("is_transition", true)
+	transition_sprite.position = local_position
 	parent.add_child(transition_sprite)
+
+
+static func spawn_cell_visuals(
+	parent: Node2D,
+	grid,
+	gx: int,
+	gy: int,
+	local_position: Vector2,
+	solid_texture_map: Dictionary,
+	color_map: Dictionary,
+	noise_mask: Texture2D
+) -> void:
+	var primary: int = grid.GetCellPrimary(gx, gy)
+
+	var base_sprite: Sprite2D = Sprite2D.new()
+	base_sprite.texture = solid_texture_map[primary] as Texture2D
+	base_sprite.centered = true
+	base_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	base_sprite.set_meta("grid_x", gx)
+	base_sprite.set_meta("grid_y", gy)
+	base_sprite.set_meta("is_transition", false)
+	base_sprite.position = local_position
+	parent.add_child(base_sprite)
+
+	spawn_transition_overlay(
+		parent, grid, gx, gy, local_position, primary, color_map, noise_mask
+	)
+
+
+static func refresh_cell_visuals(
+	parent: Node2D,
+	grid,
+	gx: int,
+	gy: int,
+	local_position: Vector2,
+	solid_texture_map: Dictionary,
+	color_map: Dictionary,
+	noise_mask: Texture2D
+) -> void:
+	var primary: int = grid.GetCellPrimary(gx, gy)
+	var base_sprite: Sprite2D = find_base_sprite(parent, gx, gy)
+	if base_sprite == null:
+		spawn_cell_visuals(
+			parent, grid, gx, gy, local_position, solid_texture_map, color_map, noise_mask
+		)
+		return
+
+	base_sprite.texture = solid_texture_map[primary] as Texture2D
+	base_sprite.position = local_position
+	remove_transition_sprites(parent, gx, gy)
+	spawn_transition_overlay(
+		parent, grid, gx, gy, local_position, primary, color_map, noise_mask
+	)
 
 
 static func _neighbor_mismatch_flag(
