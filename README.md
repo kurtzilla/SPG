@@ -8,8 +8,9 @@ Game **data and logic** are separated from the **visual layer**:
 
 | Layer | Path | Role |
 | :--- | :--- | :--- |
-| Core | `src/Core/` | Pure models and systems — no Godot nodes or engine types |
-| Godot | `src/Godot/` | Scenes, TileMaps, input, sprites, adapters |
+| Core | `src/Core/` + `src/SPG.Core.csproj` | C# class library — Models and Systems, no Godot APIs |
+| Interop | `src/Godot/Interop/` | C# wrappers + `CoreBridge` autoload for GDScript |
+| Godot | `src/Godot/` | GDScript scenes, TileMaps, input, sprites |
 
 **Canonical boundary rules:** [.cursor/rules/architecture.md](.cursor/rules/architecture.md)
 
@@ -23,19 +24,23 @@ Game **data and logic** are separated from the **visual layer**:
 SPG/
   project.godot
   src/
+    SPG.Core.csproj
     Core/
-      Models/     # GridModel, PartyModel, CharacterModel, ...
-      Systems/    # Turn/grid sim, rules (future)
+      Models/     # GridModel, PartyModel, CharacterModel, TerrainType
+      Systems/    # MapGenerator
     Godot/
+      Interop/    # C# CoreBridge + *Gd wrappers
       Scenes/     # .tscn
-      Scripts/    # Nodes, input, Core adapters
+      Scripts/    # GDScript nodes, input, presentation
       Assets/     # Art, tilesets, audio
+  SPG.sln           # Godot game project + SPG.Core reference
 ```
 
 ## Getting started
 
-1. Install [Godot 4.3+](https://godotengine.org/).
-2. Open this repository root (`SPG/`) as a project in the Godot editor.
-3. Read `.docs/dev_guide.md` before implementing gameplay code.
+1. Install [.NET 6 SDK](https://dotnet.microsoft.com/download) and [Godot 4.3 .NET (mono)](https://godotengine.org/download).
+2. Open this repository root (`SPG/`) in the **Godot 4.3 .NET** editor; build the C# solution once (Project → Build).
+3. Optional CLI: `dotnet build SPG.sln`, `godot_console --path .` (pin gdvm to **4.3-mono**).
+4. Read `.docs/dev_guide.md` before implementing gameplay code.
 
-No main scene or gameplay is configured yet — scaffold only.
+Main scene: `src/Godot/Scenes/MainSandbox.tscn`.

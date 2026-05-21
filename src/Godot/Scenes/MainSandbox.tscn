@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://main_sandbox_scene"]
+[gd_scene load_steps=2 format=3 uid="uid://bm7a58e68r7vt"]
 
 [ext_resource type="Script" path="res://src/Godot/Scripts/MainSandbox.gd" id="1_main_sandbox"]
 

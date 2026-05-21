@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)../artifacts/SPG.Core/bin/</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)../artifacts/SPG.Core/obj/</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>

@@ -2,26 +2,56 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "GDScript: Attach to Editor",
-      "type": "godot",
-      "request": "attach",
-      "address": "127.0.0.1",
-      "port": 6007
-    },
-    {
       "name": "GDScript: Launch Main Project",
       "type": "godot",
       "request": "launch",
       "project": "${workspaceFolder}",
-      "port": 6007
+      "scene": "main",
+      "address": "127.0.0.1",
+      "port": 6007,
+      "profiling": false,
+      "editor_path": "C:\\Users\\Dev\\.gdvm\\installs\\4.3-stable-csharp\\Godot_v4.3-stable_mono_win64.exe",
+      "preLaunchTask": "build-spg"
+    },
+    {
+      "name": "Godot: Run Project (direct)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "C:\\Users\\Dev\\.gdvm\\installs\\4.3-stable-csharp\\Godot_v4.3-stable_mono_win64.exe",
+      "runtimeArgs": ["--path", "${workspaceFolder}", "--debug-server", "6007"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "preLaunchTask": "build-spg"
+    },
+    {
+      "name": "GDScript: Launch Main Project (no build)",
+      "type": "godot",
+      "request": "launch",
+      "project": "${workspaceFolder}",
+      "scene": "main",
+      "address": "127.0.0.1",
+      "port": 6007,
+      "profiling": false,
+      "editor_path": "C:\\Users\\Dev\\.gdvm\\installs\\4.3-stable-csharp\\Godot_v4.3-stable_mono_win64.exe"
     },
     {
       "name": "GDScript: Launch Current Scene",
       "type": "godot",
       "request": "launch",
       "project": "${workspaceFolder}",
+      "scene": "current",
+      "address": "127.0.0.1",
       "port": 6007,
-      "additional_options": "res://${relativeFile}"
+      "profiling": false,
+      "editor_path": "C:\\Users\\Dev\\.gdvm\\installs\\4.3-stable-csharp\\Godot_v4.3-stable_mono_win64.exe"
+    },
+    {
+      "name": "GDScript: Attach to Editor",
+      "type": "godot",
+      "request": "attach",
+      "address": "127.0.0.1",
+      "port": 6007
     }
   ]
 }
