@@ -7,10 +7,10 @@ public sealed class MapGenerator
 {
 	public const float BlockedThreshold = 0.62f;
 	public const int SafeZoneRadius = 2;
+	public const int SpawnSafeZoneX = 0;
+	public const int SpawnSafeZoneY = 0;
 
 	private readonly int _seed;
-	private int _centerX;
-	private int _centerY;
 
 	public MapGenerator(int seed) => _seed = seed;
 
@@ -19,8 +19,6 @@ public sealed class MapGenerator
 	/// </summary>
 	public void GenerateRegion(GridModel grid, int centerX, int centerY, int radius)
 	{
-		_centerX = centerX;
-		_centerY = centerY;
 		int minX = centerX - radius;
 		int maxX = centerX + radius;
 		int minY = centerY - radius;
@@ -38,8 +36,8 @@ public sealed class MapGenerator
 
 	public CellTerrain GetCellTerrainForCoord(int x, int y)
 	{
-		int dx = Math.Abs(x - _centerX);
-		int dy = Math.Abs(y - _centerY);
+		int dx = Math.Abs(x - SpawnSafeZoneX);
+		int dy = Math.Abs(y - SpawnSafeZoneY);
 		if (Math.Max(dx, dy) <= SafeZoneRadius)
 		{
 			return SolidTerrain(TerrainType.Land);

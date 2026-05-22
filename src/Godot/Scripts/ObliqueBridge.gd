@@ -1,7 +1,7 @@
 class_name ObliqueBridge
 extends RefCounted
 
-## Canonical view-layer metric adapter for oblique / cabinet projection.
+## Canonical view-layer metric adapter (top-down grid; zoom applied on scene nodes).
 ## Rule: PIXELS_PER_METER screen pixels = exactly 1.0 world meter.
 ## One logical grid cell (Core x/y step) = METERS_PER_CELL meters (2m x 2m) = CELL_SIZE_PX pixels.
 
@@ -34,22 +34,14 @@ static func grid_to_meters(x: int, y: int) -> Vector2:
 	)
 
 
-## Compressed profile 2.5D projection matrix conversion.
-## Rows stay completely flat horizontally, eliminating diagonal stair-step jitter.
 static func data_to_screen(x: float, y: float) -> Vector2:
-	var screen_x = float(x) * CELL_SIZE_PX
-	# Compress the Y-axis by 0.75 to give a tilted presentation 
-	# without introducing horizontal drift or diagonal chattering.
-	var screen_y = float(y) * CELL_SIZE_PX * 0.75
-	return Vector2(screen_x, screen_y)
+	return Vector2(float(x) * CELL_SIZE_PX, float(y) * CELL_SIZE_PX)
 
 
 static func grid_to_screen(x: int, y: int, z: int = 0) -> Vector2:
 	var meters: Vector2 = grid_to_meters(x, y)
-	
 	var screen_x = meters_to_pixels(meters.x)
-	var screen_y = (meters_to_pixels(meters.y) * 0.75) - meters_to_pixels(float(z))
-	
+	var screen_y = meters_to_pixels(meters.y) - meters_to_pixels(float(z))
 	return Vector2(screen_x, screen_y)
 
 
@@ -124,6 +116,26 @@ static func resolve_transition_terrain_type(
 			best_type = neighbor_type
 
 	return best_type
+
+
+static func neighbor_mismatch_signature(grid, gx: int, gy: int, primary: int) -> Vector4:
+	return compute_neighbor_mismatch_flags(grid, gx, gy, primary)
+
+
+static func refresh_transition_overlay_only(
+	parent: Node2D,
+	grid,
+	gx: int,
+	gy: int,
+	local_position: Vector2,
+	primary: int,
+	color_map: Dictionary,
+	noise_mask: Texture2D
+) -> void:
+	remove_transition_sprites(parent, gx, gy)
+	spawn_transition_overlay(
+		parent, grid, gx, gy, local_position, primary, color_map, noise_mask
+	)
 
 
 static func find_base_sprite(parent: Node2D, gx: int, gy: int) -> Sprite2D:

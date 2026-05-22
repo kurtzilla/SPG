@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://dq8gridoverlay1"]
+
+[ext_resource type="Script" path="res://src/Godot/Scripts/GridOverlay.gd" id="1_grid_overlay"]
+
+[node name="GridLayer" type="CanvasLayer"]
+follow_viewport_enabled = true
+layer = 1
+
+[node name="GridDraw" type="Node2D" parent="."]
+script = ExtResource("1_grid_overlay")

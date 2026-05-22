@@ -17,6 +17,7 @@ config/features=PackedStringArray("4.3", "C#", "Forward Plus")
 [autoload]
 
 CoreBridge="*res://src/Godot/Interop/CoreBridge.cs"
+ViewProjection="*res://src/Godot/Scripts/ViewProjection.gd"
 
 [display]
 
