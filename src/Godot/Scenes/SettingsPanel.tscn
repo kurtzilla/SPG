@@ -1,0 +1,180 @@
+[gd_scene load_steps=4 format=3 uid="uid://csettingspanel1"]
+
+[ext_resource type="Script" path="res://src/Godot/Scripts/SettingsPanel.gd" id="1_settings_panel"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.08, 0.09, 0.11, 0.94)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.26, 0.28, 0.32, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_title_header"]
+bg_color = Color(0.05, 0.06, 0.08, 1)
+border_width_bottom = 1
+border_color = Color(0.2, 0.22, 0.26, 1)
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_stats_body"]
+bg_color = Color(0.1, 0.11, 0.13, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.18, 0.2, 0.24, 1)
+content_margin_left = 8.0
+content_margin_top = 6.0
+content_margin_right = 8.0
+content_margin_bottom = 2.0
+
+[node name="SettingsUi" type="CanvasLayer"]
+layer = 100
+follow_viewport_enabled = true
+script = ExtResource("1_settings_panel")
+
+[node name="HudRoot" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopRightVBox" type="VBoxContainer" parent="HudRoot"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -236.0
+offset_top = 16.0
+offset_right = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_constants/separation = 0
+alignment = 0
+
+[node name="SettingsPanelRoot" type="PanelContainer" parent="HudRoot/TopRightVBox"]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="ContentMargin" type="MarginContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="PanelVBox" type="VBoxContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="TitleHeaderPanel" type="PanelContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_title_header")
+
+[node name="TitleRow" type="HBoxContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/TitleHeaderPanel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/TitleHeaderPanel/TitleRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
+text = "Settings"
+
+[node name="ShowPanelToggle" type="Button" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/TitleHeaderPanel/TitleRow"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+flat = true
+text = "▲"
+tooltip_text = "Hide stats panel"
+
+[node name="MainBodyVBox" type="VBoxContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="StatsBlock" type="PanelContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_stats_body")
+
+[node name="StatsMargin" type="MarginContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock"]
+layout_mode = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="StatsGrid" type="GridContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin"]
+layout_mode = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 4
+columns = 2
+
+[node name="FpsKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 10
+text = "FPS"
+
+[node name="FpsValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "--"
+horizontal_alignment = 2
+
+[node name="ZoomKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 10
+text = "Zoom"
+
+[node name="ZoomValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "--"
+horizontal_alignment = 2
+
+[node name="FootKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 10
+text = "Foot"
+
+[node name="FootValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "--"
+horizontal_alignment = 2
+
+[node name="MouseKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 10
+text = "Mouse Pos"
+tooltip_text = "Cursor position in viewport (pixels)"
+
+[node name="MouseValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "--"
+horizontal_alignment = 2

@@ -1,11 +1,10 @@
 class_name ObliqueBridge
 extends RefCounted
 
-## Canonical view-layer metric adapter (top-down grid; zoom applied on scene nodes).
-## Rule: PIXELS_PER_METER screen pixels = exactly 1.0 world meter.
-## One logical grid cell (Core x/y step) = METERS_PER_CELL meters (2m x 2m) = CELL_SIZE_PX pixels.
+## Facade for view-layer metrics and terrain visuals. Coordinate math delegates to ViewTransforms.
 
 const ViewMetrics = preload("res://src/Godot/Scripts/ViewMetrics.gd")
+const ViewTransforms = preload("res://src/Godot/Scripts/ViewTransforms.gd")
 const TerrainTileTextures = preload("res://src/Godot/Scripts/TerrainTileTextures.gd")
 
 # Mirror CoreGridModel.TerrainType ordinals for IDE analysis (LAND=0, WATER=1, MUD=2).
@@ -13,36 +12,41 @@ const TERRAIN_LAND: int = 0
 const TERRAIN_WATER: int = 1
 const TERRAIN_MUD: int = 2
 
-const PIXELS_PER_METER: int = ViewMetrics.PIXELS_PER_METER
-const METERS_PER_CELL: float = ViewMetrics.METERS_PER_CELL
-const CELL_SIZE_PX: int = ViewMetrics.CELL_SIZE_PX
+const PIXELS_PER_METER: int = ViewTransforms.PIXELS_PER_METER
+const METERS_PER_CELL: float = ViewTransforms.METERS_PER_CELL
+const CELL_SIZE_PX: int = ViewTransforms.CELL_SIZE_PX
 const HEIGHT_OFFSET_PX: int = ViewMetrics.PIXELS_PER_METER
 
 
 static func meters_to_pixels(meters: float) -> float:
-	return meters * float(PIXELS_PER_METER)
+	return ViewTransforms.meters_to_pixels(meters)
 
 
 static func pixels_to_meters(pixels: float) -> float:
-	return pixels / float(PIXELS_PER_METER)
+	return ViewTransforms.pixels_to_meters(pixels)
 
 
 static func grid_to_meters(x: int, y: int) -> Vector2:
-	return Vector2(
-		float(x) * METERS_PER_CELL,
-		float(y) * METERS_PER_CELL
-	)
+	return ViewTransforms.grid_to_world_m(float(x), float(y))
 
 
 static func data_to_screen(x: float, y: float) -> Vector2:
-	return Vector2(float(x) * CELL_SIZE_PX, float(y) * CELL_SIZE_PX)
+	return ViewTransforms.grid_to_map_local_px(x, y)
+
+
+static func global_screen_to_grid(screen_pos: Vector2, map_scroll: Node2D) -> Vector2:
+	if map_scroll == null:
+		return Vector2.ZERO
+	var ctx: ViewContext = ViewContext.from_viewport(map_scroll, null)
+	ctx.map_scroll = map_scroll
+	return ViewTransforms.canvas_to_grid(screen_pos, ctx)
 
 
 static func grid_to_screen(x: int, y: int, z: int = 0) -> Vector2:
-	var meters: Vector2 = grid_to_meters(x, y)
-	var screen_x = meters_to_pixels(meters.x)
-	var screen_y = meters_to_pixels(meters.y) - meters_to_pixels(float(z))
-	return Vector2(screen_x, screen_y)
+	var base: Vector2 = ViewTransforms.grid_to_map_local_px(float(x), float(y))
+	if z != 0:
+		base.y -= ViewTransforms.meters_to_pixels(float(z))
+	return base
 
 
 static func grid_to_screen_centered(

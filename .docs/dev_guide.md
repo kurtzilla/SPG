@@ -58,6 +58,12 @@ That menu item does not exist in the **standard** (GDScript-only) Godot build. Y
 
 In the .NET editor, **Build** is the top-bar hammer icon, not under **Project**. **Project → Tools → C#** has solution/editor helpers only.
 
+### Display: design viewport vs window size
+
+[`project.godot`](../project.godot) uses a **design viewport** (e.g. **1280×720**) for simulation and drawing. That size drives how many grid cells are generated and how CPU overlays (fog, debug grid) scale—see `MainSandbox._visual_spawn_radius()`.
+
+To fill a 4K monitor without ~19× more cell work, use **window size overrides** (e.g. 3840×2160) with **`window/stretch/mode="viewport"`** and **`stretch/aspect="keep"`** so Godot upscales the rendered framebuffer. Do **not** set `viewport_width` / `viewport_height` to the monitor’s native resolution unless you intentionally want a much larger visible map (and accept the performance cost).
+
 ### VS Code: format on save
 
 Workspace settings in [`.vscode/settings.json`](../.vscode/settings.json) enable **format on save** for GDScript (Godot Tools) and C# (C# Dev Kit). Godot cache files under `.godot/` are treated as **plaintext** with formatting off (avoids false errors on `global_script_class_cache.cfg`).

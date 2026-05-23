@@ -8,11 +8,15 @@
 
 config_version=5
 
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
 [application]
 
 config/name="SPG"
 run/main_scene="res://src/Godot/Scenes/MainSandbox.tscn"
-config/features=PackedStringArray("4.3", "C#", "Forward Plus")
+config/features=PackedStringArray("4.6", "C#", "Forward Plus")
 
 [autoload]
 
@@ -21,10 +25,13 @@ ViewProjection="*res://src/Godot/Scripts/ViewProjection.gd"
 
 [display]
 
-window/size/viewport_width=640
-window/size/viewport_height=360
+window/size/viewport_width=1280
+window/size/viewport_height=720
 window/size/mode=3
-window/stretch/mode="canvas_items"
+window/size/initial_position_type=3
+window/size/window_width_override=3840
+window/size/window_height_override=2160
+window/stretch/mode="viewport"
 window/stretch/scale_mode="integer"
 
 [dotnet]
@@ -35,5 +42,6 @@ project/solution_name="SPG"
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
+environment/defaults/default_clear_color=Color(0, 0, 0, 1)
 2d/snap/snap_2d_transforms_to_pixel=true
 2d/snap/snap_2d_vertices_to_pixel=true

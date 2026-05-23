@@ -45,7 +45,7 @@ flowchart TB
 | :--- | :--- |
 | Plain .NET types: `int`, `float`, `string`, `Dictionary`, enums | Godot types, `GodotSharp`, `Vector2`, nodes, resources |
 | Pure functions: movement, map generation, stat math | `get_tree()`, `Input`, scene paths |
-| Unit-testable state machines | Any `res://` or engine API |
+| Pure state machines (no engine deps) | Any `res://` or engine API |
 
 ### `src/Godot/Interop/`
 
@@ -62,7 +62,25 @@ flowchart TB
 | Thin **adapter** scripts | Call Interop wrappers; never duplicate rules in the view layer |
 | `class_name` prefixed e.g. `RiftsGodot_*` (future) | Clear grep boundary vs Core types |
 
-**View metric scale (canonical):** `src/Godot/Scripts/ObliqueBridge.gd` is the single source of truth for screen-space world units. **32 pixels = 1 meter.** One logical Core grid cell = **2 meters** = **64 pixels** (`CELL_SIZE_PX`). All grid-to-screen, meter-to-pixel, and speed conversions must go through `ObliqueBridge`—do not hardcode `32` or `64` for positioning elsewhere in the Godot layer.
+**View metric scale (canonical):** `ViewMetrics.gd` / `ViewTransforms.gd` own pixel and canvas conversions. **32 pixels = 1 meter.** One logical Core grid cell = **2 meters** = **64 pixels** (`CELL_SIZE_PX`). `METERS_PER_CELL` must match `SPG.Core.GridMath.MetersPerCell`. All grid-to-screen, meter-to-pixel, and speed conversions must go through `ViewTransforms` (or `ObliqueBridge` facade)—do not hardcode `32` or `64` for positioning elsewhere in the Godot layer.
+
+## Coordinate spaces
+
+| Space | Owner | Representation | Notes |
+| :--- | :--- | :--- | :--- |
+| **Grid** | Core (`GridMath`) | integer `(x, y)` cell indices | Game rules, movement, visibility |
+| **WorldM** | Core + Godot | continuous meters | Fog, reveal; origin at grid (0,0) corner |
+| **MapLocalPx** | Godot (`ViewTransforms`) | unzoomed pixels | Tile/sprite placement before scroll/zoom |
+| **Canvas** | Godot | viewport pixels | Mouse, `get_viewport()`, fog shader `FRAGCOORD` |
+| **View** | Godot | pixels relative to viewport center | Player-anchored HUD offsets |
+| **OverlayLocal** | Godot | CanvasLayer draw space | Grid overlay, debug rings |
+
+- **Core** owns grid-index math and `MetersPerCell` (`src/Core/Math/GridMath.cs`).
+- **Godot** owns all pixel/canvas/view transforms (`ViewTransforms.gd`, `ViewContext.gd`).
+- **Generic 2D math** (lerp, AABB, angles): `Math2D.gd` — no coordinate-space semantics.
+- **Domain fog geometry**: `RevealMath.gd` — uses `ViewTransforms` for world-meter positions.
+- Prefer `ViewTransforms.grid_to_map_local_px` over legacy `ObliqueBridge.data_to_screen` in new code.
+- GDScript may read Core grid rules via `GridMathGd` / `CoreBridge.CreateGridMath()` when crossing layers (not per-frame hot paths).
 
 ## Naming convention (future)
 

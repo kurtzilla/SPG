@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://cfogoverlay01"]
+
+[ext_resource type="Script" path="res://src/Godot/Scripts/FogOverlay.gd" id="1_fog_overlay"]
+
+[node name="FogSprite" type="Sprite2D"]
+z_index = 1
+script = ExtResource("1_fog_overlay")

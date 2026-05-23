@@ -8,7 +8,8 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Core\Models/**/*.cs" />
+    <Compile Include="Core/Math/**/*.cs" />
+    <Compile Include="Core/Models/**/*.cs" />
     <Compile Include="Core/Systems/**/*.cs" />
   </ItemGroup>
 </Project>
