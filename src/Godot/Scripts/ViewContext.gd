@@ -17,7 +17,7 @@ static func from_viewport(
 	var ctx := ViewContext.new()
 	ctx.map_scroll = map_scroll
 	if viewport != null:
-		var rect: Rect2 = viewport.get_viewport_rect()
+		var rect: Rect2 = viewport.get_visible_rect()
 		ctx.viewport_size = rect.size
 		ctx.viewport_center = (rect.size * 0.5).floor()
 	if zoom_override >= 0.0:

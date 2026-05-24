@@ -1,13 +1,14 @@
 extends Sprite2D
 
-## Fog of war: GPU live sight + explored memory texture (efficient R8 updates on move).
+## Fog of war: GPU shader driven by FogExploredMemory texture.
+## Samples the explored mask and outputs black with alpha = hidden value
+## (1 = opaque fog, 0 = transparent/revealed).
 
 const ObliqueBridge = preload("res://src/Godot/Scripts/ObliqueBridge.gd")
 const RevealMathScript = preload("res://src/Godot/Scripts/RevealMath.gd")
 const FogExploredMemoryScript = preload("res://src/Godot/Scripts/FogExploredMemory.gd")
+const ViewTransformsScript = preload("res://src/Godot/Scripts/ViewTransforms.gd")
 
-const FOG_COLOR: Color = Color.BLACK
-const FOG_SHADER: Shader = preload("res://src/Godot/Shaders/FogMask.gdshader")
 const MAX_MASK_TEXELS: int = 512
 const DEBUG_REVEAL_BORDER: bool = true
 
@@ -24,28 +25,30 @@ var _explored_stamp_radius_m: float = 0.0
 var _mask_origin_world_m: Vector2 = Vector2.ZERO
 var _last_mask_origin_world_m: Vector2 = Vector2(-99999.0, -99999.0)
 var _explored: FogExploredMemory
-var _fog_material: ShaderMaterial
 var _last_meters_per_texel: float = -1.0
 var _last_feather_cells: int = -1
 var _bootstrapped: bool = false
-var _placeholder_texture: ImageTexture
 var _map_scroll: Node2D
+var _fog_stamp_version: int = 0
+var _shader_material: ShaderMaterial
 
 
 func _ready() -> void:
-	centered = false
-	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	z_index = 1
 	visible = false
 	_explored = FogExploredMemoryScript.new()
-	_fog_material = ShaderMaterial.new()
-	_fog_material.shader = FOG_SHADER
-	_fog_material.set_shader_parameter("fog_color", FOG_COLOR)
-	material = _fog_material
-	var placeholder: Image = Image.create(1, 1, false, Image.FORMAT_RGBA8)
-	placeholder.set_pixel(0, 0, Color.WHITE)
-	_placeholder_texture = ImageTexture.create_from_image(placeholder)
-	texture = _placeholder_texture
+	_setup_shader_sprite()
+
+
+func _setup_shader_sprite() -> void:
+	var fog_shader: Shader = load("res://src/Godot/Shaders/FogMask.gdshader")
+	_shader_material = ShaderMaterial.new()
+	_shader_material.shader = fog_shader
+	material = _shader_material
+	var white_img := Image.create(1, 1, false, Image.FORMAT_RGBA8)
+	white_img.fill(Color.WHITE)
+	texture = ImageTexture.create_from_image(white_img)
+	centered = false
 
 
 func set_map_scroll(map_scroll: Node2D) -> void:
@@ -175,6 +178,7 @@ func bootstrap_at(
 		stamp_radius_m = RevealMathScript.radius_cells_to_meters(initial_radius_cells)
 	if _explored != null and stamp_radius_m > 0.0:
 		_explored.stamp_disc(_player_world_m, stamp_radius_m)
+		_fog_stamp_version += 1
 		_sync_shader_params()
 
 	_last_stamp_cell = Vector2i(center_x, center_y)
@@ -224,6 +228,10 @@ func on_player_moved(
 	_last_mask_origin_world_m = _mask_origin_world_m
 
 
+func get_fog_stamp_version() -> int:
+	return _fog_stamp_version
+
+
 func _is_active() -> bool:
 	return _enabled and _fog_active and _fog_enabled and _visual_radius > 0
 
@@ -252,21 +260,16 @@ func _stamp_explored_if_moved(center_x: int, center_y: int) -> void:
 	if from_world.distance_squared_to(to_world) > 0.0001:
 		_explored.stamp_capsule(from_world, to_world, radius_m)
 	_last_stamp_cell = cell
+	_fog_stamp_version += 1
 	_sync_shader_params()
 
 
 func _viewport_half_extent_m() -> float:
-	var vp: Viewport = get_viewport()
-	if vp == null:
+	var ctx: ViewContext = ViewContext.from_viewport(_map_scroll, get_viewport(), ViewProjection.zoom)
+	var rect: Rect2 = ViewTransformsScript.visible_world_m_rect(ctx)
+	if rect.size.x <= 0.0 or rect.size.y <= 0.0:
 		return 0.0
-	var viewport: Vector2 = vp.get_visible_rect().size
-	if viewport.x <= 0.0 or viewport.y <= 0.0:
-		return 0.0
-	var zoom: float = maxf(ViewProjection.zoom, 0.01)
-	var cell_px: float = float(ObliqueBridge.CELL_SIZE_PX) * zoom
-	var half_x_m: float = (viewport.x * 0.5 / cell_px) * ObliqueBridge.METERS_PER_CELL
-	var half_y_m: float = (viewport.y * 0.5 / cell_px) * ObliqueBridge.METERS_PER_CELL
-	return maxf(half_x_m, half_y_m)
+	return maxf(rect.size.x * 0.5, rect.size.y * 0.5)
 
 
 func _feather_meters() -> float:
@@ -328,32 +331,28 @@ func _needs_rebuild() -> bool:
 
 
 func _sync_transform() -> void:
-	# Full-screen quad: always covers the entire viewport so every pixel gets fog shading.
-	var vp: Viewport = get_viewport()
-	if vp == null:
+	if _map_scroll == null:
 		return
-	position = Vector2.ZERO
-	scale = vp.get_visible_rect().size
+	var ctx: ViewContext = _view_context()
+	var canvas_pos: Vector2 = ViewTransformsScript.world_m_to_canvas(_mask_origin_world_m, ctx)
+	var world_size: Vector2 = _mask_world_size()
+	var ppm: float = float(ViewTransformsScript.PIXELS_PER_METER)
+	var z: float = maxf(ctx.zoom, 0.001)
+	var screen_size: Vector2 = world_size * ppm * z
+	position = canvas_pos
+	scale = screen_size
 
 
 func _sync_shader_params() -> void:
-	if _fog_material == null:
+	if _shader_material == null or _explored == null:
 		return
-	var ctx: ViewContext = ViewContext.from_viewport(_map_scroll, get_viewport(), ViewProjection.zoom)
-	var pixels_per_meter: float = ViewTransforms.zoomed_pixels_per_meter(ctx)
-	var map_pos: Vector2 = _map_scroll.global_position if _map_scroll != null else Vector2.ZERO
-	_fog_material.set_shader_parameter("player_world", _player_world_m)
-	_fog_material.set_shader_parameter("sight_radius_m", _sight_radius_m)
-	_fog_material.set_shader_parameter("feather_m", _feather_meters())
-	_fog_material.set_shader_parameter("mask_origin_world", _mask_origin_world_m)
-	_fog_material.set_shader_parameter("mask_world_size", _mask_world_size())
-	_fog_material.set_shader_parameter("map_scroll_pos", map_pos)
-	_fog_material.set_shader_parameter("pixels_per_meter", pixels_per_meter)
-	if _explored == null:
-		return
-	var explored_tex: ImageTexture = _explored.get_texture()
-	if explored_tex != null:
-		_fog_material.set_shader_parameter("explored_mask", explored_tex)
+	var tex: ImageTexture = _explored.get_texture()
+	if tex != null:
+		_shader_material.set_shader_parameter("explored_mask", tex)
+
+
+func _view_context() -> ViewContext:
+	return ViewContext.from_viewport(_map_scroll, get_viewport(), ViewProjection.zoom)
 
 
 func _finish_present() -> void:
@@ -385,6 +384,7 @@ func _rebuild_mask(stamp_explored: bool) -> void:
 	_sync_transform()
 	if stamp_explored:
 		_stamp_explored_if_moved(_center_x, _center_y)
+	_fog_stamp_version += 1
 	_sync_shader_params()
 	_last_mask_origin_world_m = _mask_origin_world_m
 	if _bootstrapped:
