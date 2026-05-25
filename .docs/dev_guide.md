@@ -14,11 +14,12 @@ The goal of this phase is strictly to achieve an isometric view with a 2-charact
 
 - **Core (`src/Core/`, project [`src/SPG.Core.csproj`](../src/SPG.Core.csproj)):** C# class library — no Godot references.
 
-  - `Models/`: `GridModel`, `PartyModel`, `CharacterModel`, `TerrainType`
+  - `Models/`: `PartyModel`, `CharacterModel`, `VisibilityModel`
 
-  - `Systems/`: `MapGenerator`
+  - `Math/`: `GridMath`
 
-- **Interop (`src/Godot/Interop/`):** C# `RefCounted` wrappers + `CoreBridge` autoload. GDScript calls use **PascalCase** (e.g. `CoreBridge.CreateGridModel()`, `character.MoveRelative()`).
+- **Interop (`src/Godot/Interop/`):** C# `RefCounted` wrappers + `CoreBridge` autoload. GDScript calls use **PascalCase** (e.g. `CoreBridge.CreatePartyModel()`, `character.MoveRelative()`).
+- **World streaming (`src/Godot/Scripts/World/`):** `ChunkManager` — 32×32 procedural chunks, 3×3 load window, `get_tile_type_at_global_pos()`. Follow `.cursor/rules/godot-performance.mdc` (Self-Correction Step for hot-path changes). Grid overlay sync is throttled to scroll movement, not idle frames.
 
 - **Godot (`src/Godot/`):** GDScript scenes and visuals.
 
@@ -60,9 +61,9 @@ In the .NET editor, **Build** is the top-bar hammer icon, not under **Project**.
 
 ### Display: design viewport vs window size
 
-[`project.godot`](../project.godot) uses a **design viewport** (e.g. **1280×720**) for simulation and drawing. That size drives how many grid cells are generated and how CPU overlays (fog, debug grid) scale—see `MainSandbox._visual_spawn_radius()`.
+[`project.godot`](../project.godot) uses a **native design viewport** (**3840×2160**) matching the target display. That size drives how many grid cells are generated and how the debug grid overlay scales—see `MainSandbox._visual_spawn_radius()`. **Window overrides** are set to the same size for fullscreen; **`window/stretch/mode="viewport"`** with **`stretch/aspect="keep"`** yields 1:1 rendering (no upscale) on that monitor.
 
-To fill a 4K monitor without ~19× more cell work, use **window size overrides** (e.g. 3840×2160) with **`window/stretch/mode="viewport"`** and **`stretch/aspect="keep"`** so Godot upscales the rendered framebuffer. Do **not** set `viewport_width` / `viewport_height` to the monitor’s native resolution unless you intentionally want a much larger visible map (and accept the performance cost).
+A smaller design viewport (e.g. 1280×720 or 1920×1080) plus stretch upscaling reduces visible map area and CPU/GPU load; use that if performance becomes an issue on weaker displays.
 
 ### VS Code: format on save
 

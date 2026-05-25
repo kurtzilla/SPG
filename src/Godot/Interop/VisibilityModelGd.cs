@@ -11,12 +11,6 @@ public partial class VisibilityModelGd : RefCounted
 
 	internal VisibilityModel Model => _model;
 
-	public bool FogEnabled
-	{
-		get => _model.FogEnabled;
-		set => _model.FogEnabled = value;
-	}
-
 	public int InitialRevealRadius
 	{
 		get => _model.InitialRevealRadius;

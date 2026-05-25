@@ -18,10 +18,14 @@ public readonly struct RevealedBounds
 
 public sealed class VisibilityModel
 {
+	// Must match game_settings.json core_reference.visibility_radius_min (manual sync).
 	public const int RadiusMin = 1;
+	// Must match game_settings.json core_reference.visibility_radius_max (manual sync).
 	public const int RadiusMax = 32;
-	public const int DefaultInitialRevealRadius = 12;
-    public const int DefaultMovementRevealRadius = 12;
+	// Must match game_settings.json core_reference.visibility_initial_reveal_radius (manual sync).
+	public const int DefaultInitialRevealRadius = 24;
+	// Must match game_settings.json core_reference.visibility_movement_reveal_radius (manual sync).
+	public const int DefaultMovementRevealRadius = 24;
 
 	private const float RevealRadiusScaleMin = 0.25f;
 	private const float RevealRadiusScaleMax = 4f;
@@ -36,8 +40,6 @@ public sealed class VisibilityModel
 	private int _revealedMaxX;
 	private int _revealedMinY;
 	private int _revealedMaxY;
-
-	public bool FogEnabled { get; set; } = true;
 
 	public float RevealRadiusScaleX
 	{
@@ -155,85 +157,6 @@ public sealed class VisibilityModel
 
 		bounds = new RevealedBounds(_revealedMinX, _revealedMinY, _revealedMaxX, _revealedMaxY);
 		return true;
-	}
-
-	/// <summary>
-	/// Texel dimensions for a binary fog mask (0 = revealed, 255 = hidden).
-	/// </summary>
-	public static void GetBinaryMaskDimensions(
-		int cellWidth,
-		int cellHeight,
-		int cellStride,
-		out int texelWidth,
-		out int texelHeight)
-	{
-		int stride = Math.Max(1, cellStride);
-		texelWidth = (cellWidth + stride - 1) / stride;
-		texelHeight = (cellHeight + stride - 1) / stride;
-	}
-
-	/// <summary>
-	/// Fills a row-major binary mask (0 = revealed, 255 = hidden). One texel per cellStride×cellStride block.
-	/// </summary>
-	public byte[] FillBinaryMask(
-		int minX,
-		int minY,
-		int maxX,
-		int maxY,
-		int cellStride)
-	{
-		int cellWidth = maxX - minX + 1;
-		int cellHeight = maxY - minY + 1;
-		GetBinaryMaskDimensions(cellWidth, cellHeight, cellStride, out int texelWidth, out int texelHeight);
-		var buffer = new byte[texelWidth * texelHeight];
-		FillBinaryMask(minX, minY, maxX, maxY, cellStride, buffer, 0);
-		return buffer;
-	}
-
-	public void FillBinaryMask(
-		int minX,
-		int minY,
-		int maxX,
-		int maxY,
-		int cellStride,
-		byte[] buffer,
-		int bufferOffset = 0)
-	{
-		int cellWidth = maxX - minX + 1;
-		int cellHeight = maxY - minY + 1;
-		int stride = Math.Max(1, cellStride);
-		GetBinaryMaskDimensions(cellWidth, cellHeight, stride, out int texelWidth, out int texelHeight);
-		int requiredLength = bufferOffset + texelWidth * texelHeight;
-		if (texelWidth <= 0 || texelHeight <= 0 || buffer.Length < requiredLength)
-		{
-			return;
-		}
-
-		for (int ty = 0; ty < texelHeight; ty++)
-		{
-			int blockY = minY + ty * stride;
-			for (int tx = 0; tx < texelWidth; tx++)
-			{
-				int blockX = minX + tx * stride;
-				buffer[bufferOffset + ty * texelWidth + tx] = GetBinaryMaskTexelAlpha(blockX, blockY, stride);
-			}
-		}
-	}
-
-	private byte GetBinaryMaskTexelAlpha(int blockX, int blockY, int blockSize)
-	{
-		for (int dy = 0; dy < blockSize; dy++)
-		{
-			for (int dx = 0; dx < blockSize; dx++)
-			{
-				if (GetVisibility(blockX + dx, blockY + dy) == CellVisibility.Revealed)
-				{
-					return 0;
-				}
-			}
-		}
-
-		return 255;
 	}
 
 	private bool IsInsideRevealEllipse(int gx, int gy, int centerX, int centerY, int radius)

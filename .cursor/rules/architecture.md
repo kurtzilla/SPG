@@ -9,7 +9,9 @@ alwaysApply: true
 
 - **One-way only:** `src/Godot/` may depend on `src/Core/`. `src/Core/` must never import or reference `res://src/Godot/`.
 - **Core is C#:** `src/Core/` (Models, Systems) built by [`src/SPG.Core.csproj`](../src/SPG.Core.csproj) — plain `net6.0` class library, no Godot references. GDScript must **not** `preload` Core paths.
-- **Interop bridge:** GDScript talks to Core only through `src/Godot/Interop/` C# wrappers and the **`CoreBridge`** autoload (`/root/CoreBridge`). Use **PascalCase** when calling C# from GDScript (e.g. `CoreBridge.CreateGridModel()`, `grid.GetCellPrimary()`).
+- **Interop bridge:** GDScript talks to Core only through `src/Godot/Interop/` C# wrappers and the **`CoreBridge`** autoload (`/root/CoreBridge`). Use **PascalCase** when calling C# from GDScript (e.g. `CoreBridge.CreatePartyModel()`, `character.MoveRelative()`).
+- **World streaming:** Infinite terrain is handled in GDScript by `ChunkManager` (`src/Godot/Scripts/World/`). Query tiles via `get_tile_type_at_global_pos()` / `get_tile_type_at_grid()` — not Core `GridModel`.
+- **GDScript performance:** For chunk streaming, procedural generation, fog, or other hot-path systems, follow [godot-performance.mdc](godot-performance.mdc). Plans and PRs must include a **Self-Correction Step** (traps + bypasses) before implementation.
 - Do **not** place `.gdignore` on `src/Core/` if Godot needs to see the folder for project layout; Core logic lives in `.cs` files compiled via `SPG.sln`.
 
 ## Layer flow
@@ -17,12 +19,12 @@ alwaysApply: true
 ```mermaid
 flowchart TB
   subgraph core [src/Core - C# DLL via SPG.Core.csproj]
-    Models[Models: GridModel, PartyModel, CharacterModel]
-    Systems[Systems: MapGenerator]
+    Models[Models: PartyModel, CharacterModel, VisibilityModel]
+    Math[Math: GridMath]
   end
   subgraph interop [src/Godot/Interop - C# RefCounted wrappers]
     CoreBridge[CoreBridge autoload]
-    Wrappers[GridModelGd, PartyModelGd, ...]
+    Wrappers[PartyModelGd, CharacterModelGd, ...]
   end
   subgraph godot [src/Godot - GDScript]
     Scenes[Godot/Scenes]
@@ -69,16 +71,15 @@ flowchart TB
 | Space | Owner | Representation | Notes |
 | :--- | :--- | :--- | :--- |
 | **Grid** | Core (`GridMath`) | integer `(x, y)` cell indices | Game rules, movement, visibility |
-| **WorldM** | Core + Godot | continuous meters | Fog, reveal; origin at grid (0,0) corner |
+| **WorldM** | Core + Godot | continuous meters | Reveal radii; origin at grid (0,0) corner |
 | **MapLocalPx** | Godot (`ViewTransforms`) | unzoomed pixels | Tile/sprite placement before scroll/zoom |
-| **Canvas** | Godot | viewport pixels | Mouse, `get_viewport()`, fog shader `FRAGCOORD` |
+| **Canvas** | Godot | viewport pixels | Mouse, `get_viewport()` |
 | **View** | Godot | pixels relative to viewport center | Player-anchored HUD offsets |
 | **OverlayLocal** | Godot | CanvasLayer draw space | Grid overlay, debug rings |
 
 - **Core** owns grid-index math and `MetersPerCell` (`src/Core/Math/GridMath.cs`).
 - **Godot** owns all pixel/canvas/view transforms (`ViewTransforms.gd`, `ViewContext.gd`).
 - **Generic 2D math** (lerp, AABB, angles): `Math2D.gd` — no coordinate-space semantics.
-- **Domain fog geometry**: `RevealMath.gd` — uses `ViewTransforms` for world-meter positions.
 - Prefer `ViewTransforms.grid_to_map_local_px` over legacy `ObliqueBridge.data_to_screen` in new code.
 - GDScript may read Core grid rules via `GridMathGd` / `CoreBridge.CreateGridMath()` when crossing layers (not per-frame hot paths).
 
