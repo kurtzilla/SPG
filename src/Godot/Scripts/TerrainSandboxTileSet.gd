@@ -3,9 +3,9 @@ extends RefCounted
 
 ## Builds the sandbox TileSet (land / water / mud solids) at runtime.
 
-const ViewMetrics = preload("res://src/Godot/Scripts/ViewMetrics.gd")
-const TerrainTileTextures = preload("res://src/Godot/Scripts/TerrainTileTextures.gd")
-const ObliqueBridge = preload("res://src/Godot/Scripts/ObliqueBridge.gd")
+const ViewMetricsRes = preload("res://src/Godot/Scripts/ViewMetrics.gd")
+const TerrainTileTexturesRes = preload("res://src/Godot/Scripts/TerrainTileTextures.gd")
+const TT = preload("res://src/Godot/Scripts/World/TerrainType.gd")
 
 const SOURCE_ID: int = 0
 const TERRAIN_SET: int = 0
@@ -20,16 +20,16 @@ const PEERING_BIT_COUNT: int = 16
 
 static func atlas_for_terrain(terrain: int) -> Vector2i:
 	match terrain:
-		ObliqueBridge.TERRAIN_WATER:
+		TT.WATER:
 			return ATLAS_WATER
-		ObliqueBridge.TERRAIN_MUD:
+		TT.MUD:
 			return ATLAS_MUD
 		_:
 			return ATLAS_LAND
 
 
 static func build() -> TileSet:
-	var tile_size: int = ViewMetrics.CELL_SIZE_PX
+	var tile_size: int = ViewMetricsRes.CELL_SIZE_PX
 	var tile_set := TileSet.new()
 	tile_set.tile_size = Vector2i(tile_size, tile_size)
 
@@ -47,17 +47,17 @@ static func build() -> TileSet:
 	tile_set.add_terrain(TERRAIN_SET)
 	tile_set.add_terrain(TERRAIN_SET)
 
-	_configure_terrain_tile(atlas, ATLAS_LAND, ObliqueBridge.TERRAIN_LAND)
-	_configure_terrain_tile(atlas, ATLAS_WATER, ObliqueBridge.TERRAIN_WATER)
-	_configure_terrain_tile(atlas, ATLAS_MUD, ObliqueBridge.TERRAIN_MUD)
+	_configure_terrain_tile(atlas, ATLAS_LAND, TT.LAND)
+	_configure_terrain_tile(atlas, ATLAS_WATER, TT.WATER)
+	_configure_terrain_tile(atlas, ATLAS_MUD, TT.MUD)
 
 	return tile_set
 
 
 static func _build_atlas_texture(tile_size: int) -> Texture2D:
-	var land: Image = TerrainTileTextures.create_solid_land_texture().get_image()
-	var water: Image = TerrainTileTextures.create_solid_water_texture().get_image()
-	var mud: Image = TerrainTileTextures.create_solid_mud_texture().get_image()
+	var land: Image = TerrainTileTexturesRes.create_solid_land_texture().get_image()
+	var water: Image = TerrainTileTexturesRes.create_solid_water_texture().get_image()
+	var mud: Image = TerrainTileTexturesRes.create_solid_mud_texture().get_image()
 
 	var atlas_image := Image.create(tile_size * 3, tile_size, false, Image.FORMAT_RGBA8)
 	atlas_image.blit_rect(land, Rect2i(0, 0, tile_size, tile_size), Vector2i(0, 0))

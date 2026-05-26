@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "view": {
+    "zoom": {
+      "value": 0.5,
+      "min": 0.2,
+      "max": 2.0,
+      "persist": true,
+      "context": "game"
+    },
+    "zoom_wheel_step": {
+      "value": 0.1,
+      "context": "game"
+    },
+    "settings_panel_visible": {
+      "value": true,
+      "persist": true,
+      "context": "game"
+    },
+    "save_debounce_sec": {
+      "value": 0.5,
+      "context": "game"
+    }
+  },
+  "player_movement": {
+    "max_speed": {
+      "value": 250.0,
+      "min": 50.0,
+      "max": 500.0,
+      "step": 10.0,
+      "persist": true,
+      "context": "game"
+    },
+    "acceleration": {
+      "value": 25.0,
+      "min": 5.0,
+      "max": 60.0,
+      "step": 1.0,
+      "persist": true,
+      "context": "game"
+    },
+    "friction": {
+      "value": 45.0,
+      "min": 5.0,
+      "max": 60.0,
+      "step": 1.0,
+      "persist": true,
+      "context": "game"
+    },
+    "velocity_snap_threshold_sq": {
+      "value": 0.01,
+      "context": "game"
+    }
+  },
+  "world": {
+    "noise_seed": {
+      "value": 42,
+      "context": "game"
+    },
+    "noise_frequency": {
+      "value": 0.04,
+      "context": "game"
+    },
+    "water_threshold": {
+      "value": 0.62,
+      "context": "game"
+    },
+    "mud_threshold": {
+      "value": 0.45,
+      "context": "game"
+    },
+    "cells_per_frame": {
+      "value": 256,
+      "min": 1,
+      "context": "game"
+    },
+    "chunk_size": {
+      "value": 32,
+      "min": 8,
+      "context": "game"
+    },
+    "load_radius": {
+      "value": 1,
+      "min": 0,
+      "context": "game"
+    },
+    "spawn_safe_zone_x": {
+      "value": 0,
+      "context": "game"
+    },
+    "spawn_safe_zone_y": {
+      "value": 0,
+      "context": "game"
+    },
+    "safe_zone_radius": {
+      "value": 2,
+      "min": 0,
+      "context": "game"
+    }
+  },
+  "grid": {
+    "visual_radius_buffer": {
+      "value": 2,
+      "context": "game"
+    },
+    "max_grid_radius": {
+      "value": 40,
+      "min": 1,
+      "context": "game"
+    },
+    "debug_grid_lines": {
+      "value": true,
+      "context": "game"
+    },
+    "line_width_px": {
+      "value": 1.0,
+      "context": "game"
+    },
+    "line_color": {
+      "value": [0.2, 0.22, 0.18, 0.6],
+      "context": "game"
+    }
+  },
+  "hud": {
+    "font_size": {
+      "value": 10,
+      "context": "game"
+    },
+    "value_color": {
+      "value": [0.75, 0.78, 0.82, 1.0],
+      "context": "game"
+    },
+    "max_speed_slider_step": {
+      "value": 10.0,
+      "context": "game"
+    },
+    "acceleration_slider_step": {
+      "value": 1.0,
+      "context": "game"
+    },
+    "friction_slider_step": {
+      "value": 1.0,
+      "context": "game"
+    }
+  },
+  "scale": {
+    "pixels_per_meter": {
+      "value": 64,
+      "min": 1,
+      "context": "game"
+    },
+    "meters_per_cell": {
+      "value": 1.0,
+      "min": 0.001,
+      "context": "game"
+    }
+  },
+  "core_reference": {
+    "_comment": "Manual sync with C# — not loaded into Settings runtime",
+    "meters_per_cell": {
+      "value": 1.0,
+      "source": "core",
+      "sync": "manual",
+      "csharp": "SPG.Core.GridMath.MetersPerCell",
+      "json_mirror": "scale.meters_per_cell"
+    },
+    "visibility_radius_min": {
+      "value": 1,
+      "source": "core",
+      "sync": "manual",
+      "csharp": "SPG.Core.VisibilityModel.RadiusMin"
+    },
+    "visibility_radius_max": {
+      "value": 32,
+      "source": "core",
+      "sync": "manual",
+      "csharp": "SPG.Core.VisibilityModel.RadiusMax"
+    },
+    "visibility_initial_reveal_radius": {
+      "value": 24,
+      "source": "core",
+      "sync": "manual",
+      "csharp": "SPG.Core.VisibilityModel.DefaultInitialRevealRadius"
+    },
+    "visibility_movement_reveal_radius": {
+      "value": 24,
+      "source": "core",
+      "sync": "manual",
+      "csharp": "SPG.Core.VisibilityModel.DefaultMovementRevealRadius"
+    }
+  }
+}

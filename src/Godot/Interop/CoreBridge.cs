@@ -7,10 +7,6 @@ namespace SPG.Interop;
 /// </summary>
 public partial class CoreBridge : Node
 {
-	public GridModelGd CreateGridModel() => new();
-
-	public MapGeneratorGd CreateMapGenerator(int seed) => new(seed);
-
 	public PartyModelGd CreatePartyModel() => new();
 
 	public VisibilityModelGd CreateVisibilityModel() => new();

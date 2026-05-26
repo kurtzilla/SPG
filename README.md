@@ -26,8 +26,8 @@ SPG/
   src/
     SPG.Core.csproj
     Core/
-      Models/     # GridModel, PartyModel, CharacterModel, TerrainType
-      Systems/    # MapGenerator
+      Models/     # PartyModel, CharacterModel, VisibilityModel
+      Math/       # GridMath
     Godot/
       Interop/    # C# CoreBridge + *Gd wrappers
       Scenes/     # .tscn

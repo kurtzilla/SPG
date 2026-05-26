@@ -1,92 +1,96 @@
-extends Node2D
+extends ColorRect
 
-## Viewport-space grid lines aligned to the scrolling tile map (debug / readability).
-## Lives on a CanvasLayer (not under $Tiles) so zoom does not scale line width.
+## GPU grid overlay (shader). Lives on a CanvasLayer so line width stays 1 screen px.
 
-const ViewTransforms = preload("res://src/Godot/Scripts/ViewTransforms.gd")
-
-const GRID_LINE_WIDTH_SCREEN_PX: float = 1.0
-const GRID_LINE_COLOR: Color = Color(0.12, 0.14, 0.1, 0.38)
+const ViewMetricsRes = preload("res://src/Godot/Scripts/ViewMetrics.gd")
+const GRID_SHADER: Shader = preload("res://src/Godot/Shaders/GridOverlay.gdshader")
 
 var _enabled: bool = true
-var _reveal_context: FogRevealContext = FogRevealContext.disabled()
 var _map_scroll: Node2D
 var _center_x: int = 0
 var _center_y: int = 0
 var _visual_radius: int = 0
+var _shader_mat: ShaderMaterial
+
+var _cached_enabled_param: bool = false
+var _cached_canvas_to_map: Transform2D = Transform2D.IDENTITY
+var _cached_grid_center: Vector2 = Vector2.ZERO
+var _cached_grid_radius: float = -1.0
+
+
+func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	anchors_preset = Control.PRESET_FULL_RECT
+	anchor_right = 1.0
+	anchor_bottom = 1.0
+	grow_horizontal = Control.GROW_DIRECTION_BOTH
+	grow_vertical = Control.GROW_DIRECTION_BOTH
+	color = Color(0.0, 0.0, 0.0, 0.0)
+
+	_shader_mat = ShaderMaterial.new()
+	_shader_mat.shader = GRID_SHADER
+	material = _shader_mat
+	_apply_static_uniforms()
+	sync_uniforms()
 
 
 func configure(enabled: bool) -> void:
 	_enabled = enabled
-	queue_redraw()
-
-
-func set_reveal_context(reveal_context: FogRevealContext) -> void:
-	_reveal_context = reveal_context if reveal_context != null else FogRevealContext.disabled()
+	sync_uniforms()
 
 
 func set_map_scroll(map_scroll: Node2D) -> void:
 	_map_scroll = map_scroll
+	_cached_canvas_to_map = Transform2D.IDENTITY
 
 
 func update_region(center_x: int, center_y: int, visual_radius: int) -> void:
 	_center_x = center_x
 	_center_y = center_y
 	_visual_radius = visual_radius
-	queue_redraw()
+	sync_uniforms()
 
 
 func on_view_changed() -> void:
-	queue_redraw()
+	sync_uniforms()
 
 
-func _cell_size() -> float:
-	return float(ViewTransforms.CELL_SIZE_PX)
-
-
-func _corner_screen(gx: float, gy: float) -> Vector2:
-	if _map_scroll == null:
-		return Vector2.ZERO
-	return ViewTransforms.grid_to_canvas(gx, gy, _view_context())
-
-
-func _screen_to_local(screen_pos: Vector2) -> Vector2:
-	return ViewTransforms.canvas_to_overlay_local(screen_pos, self)
-
-
-func _view_context() -> ViewContext:
-	return ViewContext.from_viewport(_map_scroll, get_viewport(), ViewProjection.zoom)
-
-
-func _draw_screen_segment(screen_from: Vector2, screen_to: Vector2) -> void:
-	draw_line(
-		_screen_to_local(screen_from),
-		_screen_to_local(screen_to),
-		GRID_LINE_COLOR,
-		GRID_LINE_WIDTH_SCREEN_PX,
-		false
-	)
-
-
-func _should_draw_cell(gx: int, gy: int) -> bool:
-	return true
-
-
-func _draw() -> void:
-	if not _enabled or _visual_radius <= 0 or _map_scroll == null:
+func sync_uniforms(_viewport: Viewport = null) -> void:
+	if _shader_mat == null:
 		return
 
-	var min_gx: int = _center_x - _visual_radius
-	var max_gx: int = _center_x + _visual_radius
-	var min_gy: int = _center_y - _visual_radius
-	var max_gy: int = _center_y + _visual_radius
+	var enabled_param: bool = _enabled and _visual_radius > 0
+	if enabled_param != _cached_enabled_param:
+		_shader_mat.set_shader_parameter("enabled", enabled_param)
+		_cached_enabled_param = enabled_param
 
-	for gx in range(min_gx, max_gx + 1):
-		for gy in range(min_gy, max_gy + 1):
-			if not _should_draw_cell(gx, gy):
-				continue
-			var top_left: Vector2 = _corner_screen(float(gx), float(gy))
-			var top_right: Vector2 = _corner_screen(float(gx + 1), float(gy))
-			var bottom_left: Vector2 = _corner_screen(float(gx), float(gy + 1))
-			_draw_screen_segment(top_left, top_right)
-			_draw_screen_segment(top_left, bottom_left)
+	var canvas_to_map: Transform2D = Transform2D.IDENTITY
+	if _map_scroll != null:
+		canvas_to_map = _map_scroll.get_global_transform_with_canvas().affine_inverse()
+	if canvas_to_map != _cached_canvas_to_map:
+		_shader_mat.set_shader_parameter("canvas_to_map_local", canvas_to_map)
+		_cached_canvas_to_map = canvas_to_map
+
+	var grid_center: Vector2 = Vector2(float(_center_x), float(_center_y))
+	if grid_center != _cached_grid_center:
+		_shader_mat.set_shader_parameter("grid_center", grid_center)
+		_cached_grid_center = grid_center
+
+	var grid_radius: float = float(_visual_radius)
+	if grid_radius != _cached_grid_radius:
+		_shader_mat.set_shader_parameter("grid_radius", grid_radius)
+		_cached_grid_radius = grid_radius
+
+
+func _apply_static_uniforms() -> void:
+	if _shader_mat == null:
+		return
+	_shader_mat.set_shader_parameter("cell_size_px", float(ViewMetricsRes.CELL_SIZE_PX))
+	_shader_mat.set_shader_parameter("line_width_px", Settings.get_float("grid.line_width_px"))
+	_shader_mat.set_shader_parameter("line_color", Settings.get_color("grid.line_color"))
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_SIZE_CHANGED:
+		_cached_canvas_to_map = Transform2D.IDENTITY
+		sync_uniforms()

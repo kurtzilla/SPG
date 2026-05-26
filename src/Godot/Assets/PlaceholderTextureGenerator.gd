@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## Procedural placeholder textures sized via ViewMetrics constants.
-## Ground tile: CELL_SIZE_PX (2m x 2m). Billboard: 1m wide x 2m tall.
+## Ground tile: CELL_SIZE_PX (1m x 1m). Billboard: 0.5m wide x 1m tall.
 
 const ViewMetrics = preload("res://src/Godot/Scripts/ViewMetrics.gd")
 

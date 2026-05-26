@@ -178,3 +178,117 @@ theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
 theme_override_font_sizes/font_size = 10
 text = "--"
 horizontal_alignment = 2
+
+[node name="SpeedKey" type="Button" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_colors/font_hover_color = Color(0.65, 0.68, 0.72, 1)
+theme_override_colors/font_pressed_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 10
+flat = true
+text = "TPS"
+tooltip_text = "Tiles per second — grid cells traversed per second"
+
+[node name="SpeedValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "--"
+horizontal_alignment = 2
+
+[node name="MovementBlock" type="PanelContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_stats_body")
+
+[node name="MovementMargin" type="MarginContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock"]
+layout_mode = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="MovementVBox" type="VBoxContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="MovementTitle" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 10
+text = "Player Movement"
+
+[node name="MovementGrid" type="GridContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 4
+columns = 3
+
+[node name="MaxSpeedKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 10
+text = "Max Speed"
+
+[node name="MaxSpeedSlider" type="HSlider" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 1.0
+step = 0.1
+tick_count = 0
+value = 0.5
+
+[node name="MaxSpeedValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid"]
+custom_minimum_size = Vector2(28, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "250"
+horizontal_alignment = 2
+
+[node name="AccelKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 10
+text = "Acceleration"
+
+[node name="AccelSlider" type="HSlider" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 1.0
+step = 0.1
+tick_count = 0
+value = 0.5
+
+[node name="AccelValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid"]
+custom_minimum_size = Vector2(28, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "25"
+horizontal_alignment = 2
+
+[node name="FrictionKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 10
+text = "Friction"
+
+[node name="FrictionSlider" type="HSlider" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 1.0
+step = 0.1
+tick_count = 0
+value = 0.5
+
+[node name="FrictionValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid"]
+custom_minimum_size = Vector2(28, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "45"
+horizontal_alignment = 2

@@ -1,11 +1,13 @@
 namespace SPG.Core;
 
 /// <summary>
-/// Grid-index utilities in Core space. MetersPerCell must match ViewMetrics.METERS_PER_CELL in Godot.
+/// Grid-index utilities in Core space. 1 cell = 1 meter.
+/// Must match game_settings.json scale.meters_per_cell and ViewMetrics.METERS_PER_CELL in Godot (manual sync).
 /// </summary>
 public static class GridMath
 {
-	public const float MetersPerCell = 2.0f;
+	// Must match game_settings.json scale.meters_per_cell (see core_reference.meters_per_cell).
+	public const float MetersPerCell = 1.0f;
 
 	public static readonly (int dx, int dy)[] Neighbor4 =
 	{

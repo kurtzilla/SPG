@@ -6,44 +6,40 @@ extends RefCounted
 
 const ViewMetrics = preload("res://src/Godot/Scripts/ViewMetrics.gd")
 
-const PIXELS_PER_METER: int = ViewMetrics.PIXELS_PER_METER
-const METERS_PER_CELL: float = ViewMetrics.METERS_PER_CELL
-const CELL_SIZE_PX: int = ViewMetrics.CELL_SIZE_PX
-
 
 static func meters_to_pixels(meters: float) -> float:
-	return meters * float(PIXELS_PER_METER)
+	return meters * float(ViewMetrics.PIXELS_PER_METER)
 
 
 static func pixels_to_meters(pixels: float) -> float:
-	return pixels / float(PIXELS_PER_METER)
+	return pixels / float(ViewMetrics.PIXELS_PER_METER)
 
 
 static func zoomed_pixels_per_meter(ctx: ViewContext) -> float:
-	return float(PIXELS_PER_METER) * _safe_zoom(ctx)
+	return float(ViewMetrics.PIXELS_PER_METER) * _safe_zoom(ctx)
 
 
 static func grid_to_world_m(gx: float, gy: float) -> Vector2:
-	return Vector2(gx * METERS_PER_CELL, gy * METERS_PER_CELL)
+	return Vector2(gx * ViewMetrics.METERS_PER_CELL, gy * ViewMetrics.METERS_PER_CELL)
 
 
 static func world_m_to_grid(world_m: Vector2) -> Vector2:
-	return Vector2(world_m.x / METERS_PER_CELL, world_m.y / METERS_PER_CELL)
+	return Vector2(world_m.x / ViewMetrics.METERS_PER_CELL, world_m.y / ViewMetrics.METERS_PER_CELL)
 
 
 static func world_m_to_grid_i(world_m: Vector2) -> Vector2i:
 	return Vector2i(
-		int(floor(world_m.x / METERS_PER_CELL)),
-		int(floor(world_m.y / METERS_PER_CELL))
+		int(floor(world_m.x / ViewMetrics.METERS_PER_CELL)),
+		int(floor(world_m.y / ViewMetrics.METERS_PER_CELL))
 	)
 
 
 static func grid_to_map_local_px(gx: float, gy: float) -> Vector2:
-	return Vector2(gx * float(CELL_SIZE_PX), gy * float(CELL_SIZE_PX))
+	return Vector2(gx * float(ViewMetrics.CELL_SIZE_PX), gy * float(ViewMetrics.CELL_SIZE_PX))
 
 
 static func map_local_px_to_grid(px: Vector2) -> Vector2:
-	return Vector2(px.x / float(CELL_SIZE_PX), px.y / float(CELL_SIZE_PX))
+	return Vector2(px.x / float(ViewMetrics.CELL_SIZE_PX), px.y / float(ViewMetrics.CELL_SIZE_PX))
 
 
 static func world_m_to_map_local_px(world_m: Vector2) -> Vector2:
@@ -146,7 +142,7 @@ static func visible_world_m_rect(ctx: ViewContext) -> Rect2:
 
 
 static func visible_grid_radius_cells(ctx: ViewContext, buffer_cells: int = 0) -> int:
-	var cell_px: float = float(CELL_SIZE_PX) * _safe_zoom(ctx)
+	var cell_px: float = float(ViewMetrics.CELL_SIZE_PX) * _safe_zoom(ctx)
 	if cell_px <= 0.0:
 		return buffer_cells
 	var half_x: int = int(ceil(ctx.viewport_size.x * 0.5 / cell_px)) + buffer_cells

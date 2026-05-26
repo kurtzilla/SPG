@@ -2,9 +2,9 @@
 
 [ext_resource type="Script" uid="uid://eu7juqc3bgem" path="res://src/Godot/Scripts/MainSandbox.gd" id="1_main_sandbox"]
 [ext_resource type="PackedScene" uid="uid://cp16cnfv02sc5" path="res://src/Godot/Scenes/GridOverlay.tscn" id="2_grid_overlay"]
-[ext_resource type="PackedScene" uid="uid://cfogoverlay01" path="res://src/Godot/Scenes/FogOverlay.tscn" id="3_fog_overlay"]
 [ext_resource type="PackedScene" uid="uid://c20o3py0qktx5" path="res://src/Godot/Scenes/SettingsPanel.tscn" id="4_settings_panel"]
-[ext_resource type="Script" uid="uid://65ao5bp8lykx" path="res://src/Godot/Scripts/RevealRingDraw.gd" id="5_reveal_ring_draw"]
+[ext_resource type="PackedScene" path="res://src/Godot/Scenes/World/ChunkManager.tscn" id="5_chunk_manager"]
+[ext_resource type="PackedScene" path="res://src/Godot/Scenes/Player.tscn" id="6_player"]
 
 [node name="MainSandbox" type="Node2D" unique_id=876572398]
 script = ExtResource("1_main_sandbox")
@@ -14,26 +14,16 @@ layer = 0
 
 [node name="Tiles" type="Node2D" parent="WorldCanvas" unique_id=720362407]
 
-[node name="TerrainLayer" type="TileMapLayer" parent="WorldCanvas/Tiles" unique_id=148971061]
+[node name="ChunkManager" parent="WorldCanvas/Tiles" unique_id=1303602726 instance=ExtResource("5_chunk_manager")]
+
+[node name="Player" parent="WorldCanvas/Tiles" unique_id=604040316 instance=ExtResource("6_player")]
+unique_name_in_owner = true
 
 [node name="GridOverlay" parent="." unique_id=316111383 instance=ExtResource("2_grid_overlay")]
-
-[node name="FogLayer" type="CanvasLayer" parent="." unique_id=1566143697]
-layer = 2
-
-[node name="FogOverlay" parent="FogLayer" unique_id=101418907 instance=ExtResource("3_fog_overlay")]
-
-[node name="RevealRingLayer" type="CanvasLayer" parent="." unique_id=1839309578]
-layer = 3
-
-[node name="RevealRingDraw" type="Node2D" parent="RevealRingLayer" unique_id=1564660639]
-script = ExtResource("5_reveal_ring_draw")
 
 [node name="GameEntitiesLayer" type="CanvasLayer" parent="." unique_id=129791858]
 layer = 16
 
 [node name="Characters" type="Node2D" parent="GameEntitiesLayer" unique_id=118185644]
-
-[node name="PlayerSprite" type="Sprite2D" parent="GameEntitiesLayer/Characters" unique_id=875016711]
 
 [node name="SettingsUi" parent="." unique_id=16521539 instance=ExtResource("4_settings_panel")]

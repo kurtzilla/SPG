@@ -37,3 +37,12 @@ This project does **not** use automated unit tests. See also `.cursor/rules/no-u
 # Code Style
 
 - Use Godot 4 / GDScript static typing (e.g., `var character_name: String = ""`).
+
+### CRITICAL CONSTRAINT: NAMESPACE & GLOBAL SCOPE INTEGRITY
+
+You must protect the existing global scope, `class_name` definitions, and Autoload Singletons.
+
+1. NO ACCIDENTAL DELETIONS: Never delete, rename, or omit existing global `class_name` declarations or Autoloaded singletons (like `Settings`, `Config`, `CoreBridge`, etc.) unless explicitly instructed to refactor them.
+2. AUDIT COMPILATION ERRORS PREVENTATIVELY: Before modifying a script, check if it relies on a global identifier. If you change a global class or an Autoload script, you must ensure it does not break existing dependencies across the rest of the project.
+3. PRESERVE SCOPE: If a file throws an "Identifier 'X' not declared in the current scope" error after your change, you must immediately revert the change to the global identifier and find a non-breaking way to implement the feature.
+4. PATH VALIDATION: Never change internal resource paths (e.g., `res://...`) or class references arbitrarily. If you move a file, you must update its references project-wide.
