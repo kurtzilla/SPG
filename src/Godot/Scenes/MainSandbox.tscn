@@ -5,6 +5,8 @@
 [ext_resource type="PackedScene" uid="uid://c20o3py0qktx5" path="res://src/Godot/Scenes/SettingsPanel.tscn" id="4_settings_panel"]
 [ext_resource type="PackedScene" path="res://src/Godot/Scenes/World/ChunkManager.tscn" id="5_chunk_manager"]
 [ext_resource type="PackedScene" path="res://src/Godot/Scenes/Player.tscn" id="6_player"]
+[ext_resource type="Script" uid="uid://dmawn4jarjyxy" path="res://src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd" id="7_fog_exploration"]
+[ext_resource type="PackedScene" uid="uid://3fqp6ja8tdwe" path="res://src/Godot/Scenes/FogOverlay.tscn" id="8_fog_overlay"]
 
 [node name="MainSandbox" type="Node2D" unique_id=876572398]
 script = ExtResource("1_main_sandbox")
@@ -18,6 +20,11 @@ layer = 0
 
 [node name="Player" parent="WorldCanvas/Tiles" unique_id=604040316 instance=ExtResource("6_player")]
 unique_name_in_owner = true
+
+[node name="FogExploration" type="Node" parent="." unique_id=1777612534]
+script = ExtResource("7_fog_exploration")
+
+[node name="FogOverlay" parent="." unique_id=1869907483 instance=ExtResource("8_fog_overlay")]
 
 [node name="GridOverlay" parent="." unique_id=316111383 instance=ExtResource("2_grid_overlay")]
 

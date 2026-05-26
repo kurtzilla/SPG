@@ -14,6 +14,13 @@ static var _cached_scroll_pos: Vector2 = Vector2.INF
 static var _cached_viewport_size: Vector2 = Vector2.ZERO
 
 
+static func viewport_center_from(viewport: Viewport) -> Vector2:
+	if viewport == null:
+		return Vector2.ZERO
+	# Visible rect matches FRAGCOORD / canvas space under stretch modes.
+	return viewport.get_visible_rect().get_center()
+
+
 static func from_viewport(
 	p_map_scroll: Node2D,
 	viewport: Viewport,
@@ -44,7 +51,7 @@ static func from_viewport(
 	ctx.map_scroll = p_map_scroll
 	ctx.zoom = z
 	ctx.viewport_size = vp_size
-	ctx.viewport_center = (vp_size * 0.5).floor()
+	ctx.viewport_center = viewport_center_from(viewport)
 
 	_cached = ctx
 	_cached_zoom = z

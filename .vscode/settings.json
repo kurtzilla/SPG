@@ -1,6 +1,6 @@
 {
-  "godotTools.editorPath.godot4": "C:\\Users\\Dev\\.gdvm\\installs\\4.3-stable-csharp\\Godot_v4.3-stable_mono_win64.exe",
-  "godotTools.editorPath": "C:\\Users\\Dev\\.gdvm\\installs\\4.3-stable-csharp\\Godot_v4.3-stable_mono_win64.exe",
+  "godotTools.editorPath.godot4": "C:\\Users\\Dev\\.gdvm\\installs\\4.6.3-stable-csharp\\Godot_v4.6.3-stable_mono_win64.exe",
+  "godotTools.editorPath": "C:\\Users\\Dev\\.gdvm\\installs\\4.6.3-stable-csharp\\Godot_v4.6.3-stable_mono_win64.exe",
   "godotTools.lsp.headless": false,
   "dotnet.defaultSolution": "SPG.sln",
   "editor.formatOnSave": true,

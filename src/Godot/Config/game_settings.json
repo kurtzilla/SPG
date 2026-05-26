@@ -70,7 +70,42 @@
       "context": "game"
     },
     "cells_per_frame": {
+      "value": 192,
+      "min": 1,
+      "context": "game"
+    },
+    "chunk_frame_budget_usec": {
+      "value": 3500,
+      "min": 500,
+      "context": "game"
+    },
+    "bootstrap_cells_per_frame": {
+      "value": 512,
+      "min": 1,
+      "context": "game"
+    },
+    "bootstrap_cells_paint_per_frame": {
       "value": 256,
+      "min": 1,
+      "context": "game"
+    },
+    "bootstrap_max_active_chunk_jobs": {
+      "value": 3,
+      "min": 1,
+      "context": "game"
+    },
+    "bootstrap_layer_acquires_per_frame": {
+      "value": 3,
+      "min": 1,
+      "context": "game"
+    },
+    "bootstrap_chunk_frame_budget_usec": {
+      "value": 6000,
+      "min": 500,
+      "context": "game"
+    },
+    "unload_chunks_per_frame": {
+      "value": 1,
       "min": 1,
       "context": "game"
     },
@@ -84,6 +119,31 @@
       "min": 0,
       "context": "game"
     },
+    "load_radius_buffer": {
+      "value": 1,
+      "min": 0,
+      "context": "game"
+    },
+    "load_radius_view_padding": {
+      "value": 2,
+      "min": 0,
+      "context": "game"
+    },
+    "max_active_chunk_jobs": {
+      "value": 2,
+      "min": 1,
+      "context": "game"
+    },
+    "layer_acquires_per_frame": {
+      "value": 2,
+      "min": 1,
+      "context": "game"
+    },
+    "cells_paint_per_frame": {
+      "value": 96,
+      "min": 1,
+      "context": "game"
+    },
     "spawn_safe_zone_x": {
       "value": 0,
       "context": "game"
@@ -95,6 +155,37 @@
     "safe_zone_radius": {
       "value": 2,
       "min": 0,
+      "context": "game"
+    }
+  },
+  "fog": {
+    "enabled": {
+      "value": true,
+      "context": "game"
+    },
+    "texture_update_hz": {
+      "value": 10,
+      "min": 1,
+      "context": "game"
+    },
+    "reveal_radius_screen_px": {
+      "value": 60,
+      "min": 1,
+      "context": "game"
+    },
+    "reveal_feather_screen_px": {
+      "value": 16,
+      "min": 0,
+      "context": "game"
+    },
+    "world_extent_x": {
+      "value": 8192,
+      "min": 1,
+      "context": "game"
+    },
+    "world_extent_y": {
+      "value": 8192,
+      "min": 1,
       "context": "game"
     }
   },

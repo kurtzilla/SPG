@@ -55,6 +55,18 @@ func on_view_changed() -> void:
 	sync_uniforms()
 
 
+## Updates canvas_to_map_local from scroll position and zoom without a scene-tree transform walk.
+func sync_scroll(scroll_pos: Vector2, zoom: float) -> void:
+	if _shader_mat == null:
+		return
+	var safe_zoom: float = zoom if not is_zero_approx(zoom) else 1.0
+	var forward := Transform2D(Vector2(safe_zoom, 0.0), Vector2(0.0, safe_zoom), scroll_pos)
+	var canvas_to_map: Transform2D = forward.affine_inverse()
+	if canvas_to_map != _cached_canvas_to_map:
+		_shader_mat.set_shader_parameter("canvas_to_map_local", canvas_to_map)
+		_cached_canvas_to_map = canvas_to_map
+
+
 func sync_uniforms(_viewport: Viewport = null) -> void:
 	if _shader_mat == null:
 		return
@@ -64,12 +76,8 @@ func sync_uniforms(_viewport: Viewport = null) -> void:
 		_shader_mat.set_shader_parameter("enabled", enabled_param)
 		_cached_enabled_param = enabled_param
 
-	var canvas_to_map: Transform2D = Transform2D.IDENTITY
 	if _map_scroll != null:
-		canvas_to_map = _map_scroll.get_global_transform_with_canvas().affine_inverse()
-	if canvas_to_map != _cached_canvas_to_map:
-		_shader_mat.set_shader_parameter("canvas_to_map_local", canvas_to_map)
-		_cached_canvas_to_map = canvas_to_map
+		sync_scroll(_map_scroll.global_position, _map_scroll.scale.x)
 
 	var grid_center: Vector2 = Vector2(float(_center_x), float(_center_y))
 	if grid_center != _cached_grid_center:

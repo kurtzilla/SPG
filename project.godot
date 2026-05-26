@@ -33,7 +33,6 @@ window/size/initial_position_type=3
 window/size/window_width_override=3840
 window/size/window_height_override=2160
 window/stretch/mode="viewport"
-window/stretch/aspect="keep"
 window/stretch/scale_mode="integer"
 
 [dotnet]
