@@ -13,6 +13,7 @@ script = ExtResource("1_main_sandbox")
 
 [node name="WorldCanvas" type="CanvasLayer" parent="." unique_id=1103161756]
 layer = 0
+follow_viewport_enabled = true
 
 [node name="Tiles" type="Node2D" parent="WorldCanvas" unique_id=720362407]
 

@@ -58,13 +58,13 @@ static func map_local_px_to_world_m(px: Vector2) -> Vector2:
 
 static func map_local_px_to_canvas(px: Vector2, ctx: ViewContext) -> Vector2:
 	if ctx.map_scroll == null:
-		return px * _safe_zoom(ctx)
+		return ViewProjection.world_to_screen(px)
 	return ctx.map_scroll.get_global_transform_with_canvas() * px
 
 
 static func canvas_to_map_local_px(canvas: Vector2, ctx: ViewContext) -> Vector2:
 	if ctx.map_scroll == null:
-		return canvas / _safe_zoom(ctx)
+		return ViewProjection.screen_to_world(canvas)
 	return ctx.map_scroll.get_global_transform_with_canvas().affine_inverse() * canvas
 
 

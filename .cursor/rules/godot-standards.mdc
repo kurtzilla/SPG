@@ -1,0 +1,19 @@
+---
+description: Universal architectural constraints for Godot 4 structures and singletons.
+globs: **/*.gd
+alwaysApply: true
+---
+
+# Godot 4 Architecture & API Standards
+
+### 1. Autoload / Singleton Rules
+
+- ViewProjection is an Autoload (Singleton) node.
+- CRITICAL: Autoload scripts do not automatically possess a local scene tree viewport context upon initialization. Never use naked get_viewport() inside an Autoload script or inside a static function context.
+- To safely fetch the viewport size universally across the project, always access the root window via the global engine loop. For example, assign a Vector2 variable by checking if Engine.get_main_loop() is a SceneTree and its root is not null, then extract its viewport visible rect size.
+
+### 2. Modern Godot 4 Engine Syntax Enforcements
+
+- Always use Godot 4 type casting and structures (e.g., Vector2i for grid tiles, floori() or clampi() for integer math transformations).
+- Never use deprecated Godot 3 functions (like set_process_input or old math methods).
+- Ensure all custom node UI updates (\_draw loops or control positions) map through coordinate transforms rather than assuming the screen origin is fixed at world (0,0).

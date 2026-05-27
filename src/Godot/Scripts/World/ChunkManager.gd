@@ -264,8 +264,8 @@ func grid_to_chunk_coord(grid_tile: Vector2i) -> Vector2i:
 
 func world_px_to_grid_tile(pos: Vector2) -> Vector2i:
 	return Vector2i(
-		int(floor(pos.x / float(_tile_size))),
-		int(floor(pos.y / float(_tile_size)))
+		floori(pos.x / float(_tile_size)),
+		floori(pos.y / float(_tile_size))
 	)
 
 

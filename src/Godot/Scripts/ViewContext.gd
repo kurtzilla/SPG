@@ -3,6 +3,7 @@ extends RefCounted
 
 ## Bundle of view/camera state passed to ViewTransforms conversion functions.
 
+## WorldCanvas/Tiles scroll node (canvas transform). Not ViewProjection.map_scroll (camera focus).
 var map_scroll: Node2D
 var zoom: float = 1.0
 var viewport_center: Vector2 = Vector2.ZERO
@@ -12,6 +13,13 @@ static var _cached: ViewContext = null
 static var _cached_zoom: float = -1.0
 static var _cached_scroll_pos: Vector2 = Vector2.INF
 static var _cached_viewport_size: Vector2 = Vector2.ZERO
+
+
+static func invalidate_cache() -> void:
+	_cached = null
+	_cached_zoom = -1.0
+	_cached_scroll_pos = Vector2.INF
+	_cached_viewport_size = Vector2.ZERO
 
 
 static func viewport_center_from(viewport: Viewport) -> Vector2:

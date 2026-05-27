@@ -1,6 +1,6 @@
 ---
 description: Rules for writing high-performance 2D Godot 4 scripts
-globs: "*.gd"
+globs: "/*.gd"
 alwaysApply: true
 ---
 

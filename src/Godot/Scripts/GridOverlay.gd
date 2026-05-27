@@ -13,7 +13,9 @@ var _visual_radius: int = 0
 var _shader_mat: ShaderMaterial
 
 var _cached_enabled_param: bool = false
-var _cached_canvas_to_map: Transform2D = Transform2D.IDENTITY
+var _cached_viewport_center: Vector2 = Vector2(-99999.0, -99999.0)
+var _cached_camera_focus: Vector2 = Vector2(-99999.0, -99999.0)
+var _cached_zoom: float = -1.0
 var _cached_grid_center: Vector2 = Vector2.ZERO
 var _cached_grid_radius: float = -1.0
 
@@ -41,7 +43,7 @@ func configure(enabled: bool) -> void:
 
 func set_map_scroll(map_scroll: Node2D) -> void:
 	_map_scroll = map_scroll
-	_cached_canvas_to_map = Transform2D.IDENTITY
+	_invalidate_projection_cache()
 
 
 func update_region(center_x: int, center_y: int, visual_radius: int) -> void:
@@ -55,16 +57,21 @@ func on_view_changed() -> void:
 	sync_uniforms()
 
 
-## Updates canvas_to_map_local from scroll position and zoom without a scene-tree transform walk.
-func sync_scroll(scroll_pos: Vector2, zoom: float) -> void:
+## Authoritative path: explicit ViewProjection inverse uniforms (matches FogOverlay).
+func sync_canvas_transform(_map_scroll_node: Node2D = null) -> void:
 	if _shader_mat == null:
 		return
-	var safe_zoom: float = zoom if not is_zero_approx(zoom) else 1.0
-	var forward := Transform2D(Vector2(safe_zoom, 0.0), Vector2(0.0, safe_zoom), scroll_pos)
-	var canvas_to_map: Transform2D = forward.affine_inverse()
-	if canvas_to_map != _cached_canvas_to_map:
-		_shader_mat.set_shader_parameter("canvas_to_map_local", canvas_to_map)
-		_cached_canvas_to_map = canvas_to_map
+	var center: Vector2 = ViewProjection.get_screen_center_offset()
+	var focus: Vector2 = ViewProjection.map_scroll
+	var safe_zoom: float = ViewProjection.zoom
+	if is_zero_approx(safe_zoom):
+		safe_zoom = 1.0
+	_push_projection_uniforms(center, focus, safe_zoom)
+
+
+## Legacy entry point (used by unit tests).
+func sync_scroll(_scroll_pos: Vector2, _zoom: float) -> void:
+	sync_canvas_transform()
 
 
 func sync_uniforms(_viewport: Viewport = null) -> void:
@@ -76,8 +83,7 @@ func sync_uniforms(_viewport: Viewport = null) -> void:
 		_shader_mat.set_shader_parameter("enabled", enabled_param)
 		_cached_enabled_param = enabled_param
 
-	if _map_scroll != null:
-		sync_scroll(_map_scroll.global_position, _map_scroll.scale.x)
+	sync_canvas_transform()
 
 	var grid_center: Vector2 = Vector2(float(_center_x), float(_center_y))
 	if grid_center != _cached_grid_center:
@@ -90,6 +96,24 @@ func sync_uniforms(_viewport: Viewport = null) -> void:
 		_cached_grid_radius = grid_radius
 
 
+func _push_projection_uniforms(center: Vector2, focus: Vector2, safe_zoom: float) -> void:
+	if center != _cached_viewport_center:
+		_shader_mat.set_shader_parameter("viewport_center_px", center)
+		_cached_viewport_center = center
+	if focus != _cached_camera_focus:
+		_shader_mat.set_shader_parameter("camera_focus_map_px", focus)
+		_cached_camera_focus = focus
+	if not is_equal_approx(safe_zoom, _cached_zoom):
+		_shader_mat.set_shader_parameter("zoom", safe_zoom)
+		_cached_zoom = safe_zoom
+
+
+func _invalidate_projection_cache() -> void:
+	_cached_viewport_center = Vector2(-99999.0, -99999.0)
+	_cached_camera_focus = Vector2(-99999.0, -99999.0)
+	_cached_zoom = -1.0
+
+
 func _apply_static_uniforms() -> void:
 	if _shader_mat == null:
 		return
@@ -100,5 +124,6 @@ func _apply_static_uniforms() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
-		_cached_canvas_to_map = Transform2D.IDENTITY
+		ViewProjection.invalidate_screen_center_cache()
+		_invalidate_projection_cache()
 		sync_uniforms()

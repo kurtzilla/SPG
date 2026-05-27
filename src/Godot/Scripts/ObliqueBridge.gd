@@ -33,12 +33,9 @@ static func data_to_screen(x: float, y: float) -> Vector2:
 	return ViewTransformsRes.grid_to_map_local_px(x, y)
 
 
-static func global_screen_to_grid(screen_pos: Vector2, map_scroll: Node2D) -> Vector2:
-	if map_scroll == null:
-		return Vector2.ZERO
-	var ctx: ViewContext = ViewContext.from_viewport(map_scroll, null)
-	ctx.map_scroll = map_scroll
-	return ViewTransformsRes.canvas_to_grid(screen_pos, ctx)
+static func global_screen_to_grid(screen_pos: Vector2, _map_scroll: Node2D = null) -> Vector2:
+	var map_px: Vector2 = ViewProjection.screen_to_world(screen_pos)
+	return ViewTransformsRes.map_local_px_to_grid(map_px)
 
 
 static func grid_to_screen(x: int, y: int, z: int = 0) -> Vector2:

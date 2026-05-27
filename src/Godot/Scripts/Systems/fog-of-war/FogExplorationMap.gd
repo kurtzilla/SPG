@@ -122,14 +122,6 @@ func push_runtime_uniforms(material: ShaderMaterial) -> void:
 		material.set_shader_parameter(&"mask_sub_texel_offset", _mask_sub_texel_offset)
 		_cached_sub_texel = _mask_sub_texel_offset
 
-	if not is_equal_approx(_reveal_radius_world_px, _cached_reveal_radius_px):
-		material.set_shader_parameter(&"reveal_radius_screen_px", _reveal_radius_world_px)
-		_cached_reveal_radius_px = _reveal_radius_world_px
-
-	if not is_equal_approx(_reveal_feather_world_px, _cached_reveal_feather_px):
-		material.set_shader_parameter(&"reveal_feather_screen_px", _reveal_feather_world_px)
-		_cached_reveal_feather_px = _reveal_feather_world_px
-
 
 func chunk_map_rect(chunk_coord: Vector2i, chunk_size_cells: int, cell_px: int) -> Rect2:
 	var size_px: float = float(chunk_size_cells * cell_px)
