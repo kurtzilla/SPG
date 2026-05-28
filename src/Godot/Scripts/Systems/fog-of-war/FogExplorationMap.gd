@@ -5,7 +5,7 @@ extends Node
 @export var enabled: bool = true
 
 var _player: Node2D
-var _fog_overlay: Node2D
+var _fog_overlay: Node
 var _visibility: Object
 
 
@@ -18,7 +18,7 @@ func _read_fog_settings() -> void:
 		enabled = Settings.get_bool("fog.enabled")
 
 
-func setup(player: Node2D, fog_overlay: Node2D) -> void:
+func setup(player: Node2D, fog_overlay: Node) -> void:
 	_player = player
 	_fog_overlay = fog_overlay
 	var core: Node = get_node("/root/CoreBridge")

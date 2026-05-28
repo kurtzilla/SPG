@@ -1,7 +1,7 @@
 extends Node2D
 
 ## Sliding-window fog presentation buffer (1 texel = 1 grid cell).
-## Authoritative exploration history lives in Core VisibilityModel.
+## Buffer-centered map-local blanket; shader contract in .cursor/rules/architecture.md
 
 const FOG_SHADER: Shader = preload("res://src/Godot/Shaders/FogOverlay.gdshader")
 const ViewMetricsRes = preload("res://src/Godot/Scripts/ViewMetrics.gd")
@@ -13,6 +13,8 @@ const DEFAULT_BUFFER_SIZE_CELLS: int = 128
 const DEFAULT_RECENTER_MARGIN_CELLS: int = 24
 const DEFAULT_INITIAL_REVEAL_RADIUS: int = 20
 const DEFAULT_PLAYER_REVEAL_RADIUS: int = 8
+
+const BLANKET_MARGIN_SCALE: float = 1.5
 
 @onready var _fog_rect: ColorRect = $FogRect
 
@@ -35,16 +37,54 @@ var _configured: bool = false
 
 
 func _ready() -> void:
-	z_as_relative = false
-	z_index = 100
+	# Programmatic Architecture Guards (_map_scroll == WorldCanvas/Tiles in MainSandbox.tscn)
+	assert(
+		get_parent() != null and get_parent().name == "Tiles",
+		"CRITICAL ARCHITECTURAL BREAK: FogOverlay must be a direct child of _map_scroll."
+	)
+	assert(
+		position == Vector2.ZERO,
+		"CRITICAL ARCHITECTURAL BREAK: Parent FogOverlay Node2D must remain at world origin (0,0)."
+	)
+
 	_fog_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fog_rect.color = Color(0.0, 0.0, 0.0, 0.0)
+	_fog_rect.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_fog_rect.offset_left = 0.0
+	_fog_rect.offset_top = 0.0
+	_fog_rect.offset_right = 1.0
+	_fog_rect.offset_bottom = 1.0
+	_fog_rect.z_index = 10
 
 	_shader_mat = ShaderMaterial.new()
 	_shader_mat.shader = FOG_SHADER
 	_fog_rect.material = _shader_mat
 
+	set_process(false)
 	_read_buffer_settings()
+
+
+func _process(_delta: float) -> void:
+	if not _configured or _shader_mat == null:
+		return
+	_sync_fog_blanket_layout()
+
+
+func _sync_fog_blanket_layout() -> void:
+	var vp_size: Vector2 = get_viewport_rect().size
+	var current_zoom: float = maxf(ViewProjection.zoom, 0.0001)
+	var world_view_size: Vector2 = (vp_size / current_zoom) * BLANKET_MARGIN_SCALE
+	var cell_px: float = float(ViewMetricsRes.CELL_SIZE_PX)
+	var buffer_center_px: Vector2 = Vector2(_current_buffer_center_grid) * cell_px
+	var blanket_origin_px: Vector2 = buffer_center_px - world_view_size * 0.5
+
+	_fog_rect.size = Vector2.ONE
+	_fog_rect.scale = world_view_size
+	# Map-local placement under _map_scroll; must match world_blanket_origin_px (not canvas global).
+	_fog_rect.position = blanket_origin_px
+
+	_shader_mat.set_shader_parameter(&"world_blanket_origin_px", blanket_origin_px)
+	_shader_mat.set_shader_parameter(&"world_blanket_size_px", world_view_size)
 
 
 func get_shader_material() -> ShaderMaterial:
@@ -52,27 +92,24 @@ func get_shader_material() -> ShaderMaterial:
 
 
 func set_enabled_visible(fog_enabled: bool) -> void:
-	visible = fog_enabled
+	_fog_rect.visible = fog_enabled
 
 
-## Re-align fog quad + texture after scroll/zoom changes (viewport-sized coverage check).
+## Buffer recenters when the player nears the window edge; blanket layout runs in _process.
 func sync_view_transform(
-	viewport_size: Vector2,
+	_viewport_size: Vector2,
 	zoom: float,
 	player_cell: Vector2i,
-	camera_center: Vector2
+	_camera_center: Vector2
 ) -> void:
 	if not _configured or _visibility == null:
 		return
 
-	_sync_view_uniforms(viewport_size, zoom, camera_center)
-	_warn_if_viewport_exceeds_buffer(viewport_size, zoom)
+	_warn_if_viewport_exceeds_buffer(_viewport_size, zoom)
 
 	if player_cell != _current_buffer_center_grid or _needs_recenter(player_cell):
 		_recenter_buffer(player_cell, 0)
 	else:
-		_apply_rect_layout()
-		_sync_buffer_center_uniform()
 		_fill_buffer_from_core()
 		_fog_texture.update(_fog_image)
 
@@ -89,13 +126,15 @@ func setup(visibility: Object, start_cell: Vector2i) -> void:
 
 	_current_buffer_center_grid = start_cell
 	_recompute_buffer_origin()
-	_apply_rect_layout()
 	_bind_shader_uniforms()
+	_sync_buffer_center_shader()
 
 	_configured = true
 	_is_first_draw = true
 	_last_reveal_cell = Vector2i(999999, 999999)
 	_bootstrap_initial_reveal(start_cell)
+
+	set_process(true)
 
 
 func on_player_cell_changed(cell: Vector2i) -> void:
@@ -138,15 +177,24 @@ func _needs_recenter(cell: Vector2i) -> bool:
 func _recenter_buffer(new_center: Vector2i, pending_radius: int) -> void:
 	_current_buffer_center_grid = new_center
 	_recompute_buffer_origin()
-	_apply_rect_layout()
-	_sync_buffer_center_uniform()
+	_sync_buffer_center_shader()
 
 	_fog_image.fill(Color(0, 0, 0, 1))
 	_fill_buffer_from_core()
-	reveal_cells_at(_last_reveal_cell, pending_radius)
+	var radius: int = _effective_reveal_radius(pending_radius)
+	reveal_cells_at(new_center, radius)
 	_fog_texture.update(_fog_image)
 
 
+func _effective_reveal_radius(pending_radius: int) -> int:
+	if pending_radius > 0:
+		return pending_radius
+	if _is_first_draw:
+		return _initial_reveal_radius
+	return _player_reveal_radius
+
+
+## Bulk history restore: row-major mask from Core (one IsRevealed per buffer texel).
 func _fill_buffer_from_core() -> void:
 	var origin: Vector2i = _buffer_origin_grid
 	var mask: PackedByteArray = PackedByteArray(
@@ -194,20 +242,13 @@ func _recompute_buffer_origin() -> void:
 	_buffer_origin_grid = _current_buffer_center_grid - Vector2i(half, half)
 
 
-func _apply_rect_layout() -> void:
-	var vp_size: Vector2 = get_viewport_rect().size
-	position = Vector2.ZERO
-	_fog_rect.position = Vector2.ZERO
-	_fog_rect.size = vp_size
-	_fog_rect.offset_left = 0.0
-	_fog_rect.offset_top = 0.0
-	_fog_rect.offset_right = vp_size.x
-	_fog_rect.offset_bottom = vp_size.y
-
-
-func _world_buffer_center_px() -> Vector2:
-	var cell_px: float = float(ViewMetricsRes.CELL_SIZE_PX)
-	return Vector2(_current_buffer_center_grid) * cell_px
+func _sync_buffer_center_shader() -> void:
+	if _shader_mat == null:
+		return
+	var cell_px := float(ViewMetricsRes.CELL_SIZE_PX)
+	var buffer_center_px := Vector2(_current_buffer_center_grid) * cell_px
+	_shader_mat.set_shader_parameter(&"buffer_size_cells", float(_buffer_size_cells))
+	_shader_mat.set_shader_parameter(&"world_buffer_center_px", buffer_center_px)
 
 
 func _bind_shader_uniforms() -> void:
@@ -216,29 +257,9 @@ func _bind_shader_uniforms() -> void:
 	_shader_mat.set_shader_parameter(&"fog_data_texture", _fog_texture)
 	_shader_mat.set_shader_parameter(&"buffer_size_cells", float(_buffer_size_cells))
 	_shader_mat.set_shader_parameter(&"cell_size_px", float(ViewMetricsRes.CELL_SIZE_PX))
-	_shader_mat.set_shader_parameter(&"zoom", 1.0)
-	_shader_mat.set_shader_parameter(&"rect_size", _fog_rect.size)
-	_shader_mat.set_shader_parameter(&"world_camera_center_px", _world_buffer_center_px())
 	_shader_mat.set_shader_parameter(&"fog_color", Color(0.0, 0.0, 0.0, 0.85))
-	_sync_buffer_center_uniform()
-
-
-func _sync_buffer_center_uniform() -> void:
-	if _shader_mat != null:
-		_shader_mat.set_shader_parameter(&"world_buffer_center_px", _world_buffer_center_px())
-
-
-func _sync_view_uniforms(viewport_size: Vector2, view_zoom: float, camera_center: Vector2) -> void:
-	if _shader_mat == null:
-		return
-	var vp_size: Vector2 = viewport_size
-	_fog_rect.size = vp_size
-	_fog_rect.offset_right = vp_size.x
-	_fog_rect.offset_bottom = vp_size.y
-	_shader_mat.set_shader_parameter(&"rect_size", vp_size)
-	_shader_mat.set_shader_parameter(&"world_camera_center_px", camera_center)
-	_shader_mat.set_shader_parameter(&"world_buffer_center_px", _current_buffer_center_grid * 64.0)
-	_shader_mat.set_shader_parameter(&"zoom", view_zoom if has_node("/root/ViewProjection") else 1.0)
+	_shader_mat.set_shader_parameter(&"world_blanket_origin_px", Vector2.ZERO)
+	_shader_mat.set_shader_parameter(&"world_blanket_size_px", Vector2.ONE)
 
 
 func _bootstrap_initial_reveal(start_cell: Vector2i) -> void:

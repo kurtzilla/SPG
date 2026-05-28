@@ -12,6 +12,7 @@ You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated fr
   - `.docs/dev_guide.md` — current phase goals and immediate tasks
 
 - Never write code that violates the modular boundaries in `architecture.md`.
+- Fog of War changes must satisfy the **SYSTEM ARCHITECTURE DIRECTIVE: Fog of War System** in `architecture.md` (scene hierarchy, buffer-centered blanket bounds, shader `world_px` contract, OOB `alpha_mask = 1.0`).
 
 # Repomix — opt-in only
 

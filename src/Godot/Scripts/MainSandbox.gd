@@ -38,8 +38,6 @@ func _ready() -> void:
 	y_sort_enabled = false
 	_map_scroll.y_sort_enabled = false
 	_snap_scroll_to_pixel = ProjectSettings.get_setting("rendering/2d/snap/snap_2d_transforms_to_pixel")
-	_mount_fog_overlay_to_screen_space()
-
 	if not ViewProjection.view_changed.is_connected(_on_view_changed):
 		ViewProjection.view_changed.connect(_on_view_changed)
 
@@ -168,17 +166,6 @@ func _setup_fog() -> void:
 	_fog.bootstrap_exploration(spawn_grid)
 	_fog_overlay.set_enabled_visible(_fog.enabled)
 	_chunk_manager.force_immediate_startup_pass(spawn_grid)
-
-
-func _mount_fog_overlay_to_screen_space() -> void:
-	if _fog_overlay == null:
-		return
-	var parent: Node = _fog_overlay.get_parent()
-	if parent == self:
-		return
-	if parent != null:
-		parent.remove_child(_fog_overlay)
-	add_child(_fog_overlay)
 
 
 func _sync_spawn_tracking_from_player() -> void:
