@@ -117,10 +117,12 @@ func _finish_ready_viewport_dependent() -> void:
 
 
 func _process(_delta: float) -> void:
+	if _player != null and is_instance_valid(_player):
+		_sync_view_scroll_and_overlays(false)
+		_sync_fog_view_transform()
+
 	if _view_dirty or _view_force_sync:
 		_flush_view_if_dirty()
-	else:
-		_sync_fog_view_transform()
 
 
 func _notification(what: int) -> void:
@@ -172,7 +174,6 @@ func _on_player_grid_cell_changed(cell: Vector2i) -> void:
 func _on_player_map_position_changed(map_px: Vector2) -> void:
 	if _chunk_manager != null:
 		_chunk_manager.sync_center_from_player_map_px(map_px)
-	_mark_view_dirty(true)
 
 
 func _bootstrap_after_frame() -> void:
@@ -288,8 +289,6 @@ func _sync_view_scroll_and_overlays(force: bool = false) -> void:
 
 	if scroll_changed or zoom_changed:
 		_grid_overlay.sync_canvas_transform(_map_scroll)
-		if scroll_changed or zoom_changed:
-			_sync_fog_view_transform()
 		if scroll_changed:
 			_verify_projection_canvas_parity()
 
@@ -301,29 +300,27 @@ func _sync_fog_view_transform() -> void:
 	if _fog_overlay == null or _player == null or not is_instance_valid(_player):
 		return
 	var center_grid: Vector2i = _resolve_authoritative_map_center()
-	var focus_px: Vector2 = _player.position
-	if ViewProjection.is_camera_registered():
-		focus_px = ViewProjection.map_scroll
+	var focus_px: Vector2 = ViewProjection.resolve_camera_focus_map_px(_player)
 	var vp_center: Vector2 = ViewProjection.get_screen_center_offset()
 	var current_zoom: float = ViewProjection.zoom if ViewProjection.zoom > 0.0 else 1.0
 	_fog_overlay.sync_view_transform(center_grid, focus_px, current_zoom, vp_center)
 
 
 func _resolve_authoritative_map_center() -> Vector2i:
-	var map_center: Vector2i = ViewProjection.get_camera_center_map()
-	if not ViewProjection.is_camera_registered():
-		var players: Array[Node] = get_tree().get_nodes_in_group("player")
-		if not players.is_empty():
-			var player_node := players[0] as Node2D
-			if player_node != null:
-				ViewProjection.update_camera_position(player_node.position, true)
-				map_center = ViewProjection.resolve_map_center_from_player(player_node)
-				_mark_view_dirty(true)
-				return map_center
+	if ViewProjection.is_camera_registered():
+		return ViewProjection.get_camera_center_map()
+	var players: Array[Node] = get_tree().get_nodes_in_group("player")
+	if not players.is_empty():
+		var player_node := players[0] as Node2D
+		if player_node != null:
+			ViewProjection.update_camera_position(player_node.position, true)
+			_mark_view_dirty(true)
+			return ViewProjection.resolve_map_center_from_player(player_node)
 	if _player != null and is_instance_valid(_player):
-		ViewProjection.update_camera_position(_player.position)
+		ViewProjection.update_camera_position(_player.position, true)
+		_mark_view_dirty(true)
 		return ViewProjection.map_local_px_to_grid_cell(_player.position)
-	return map_center
+	return Vector2i.ZERO
 
 
 ## Returns false when visible rect is not ready (zero size); scroll must not run until true.
@@ -399,18 +396,18 @@ func _mark_view_dirty(force: bool = false) -> void:
 
 
 func _flush_view_if_dirty() -> void:
-	if not _view_dirty:
+	if not _view_dirty and not _view_force_sync:
 		return
 	var force: bool = _view_force_sync
-	print("[MainSandbox:flush] force=%s" % force)
 	_view_dirty = false
 	_view_force_sync = false
-	_sync_view_scroll_and_overlays(force)
-	if force and _grid_overlay != null:
-		_grid_overlay.sync_uniforms(null, true)
-	if _fog_overlay != null and _player != null:
+	if force:
+		_sync_view_scroll_and_overlays(true)
+		if _grid_overlay != null:
+			_grid_overlay.sync_uniforms(null, true)
 		_sync_fog_view_transform()
-	if force or _debug_flush_log_remaining > 0:
+	if OS.is_debug_build() and (force or _debug_flush_log_remaining > 0):
+		print("[MainSandbox:flush] force=%s" % force)
 		_debug_log_view_metrics("flush")
 		if not force and _debug_flush_log_remaining > 0:
 			_debug_flush_log_remaining -= 1

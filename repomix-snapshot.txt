@@ -125,29 +125,7 @@ src/Godot/Shaders/FogOverlay.gdshader
 src/Godot/Shaders/FogOverlay.gdshader.uid
 src/Godot/Shaders/GridOverlay.gdshader
 src/Godot/Shaders/GridOverlay.gdshader.uid
-src/SPG.Core.csproj</directory_structure><files>This section contains the contents of the repository&apos;s files.<file path="src/Godot/Scripts/ViewCameraTracker.gd">extends Node
-
-## Pushes a Node2D focus (player or Camera2D) into ViewProjection each physics tick.
-
-var _camera_source: Node2D = null
-
-
-func _ready() -&gt; void:
-	var parent_source := get_parent() as Node2D
-	if parent_source != null:
-		register_source(parent_source)
-
-
-func register_source(source: Node2D) -&gt; void:
-	_camera_source = source
-	if _camera_source != null:
-		ViewProjection.register_camera(_camera_source)
-
-
-func _physics_process(_delta: float) -&gt; void:
-	if _camera_source == null or not is_instance_valid(_camera_source):
-		return
-	ViewProjection.update_camera_position(_camera_source.position)</file><file path="src/Godot/Scripts/ViewCameraTracker.gd.uid">uid://d37omkq736u53</file><file path=".cursor/commands/repomix-run.md">---
+src/SPG.Core.csproj</directory_structure><files>This section contains the contents of the repository&apos;s files.<file path=".cursor/commands/repomix-run.md">---
 description: Generates a codebase snapshot quietly
 ---
 
@@ -971,7 +949,57 @@ static func to_section_name(ctx: Context) -&gt; String:
 		Context.PLAYER:
 			return &quot;player&quot;
 		_:
-			return &quot;game&quot;</file><file path="src/Godot/Scripts/SettingsContext.gd.uid">uid://cn0jai533kk4m</file><file path="src/Godot/Scripts/SettingsPanel.gd.uid">uid://xps63hp34thj</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd.uid">uid://dmawn4jarjyxy</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd.uid">uid://de0pe5d3agf4l</file><file path="src/Godot/Scripts/TerrainSandboxTileSet.gd.uid">uid://ci2487hxkfw0j</file><file path="src/Godot/Scripts/TerrainTileTextures.gd">class_name TerrainTileTextures
+			return &quot;game&quot;</file><file path="src/Godot/Scripts/SettingsContext.gd.uid">uid://cn0jai533kk4m</file><file path="src/Godot/Scripts/SettingsPanel.gd.uid">uid://xps63hp34thj</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd.uid">uid://dmawn4jarjyxy</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd.uid">uid://de0pe5d3agf4l</file><file path="src/Godot/Scripts/TerrainSandboxTileSet.gd.uid">uid://ci2487hxkfw0j</file><file path="src/Godot/Scripts/TerrainTileTextures.gd.uid">uid://cfs3brjf6gp8v</file><file path="src/Godot/Scripts/ViewCameraTracker.gd">extends Node
+
+## Pushes a Node2D focus (player or Camera2D) into ViewProjection each physics tick.
+
+var _camera_source: Node2D = null
+
+
+func _ready() -&gt; void:
+	var parent_source := get_parent() as Node2D
+	if parent_source != null:
+		register_source(parent_source)
+
+
+func register_source(source: Node2D) -&gt; void:
+	_camera_source = source
+	if _camera_source != null:
+		ViewProjection.register_camera(_camera_source)
+
+
+func _physics_process(_delta: float) -&gt; void:
+	if _camera_source == null or not is_instance_valid(_camera_source):
+		return
+	ViewProjection.update_camera_position(_camera_source.position)</file><file path="src/Godot/Scripts/ViewCameraTracker.gd.uid">uid://d37omkq736u53</file><file path="src/Godot/Scripts/ViewContext.gd.uid">uid://bq1f71m072xaj</file><file path="src/Godot/Scripts/ViewMetrics.gd.uid">uid://d33x5gfnuvuju</file><file path="src/Godot/Scripts/ViewProjection.gd.uid">uid://cttfcs6h51302</file><file path="src/Godot/Scripts/ViewTransforms.gd.uid">uid://bk7i8cic0di84</file><file path="src/Godot/Scripts/World/ChunkData.gd.uid">uid://dco58k1klmgm6</file><file path="src/Godot/Scripts/World/ChunkLoadJob.gd.uid">uid://bqj8x7k2m4nwp</file><file path="src/Godot/Scripts/World/ChunkManager.gd.uid">uid://c2r5oom8mgi3k</file><file path="src/Godot/Scripts/World/TerrainType.gd">extends Object
+
+## Terrain tile ordinals (match TileSet terrain ids).
+
+const LAND: int = 0
+const WATER: int = 1
+const MUD: int = 2</file><file path="src/Godot/Scripts/World/TerrainType.gd.uid">uid://e35taajap82x</file><file path="src/Godot/Shaders/FogOverlay.gdshader.uid">uid://c4iu7p14yrpbi</file><file path="src/Godot/Shaders/GridOverlay.gdshader.uid">uid://7su4xrms61rx</file><file path=".cursor/rules/godot-performance.mdc">---
+description: Rules for writing high-performance 2D Godot 4 scripts
+globs: &quot;/*.gd&quot;
+alwaysApply: true
+---
+
+You are an expert game developer specializing in high-performance Godot 4 (GDScript).
+Always prioritize GPU-bound or built-in server solutions over heavy CPU loops.
+
+CRITICAL WORKFLOW CONSTRAINT:
+Before writing any complex system (like chunk management, procedural generation, or data structures), you must always output a &quot;Self-Correction Step&quot;.
+
+- Explicitly state any potential performance traps or inefficiencies in your initial thought process.
+- Explain how you are bypassing them (e.g., using Dictionaries instead of Arrays, avoiding per-frame node instantiations).
+- Only provide code that has passed your own internal performance audit.</file><file path="src/Core/Models/CellVisibility.cs">namespace SPG.Core;
+
+public enum CellVisibility
+{
+	Hidden = 0,
+	Revealed = 1,
+	// Reserved for future three-state visibility (e.g. in-sight vs explored).
+	// Visible = 2,
+}</file><file path="src/Godot/Scripts/TerrainTileTextures.gd">class_name TerrainTileTextures
 extends RefCounted
 
 ## Solid terrain tiles for grid rendering.
@@ -1003,7 +1031,7 @@ static func _create_solid_fill_texture(fill: Color) -&gt; ImageTexture:
 
 
 static func _image_to_texture(image: Image) -&gt; ImageTexture:
-	return ImageTexture.create_from_image(image)</file><file path="src/Godot/Scripts/TerrainTileTextures.gd.uid">uid://cfs3brjf6gp8v</file><file path="src/Godot/Scripts/ViewContext.gd.uid">uid://bq1f71m072xaj</file><file path="src/Godot/Scripts/ViewMetrics.gd.uid">uid://d33x5gfnuvuju</file><file path="src/Godot/Scripts/ViewProjection.gd.uid">uid://cttfcs6h51302</file><file path="src/Godot/Scripts/ViewTransforms.gd.uid">uid://bk7i8cic0di84</file><file path="src/Godot/Scripts/World/ChunkData.gd.uid">uid://dco58k1klmgm6</file><file path="src/Godot/Scripts/World/ChunkLoadJob.gd">class_name ChunkLoadJob
+	return ImageTexture.create_from_image(image)</file><file path="src/Godot/Scripts/World/ChunkLoadJob.gd">class_name ChunkLoadJob
 extends RefCounted
 
 ## Per-chunk async load state for ChunkManager&apos;s cooperative queue.
@@ -1019,35 +1047,164 @@ var cell_index: int = 0
 ## Chunk AABB does not overlap spawn safe zone — skip per-cell safe checks.
 var skip_safe_zone: bool = false
 ## Chunk AABB is fully inside spawn safe zone — fill LAND without noise.
-var fill_land: bool = false</file><file path="src/Godot/Scripts/World/ChunkLoadJob.gd.uid">uid://bqj8x7k2m4nwp</file><file path="src/Godot/Scripts/World/ChunkManager.gd.uid">uid://c2r5oom8mgi3k</file><file path="src/Godot/Scripts/World/TerrainType.gd">extends Object
+var fill_land: bool = false</file><file path=".gitignore"># Godot 4+ specific ignores
+.godot/
+.nomedia
+.repomix-snapshot.txt
 
-## Terrain tile ordinals (match TileSet terrain ids).
+# Godot-specific ignores
+.import/
+export.cfg
+export_credentials.cfg
+*.tmp
 
-const LAND: int = 0
-const WATER: int = 1
-const MUD: int = 2</file><file path="src/Godot/Scripts/World/TerrainType.gd.uid">uid://e35taajap82x</file><file path="src/Godot/Shaders/FogOverlay.gdshader.uid">uid://c4iu7p14yrpbi</file><file path="src/Godot/Shaders/GridOverlay.gdshader.uid">uid://7su4xrms61rx</file><file path=".cursor/rules/godot-performance.mdc">---
-description: Rules for writing high-performance 2D Godot 4 scripts
-globs: &quot;/*.gd&quot;
-alwaysApply: true
----
+# Imported translations (automatically generated from CSV files)
+*.translation
 
-You are an expert game developer specializing in high-performance Godot 4 (GDScript).
-Always prioritize GPU-bound or built-in server solutions over heavy CPU loops.
+# Mono-specific ignores
+.mono/
+data_*/
+mono_crash.*.json
 
-CRITICAL WORKFLOW CONSTRAINT:
-Before writing any complex system (like chunk management, procedural generation, or data structures), you must always output a &quot;Self-Correction Step&quot;.
+# .NET build output
+bin/
+obj/
+artifacts/</file><file path="SPG.csproj.old">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.6.3&quot;&gt;
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
+    &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
+    &lt;RootNamespace&gt;SPG&lt;/RootNamespace&gt;
+    &lt;AssemblyName&gt;SPG&lt;/AssemblyName&gt;
+    &lt;Nullable&gt;enable&lt;/Nullable&gt;
+    &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
+  &lt;/PropertyGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;ProjectReference Include=&quot;src\SPG.Core.csproj&quot; /&gt;
+  &lt;/ItemGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;Compile Remove=&quot;src\Core\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;src\obj\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;src\bin\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;artifacts\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;tests\**\*.cs&quot; /&gt;
+  &lt;/ItemGroup&gt;
+&lt;/Project&gt;</file><file path="SPG.csproj.old.1">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.3.0&quot;&gt;
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
+    &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
+    &lt;RootNamespace&gt;SPG&lt;/RootNamespace&gt;
+    &lt;AssemblyName&gt;SPG&lt;/AssemblyName&gt;
+    &lt;Nullable&gt;enable&lt;/Nullable&gt;
+    &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
+  &lt;/PropertyGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;ProjectReference Include=&quot;src\SPG.Core.csproj&quot; /&gt;
+  &lt;/ItemGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;Compile Remove=&quot;src\Core\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;src\obj\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;src\bin\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;artifacts\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;tests\**\*.cs&quot; /&gt;
+  &lt;/ItemGroup&gt;
+&lt;/Project&gt;</file><file path="src/Core/Math/GridMath.cs">namespace SPG.Core;
 
-- Explicitly state any potential performance traps or inefficiencies in your initial thought process.
-- Explain how you are bypassing them (e.g., using Dictionaries instead of Arrays, avoiding per-frame node instantiations).
-- Only provide code that has passed your own internal performance audit.</file><file path="src/Core/Models/CellVisibility.cs">namespace SPG.Core;
-
-public enum CellVisibility
+/// &lt;summary&gt;
+/// Grid-index utilities in Core space. 1 cell = 1 meter.
+/// Must match game_settings.json scale.meters_per_cell and ViewMetrics.METERS_PER_CELL in Godot (manual sync).
+/// &lt;/summary&gt;
+public static class GridMath
 {
-	Hidden = 0,
-	Revealed = 1,
-	// Reserved for future three-state visibility (e.g. in-sight vs explored).
-	// Visible = 2,
-}</file><file path="src/Godot/Scenes/Player.tscn">[gd_scene load_steps=3 format=3]
+	// Must match game_settings.json scale.meters_per_cell.
+	public const float MetersPerCell = 1.0f;
+
+	public static readonly (int dx, int dy)[] Neighbor4 =
+	{
+		(0, -1),
+		(0, 1),
+		(1, 0),
+		(-1, 0),
+	};
+
+	public static readonly (int dx, int dy)[] Neighbor8 =
+	{
+		(0, -1),
+		(0, 1),
+		(1, 0),
+		(-1, 0),
+		(1, -1),
+		(1, 1),
+		(-1, -1),
+		(-1, 1),
+	};
+
+	public static (int gx, int gy) FloorToCell(float worldX, float worldY) =&gt;
+		((int)MathF.Floor(worldX / MetersPerCell), (int)MathF.Floor(worldY / MetersPerCell));
+
+	public static (float x, float y) CellCenter(int gx, int gy) =&gt;
+		(gx + 0.5f, gy + 0.5f);
+
+	public static (float x, float y) CellCornerWorldM(int gx, int gy) =&gt;
+		(gx * MetersPerCell, gy * MetersPerCell);
+
+	public static (float x, float y) CellCenterWorldM(int gx, int gy)
+	{
+		var (cx, cy) = CellCenter(gx, gy);
+		return (cx * MetersPerCell, cy * MetersPerCell);
+	}
+
+	public static (float minX, float minY, float maxX, float maxY) CellAabbWorldM(int gx, int gy)
+	{
+		var (minX, minY) = CellCornerWorldM(gx, gy);
+		return (minX, minY, minX + MetersPerCell, minY + MetersPerCell);
+	}
+
+	public static int Manhattan(int ax, int ay, int bx, int by) =&gt;
+		Math.Abs(ax - bx) + Math.Abs(ay - by);
+
+	public static int Chebyshev(int ax, int ay, int bx, int by) =&gt;
+		Math.Max(Math.Abs(ax - bx), Math.Abs(ay - by));
+
+	public static float EuclideanSquared(int ax, int ay, int bx, int by)
+	{
+		float dx = ax - bx;
+		float dy = ay - by;
+		return dx * dx + dy * dy;
+	}
+}</file><file path="src/Godot/Interop/CoreBridge.cs">using Godot;
+
+namespace SPG.Interop;
+
+/// &lt;summary&gt;
+/// Autoload factory for Core types exposed to GDScript.
+/// &lt;/summary&gt;
+public partial class CoreBridge : Node
+{
+	public PartyModelGd CreatePartyModel() =&gt; new();
+
+	public VisibilityModelGd CreateVisibilityModel() =&gt; new();
+
+	public CharacterModelGd CreateCharacter(string id, string name, int startX = 0, int startY = 0) =&gt;
+		new(id, name, startX, startY);
+
+	public GridMathGd CreateGridMath() =&gt; new();
+}</file><file path="src/Godot/Scenes/GridOverlay.tscn">[gd_scene load_steps=2 format=3 uid=&quot;uid://dq8gridoverlay1&quot;]
+
+[ext_resource type=&quot;Script&quot; path=&quot;res://src/Godot/Scripts/GridOverlay.gd&quot; id=&quot;1_grid_overlay&quot;]
+
+[node name=&quot;GridLayer&quot; type=&quot;CanvasLayer&quot;]
+follow_viewport_enabled = true
+layer = 0
+
+[node name=&quot;GridRect&quot; type=&quot;ColorRect&quot; parent=&quot;.&quot;]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+script = ExtResource(&quot;1_grid_overlay&quot;)</file><file path="src/Godot/Scenes/Player.tscn">[gd_scene load_steps=3 format=3]
 
 [ext_resource type=&quot;Script&quot; path=&quot;res://src/Godot/Scripts/PlayerController.gd&quot; id=&quot;1_player_controller&quot;]
 
@@ -1061,7 +1218,383 @@ script = ExtResource(&quot;1_player_controller&quot;)
 [node name=&quot;Sprite2D&quot; type=&quot;Sprite2D&quot; parent=&quot;.&quot;]
 
 [node name=&quot;CollisionShape2D&quot; type=&quot;CollisionShape2D&quot; parent=&quot;.&quot;]
-shape = SubResource(&quot;RectangleShape2D_player&quot;)</file><file path="src/Godot/Scripts/PlayerController.gd">extends CharacterBody2D
+shape = SubResource(&quot;RectangleShape2D_player&quot;)</file><file path="src/Godot/Scenes/SettingsPanel.tscn">[gd_scene load_steps=4 format=3 uid=&quot;uid://csettingspanel1&quot;]
+
+[ext_resource type=&quot;Script&quot; path=&quot;res://src/Godot/Scripts/SettingsPanel.gd&quot; id=&quot;1_settings_panel&quot;]
+
+[sub_resource type=&quot;StyleBoxFlat&quot; id=&quot;StyleBoxFlat_panel&quot;]
+bg_color = Color(0.08, 0.09, 0.11, 0.94)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.26, 0.28, 0.32, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type=&quot;StyleBoxFlat&quot; id=&quot;StyleBoxFlat_title_header&quot;]
+bg_color = Color(0.05, 0.06, 0.08, 1)
+border_width_bottom = 1
+border_color = Color(0.2, 0.22, 0.26, 1)
+content_margin_left = 20.0
+content_margin_top = 8.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+
+[sub_resource type=&quot;StyleBoxFlat&quot; id=&quot;StyleBoxFlat_stats_body&quot;]
+bg_color = Color(0.1, 0.11, 0.13, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.18, 0.2, 0.24, 1)
+content_margin_left = 16.0
+content_margin_top = 12.0
+content_margin_right = 16.0
+content_margin_bottom = 4.0
+
+[node name=&quot;SettingsUi&quot; type=&quot;CanvasLayer&quot;]
+layer = 100
+follow_viewport_enabled = true
+script = ExtResource(&quot;1_settings_panel&quot;)
+
+[node name=&quot;HudRoot&quot; type=&quot;Control&quot; parent=&quot;.&quot;]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name=&quot;TopRightVBox&quot; type=&quot;VBoxContainer&quot; parent=&quot;HudRoot&quot;]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -456.0
+offset_top = 16.0
+offset_right = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_constants/separation = 0
+alignment = 0
+
+[node name=&quot;SettingsPanelRoot&quot; type=&quot;PanelContainer&quot; parent=&quot;HudRoot/TopRightVBox&quot;]
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource(&quot;StyleBoxFlat_panel&quot;)
+
+[node name=&quot;ContentMargin&quot; type=&quot;MarginContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot&quot;]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name=&quot;PanelVBox&quot; type=&quot;VBoxContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin&quot;]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name=&quot;TitleHeaderPanel&quot; type=&quot;PanelContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox&quot;]
+layout_mode = 2
+theme_override_styles/panel = SubResource(&quot;StyleBoxFlat_title_header&quot;)
+
+[node name=&quot;TitleRow&quot; type=&quot;HBoxContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/TitleHeaderPanel&quot;]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name=&quot;Title&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/TitleHeaderPanel/TitleRow&quot;]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 26
+text = &quot;Settings&quot;
+
+[node name=&quot;ShowPanelToggle&quot; type=&quot;Button&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/TitleHeaderPanel/TitleRow&quot;]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+flat = true
+text = &quot;▲&quot;
+tooltip_text = &quot;Hide stats panel&quot;
+
+[node name=&quot;MainBodyVBox&quot; type=&quot;VBoxContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox&quot;]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name=&quot;StatsBlock&quot; type=&quot;PanelContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox&quot;]
+layout_mode = 2
+theme_override_styles/panel = SubResource(&quot;StyleBoxFlat_stats_body&quot;)
+
+[node name=&quot;StatsMargin&quot; type=&quot;MarginContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock&quot;]
+layout_mode = 2
+theme_override_constants/margin_bottom = 4
+
+[node name=&quot;StatsGrid&quot; type=&quot;GridContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin&quot;]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 8
+columns = 2
+
+[node name=&quot;FpsKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;FPS&quot;
+
+[node name=&quot;FpsValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;--&quot;
+horizontal_alignment = 2
+
+[node name=&quot;ZoomKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;Zoom&quot;
+
+[node name=&quot;ZoomValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;--&quot;
+horizontal_alignment = 2
+
+[node name=&quot;FootKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;Foot&quot;
+
+[node name=&quot;FootValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;--&quot;
+horizontal_alignment = 2
+
+[node name=&quot;MouseKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;Mouse Pos&quot;
+tooltip_text = &quot;Cursor position in viewport (pixels)&quot;
+
+[node name=&quot;MouseValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;--&quot;
+horizontal_alignment = 2
+
+[node name=&quot;SpeedKey&quot; type=&quot;Button&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_colors/font_hover_color = Color(0.65, 0.68, 0.72, 1)
+theme_override_colors/font_pressed_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+flat = true
+text = &quot;TPS&quot;
+tooltip_text = &quot;Tiles per second — grid cells traversed per second&quot;
+
+[node name=&quot;SpeedValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;--&quot;
+horizontal_alignment = 2
+
+[node name=&quot;MovementBlock&quot; type=&quot;PanelContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox&quot;]
+layout_mode = 2
+theme_override_styles/panel = SubResource(&quot;StyleBoxFlat_stats_body&quot;)
+
+[node name=&quot;MovementMargin&quot; type=&quot;MarginContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock&quot;]
+layout_mode = 2
+theme_override_constants/margin_bottom = 4
+
+[node name=&quot;MovementVBox&quot; type=&quot;VBoxContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin&quot;]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name=&quot;MovementTitle&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;Player Movement&quot;
+
+[node name=&quot;MovementGrid&quot; type=&quot;GridContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox&quot;]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 8
+columns = 3
+
+[node name=&quot;MaxSpeedKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;Max Speed&quot;
+
+[node name=&quot;MaxSpeedSlider&quot; type=&quot;HSlider&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 1.0
+step = 0.1
+tick_count = 0
+value = 0.5
+
+[node name=&quot;MaxSpeedValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;250&quot;
+horizontal_alignment = 2
+
+[node name=&quot;AccelKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;Acceleration&quot;
+
+[node name=&quot;AccelSlider&quot; type=&quot;HSlider&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 1.0
+step = 0.1
+tick_count = 0
+value = 0.5
+
+[node name=&quot;AccelValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;25&quot;
+horizontal_alignment = 2
+
+[node name=&quot;FrictionKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;Friction&quot;
+
+[node name=&quot;FrictionSlider&quot; type=&quot;HSlider&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 1.0
+step = 0.1
+tick_count = 0
+value = 0.5
+
+[node name=&quot;FrictionValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;45&quot;
+horizontal_alignment = 2
+
+[node name=&quot;FogBlock&quot; type=&quot;PanelContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox&quot;]
+layout_mode = 2
+theme_override_styles/panel = SubResource(&quot;StyleBoxFlat_stats_body&quot;)
+
+[node name=&quot;FogMargin&quot; type=&quot;MarginContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock&quot;]
+layout_mode = 2
+theme_override_constants/margin_bottom = 4
+
+[node name=&quot;FogVBox&quot; type=&quot;VBoxContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin&quot;]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name=&quot;FogTitle&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;Fog of War&quot;
+
+[node name=&quot;FogGrid&quot; type=&quot;GridContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox&quot;]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 8
+columns = 3
+
+[node name=&quot;InitialRevealKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;Initial Reveal Radius *&quot;
+
+[node name=&quot;InitialRevealSlider&quot; type=&quot;HSlider&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 1.0
+max_value = 256.0
+step = 1.0
+tick_count = 0
+value = 20.0
+
+[node name=&quot;InitialRevealValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;20&quot;
+horizontal_alignment = 2
+
+[node name=&quot;PlayerRevealKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;Player Reveal Radius *&quot;
+
+[node name=&quot;PlayerRevealSlider&quot; type=&quot;HSlider&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 1.0
+max_value = 256.0
+step = 1.0
+tick_count = 0
+value = 8.0
+
+[node name=&quot;PlayerRevealValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;8&quot;
+horizontal_alignment = 2
+
+[node name=&quot;LegendMargin&quot; type=&quot;MarginContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox&quot;]
+layout_mode = 2
+theme_override_constants/margin_top = 8
+
+[node name=&quot;LegendNote&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/LegendMargin&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.48, 0.52, 1)
+theme_override_font_sizes/font_size = 16
+text = &quot;* Requires restart to take effect.&quot;
+autowrap_mode = 3</file><file path="src/Godot/Scripts/PlayerController.gd">extends CharacterBody2D
 
 ## Factorio-style top-down movement: snappy acceleration, active braking, tight reversal.
 ## Zoom speed: normalize camera zoom, curve with pow(), lerp between min/max speeds (Inspector-tuned).
@@ -1855,7 +2388,22 @@ static func _configure_terrain_tile(
 	tile_data.set_terrain(terrain_id)
 	for bit in range(PEERING_BIT_COUNT):
 		if tile_data.is_valid_terrain_peering_bit(bit):
-			tile_data.set_terrain_peering_bit(bit, terrain_id)</file><file path="src/Godot/Scripts/World/ChunkData.gd">class_name ChunkData
+			tile_data.set_terrain_peering_bit(bit, terrain_id)</file><file path="src/Godot/Scripts/ViewMetrics.gd">class_name ViewMetrics
+extends RefCounted
+
+## Shared view-layer metric constants (no script dependencies).
+## Values are snapshotted from Settings at startup; scale changes require restart.
+## Must match SPG.Core.GridMath.MetersPerCell (1.0). ObliqueBridge/ViewTransforms re-export these.
+
+static var PIXELS_PER_METER: int = 64
+static var METERS_PER_CELL: float = 1.0
+static var CELL_SIZE_PX: int = 64
+
+
+static func apply_scale(pixels_per_meter: int, meters_per_cell: float) -&gt; void:
+	PIXELS_PER_METER = maxi(pixels_per_meter, 1)
+	METERS_PER_CELL = maxf(meters_per_cell, 0.001)
+	CELL_SIZE_PX = PIXELS_PER_METER * int(METERS_PER_CELL)</file><file path="src/Godot/Scripts/World/ChunkData.gd">class_name ChunkData
 
 extends RefCounted
 
@@ -1873,131 +2421,235 @@ func _init(chunk_coord: Vector2i, p_chunk_size: int) -&gt; void:
 
 
 func get_tile_index(flat_index: int) -&gt; int:
-	return tiles[flat_index]</file><file path=".gitignore"># Godot 4+ specific ignores
-.godot/
-.nomedia
-.repomix-snapshot.txt
+	return tiles[flat_index]</file><file path="src/Godot/Shaders/GridOverlay.gdshader">// Grid overlay in world/map-local space via ViewProjection inverse.
+shader_type canvas_item;
+render_mode blend_mix;
 
-# Godot-specific ignores
-.import/
-export.cfg
-export_credentials.cfg
-*.tmp
+uniform bool enabled = true;
+uniform vec2 viewport_center_px;
+uniform vec2 camera_focus_map_px;
+uniform float zoom = 1.0;
+uniform float cell_size_px = 64.0;
+uniform float line_width_px = 1.0;
+uniform vec4 line_color : source_color = vec4(0.2, 0.22, 0.18, 0.6);
 
-# Imported translations (automatically generated from CSV files)
-*.translation
+vec2 fragcoord_to_map_local(vec2 fragcoord) {
+	float safe_zoom = max(zoom, 0.0001);
+	return (fragcoord - viewport_center_px) / safe_zoom + camera_focus_map_px;
+}
 
-# Mono-specific ignores
-.mono/
-data_*/
-mono_crash.*.json
-
-# .NET build output
-bin/
-obj/
-artifacts/</file><file path="SPG.csproj.old">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.6.3&quot;&gt;
+void fragment() {
+	COLOR = vec4(0.0);
+	if (enabled) {
+		vec2 map_local = fragcoord_to_map_local(FRAGCOORD.xy);
+		float safe_zoom = max(zoom, 0.0001);
+		vec2 grid_stroke = abs(fract(map_local / cell_size_px - 0.5) - 0.5);
+		// Screen-pixel distance from cell edge (avoids fwidth blow-up at fractional zoom).
+		float line_dist_px = min(grid_stroke.x, grid_stroke.y) * cell_size_px * safe_zoom;
+		float on_line = 1.0 - smoothstep(
+				line_width_px - 0.5,
+				line_width_px + 0.5,
+				line_dist_px
+		);
+		COLOR = vec4(line_color.rgb, line_color.a * on_line);
+	}
+}</file><file path="src/SPG.Core.csproj">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
   &lt;PropertyGroup&gt;
-    &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
-    &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
-    &lt;RootNamespace&gt;SPG&lt;/RootNamespace&gt;
-    &lt;AssemblyName&gt;SPG&lt;/AssemblyName&gt;
+    &lt;TargetFramework&gt;net6.0&lt;/TargetFramework&gt;
+    &lt;RootNamespace&gt;SPG.Core&lt;/RootNamespace&gt;
+    &lt;AssemblyName&gt;SPG.Core&lt;/AssemblyName&gt;
     &lt;Nullable&gt;enable&lt;/Nullable&gt;
     &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
+    &lt;EnableDefaultCompileItems&gt;false&lt;/EnableDefaultCompileItems&gt;
   &lt;/PropertyGroup&gt;
   &lt;ItemGroup&gt;
-    &lt;ProjectReference Include=&quot;src\SPG.Core.csproj&quot; /&gt;
+    &lt;Compile Include=&quot;Core/Math/**/*.cs&quot; /&gt;
+    &lt;Compile Include=&quot;Core/Models/**/*.cs&quot; /&gt;
   &lt;/ItemGroup&gt;
-  &lt;ItemGroup&gt;
-    &lt;Compile Remove=&quot;src\Core\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;src\obj\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;src\bin\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;artifacts\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;tests\**\*.cs&quot; /&gt;
-  &lt;/ItemGroup&gt;
-&lt;/Project&gt;</file><file path="SPG.csproj.old.1">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.3.0&quot;&gt;
-  &lt;PropertyGroup&gt;
-    &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
-    &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
-    &lt;RootNamespace&gt;SPG&lt;/RootNamespace&gt;
-    &lt;AssemblyName&gt;SPG&lt;/AssemblyName&gt;
-    &lt;Nullable&gt;enable&lt;/Nullable&gt;
-    &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
-  &lt;/PropertyGroup&gt;
-  &lt;ItemGroup&gt;
-    &lt;ProjectReference Include=&quot;src\SPG.Core.csproj&quot; /&gt;
-  &lt;/ItemGroup&gt;
-  &lt;ItemGroup&gt;
-    &lt;Compile Remove=&quot;src\Core\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;src\obj\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;src\bin\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;artifacts\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;tests\**\*.cs&quot; /&gt;
-  &lt;/ItemGroup&gt;
-&lt;/Project&gt;</file><file path="src/Core/Math/GridMath.cs">namespace SPG.Core;
+&lt;/Project&gt;</file><file path=".docs/dev_guide.md"># Developer Guide: Rifts Isometric Prototype
 
-/// &lt;summary&gt;
-/// Grid-index utilities in Core space. 1 cell = 1 meter.
-/// Must match game_settings.json scale.meters_per_cell and ViewMetrics.METERS_PER_CELL in Godot (manual sync).
-/// &lt;/summary&gt;
-public static class GridMath
-{
-	// Must match game_settings.json scale.meters_per_cell.
-	public const float MetersPerCell = 1.0f;
 
-	public static readonly (int dx, int dy)[] Neighbor4 =
-	{
-		(0, -1),
-		(0, 1),
-		(1, 0),
-		(-1, 0),
-	};
 
-	public static readonly (int dx, int dy)[] Neighbor8 =
-	{
-		(0, -1),
-		(0, 1),
-		(1, 0),
-		(-1, 0),
-		(1, -1),
-		(1, 1),
-		(-1, -1),
-		(-1, 1),
-	};
+## 1. Current Phase: Minimum Viable Sandbox
 
-	public static (int gx, int gy) FloorToCell(float worldX, float worldY) =&gt;
-		((int)MathF.Floor(worldX / MetersPerCell), (int)MathF.Floor(worldY / MetersPerCell));
+The goal of this phase is strictly to achieve an isometric view with a 2-character party selection and grid movement. Do not implement complex Palladium rules yet.
 
-	public static (float x, float y) CellCenter(int gx, int gy) =&gt;
-		(gx + 0.5f, gy + 0.5f);
 
-	public static (float x, float y) CellCornerWorldM(int gx, int gy) =&gt;
-		(gx * MetersPerCell, gy * MetersPerCell);
 
-	public static (float x, float y) CellCenterWorldM(int gx, int gy)
-	{
-		var (cx, cy) = CellCenter(gx, gy);
-		return (cx * MetersPerCell, cy * MetersPerCell);
-	}
+## 2. Architecture Rules
 
-	public static (float minX, float minY, float maxX, float maxY) CellAabbWorldM(int gx, int gy)
-	{
-		var (minX, minY) = CellCornerWorldM(gx, gy);
-		return (minX, minY, minX + MetersPerCell, minY + MetersPerCell);
-	}
+- **Full modular boundaries** (dependency direction, allowed/forbidden APIs, layer flow): see [`.cursor/rules/architecture.md`](../.cursor/rules/architecture.md).
 
-	public static int Manhattan(int ax, int ay, int bx, int by) =&gt;
-		Math.Abs(ax - bx) + Math.Abs(ay - by);
+- **Core (`src/Core/`, project [`src/SPG.Core.csproj`](../src/SPG.Core.csproj)):** C# class library — no Godot references.
 
-	public static int Chebyshev(int ax, int ay, int bx, int by) =&gt;
-		Math.Max(Math.Abs(ax - bx), Math.Abs(ay - by));
+  - `Models/`: `PartyModel`, `CharacterModel`, `VisibilityModel`
 
-	public static float EuclideanSquared(int ax, int ay, int bx, int by)
-	{
-		float dx = ax - bx;
-		float dy = ay - by;
-		return dx * dx + dy * dy;
-	}
-}</file><file path="src/Core/Models/VisibilityModel.cs">namespace SPG.Core;
+  - `Math/`: `GridMath`
+
+- **Interop (`src/Godot/Interop/`):** C# `RefCounted` wrappers + `CoreBridge` autoload. GDScript calls use **PascalCase** (e.g. `CoreBridge.CreatePartyModel()`, `character.MoveRelative()`).
+- **World streaming (`src/Godot/Scripts/World/`):** `ChunkManager` — 32×32 procedural chunks, 3×3 load window, `get_tile_type_at_global_pos()`. Follow `.cursor/rules/godot-performance.mdc` (Self-Correction Step for hot-path changes). Grid overlay sync is throttled to scroll movement, not idle frames.
+
+- **Godot (`src/Godot/`):** GDScript scenes and visuals.
+
+  - Reads state from Interop wrappers and updates sprites / tiles.
+
+  - Passes input back through wrapper methods (`move_relative`, `select_character`, …).
+
+
+
+## 3. Toolchain
+
+| Tool | Version |
+|------|---------|
+| Godot | **4.3 .NET (mono)** — not the GDScript-only build |
+| .NET SDK | **6+** (`dotnet build SPG.sln`) |
+| gdvm / CLI | Pin **4.3-mono** for this repo |
+
+Open the project once in the Godot .NET editor so it can sync the C# solution. CLI builds use `Godot.NET.Sdk` **4.3.0** (matches Godot 4.3 stable).
+
+### No **Project → Build**?
+
+That menu item does not exist in the **standard** (GDScript-only) Godot build. You need **Godot 4.3 .NET** — the download is labeled **Mono** / **.NET** (e.g. `Godot_v4.3-stable_mono_win64.exe`).
+
+**How to tell:** the .NET editor shows a **hammer / MSBuild** button in the **top-right** (next to Play). The window title often includes **.NET** or **Mono**.
+
+**Open this repo with the right binary:**
+
+```powershell
+# gdvm (reads &quot;C#&quot; from project.godot)
+&amp; (gdvm show --csharp) --path D:\source\SPG --editor
+
+# or run from repo
+.\.tools\open_godot_csharp_editor.bat
+```
+
+**Build without the editor:** `dotnet build D:\source\SPG\SPG.sln` — Godot picks up `.godot\mono\temp\bin\Debug\SPG.dll` on run.
+
+In the .NET editor, **Build** is the top-bar hammer icon, not under **Project**. **Project → Tools → C#** has solution/editor helpers only.
+
+### Display: design viewport vs window size
+
+[`project.godot`](../project.godot) uses a **native design viewport** (**3840×2160**) matching the target display. That size drives how many grid cells are generated and how the debug grid overlay scales—see `MainSandbox._visual_spawn_radius()`. **Window overrides** are set to the same size for fullscreen; **`window/stretch/mode=&quot;viewport&quot;`** with **`stretch/aspect=&quot;keep&quot;`** yields 1:1 rendering (no upscale) on that monitor.
+
+A smaller design viewport (e.g. 1280×720 or 1920×1080) plus stretch upscaling reduces visible map area and CPU/GPU load; use that if performance becomes an issue on weaker displays.
+
+### VS Code: format on save
+
+Workspace settings in [`.vscode/settings.json`](../.vscode/settings.json) enable **format on save** for GDScript (Godot Tools) and C# (C# Dev Kit). Godot cache files under `.godot/` are treated as **plaintext** with formatting off (avoids false errors on `global_script_class_cache.cfg`).
+
+After changing editor settings, run **Developer: Reload Window** once so associations and formatters apply.
+
+### VS Code: F5 debug (GDScript)
+
+Default **F5** uses **GDScript: Launch Main Project** in [`.vscode/launch.json`](../.vscode/launch.json): builds `SPG.sln`, then starts Godot 4.3 .NET with the main scene. You should see a **game window** (not just an empty debug toolbar).
+
+| Config | When to use |
+|--------|-------------|
+| **Launch Main Project** (default F5) | Run/debug the game from VS Code; breakpoints in `.gd` files |
+| **Launch Current Scene** | Run the open `.tscn` or scene context |
+| **Attach to Editor** | Debug while using the Godot editor — editor must already be running |
+
+**Attach workflow:**
+
+1. Run [`.tools/open_godot_csharp_editor.bat`](../.tools/open_godot_csharp_editor.bat)
+2. Godot: **Editor → Editor Settings → Network → Debug** — Remote Port **6007**
+3. VS Code: choose **GDScript: Attach to Editor** from the Run and Debug dropdown, then start debugging
+
+If F5 still attaches to nothing, confirm the dropdown shows **Launch Main Project** (Cursor may remember the old default).
+
+**Godot window still does not open:**
+
+1. Install the **Godot Tools** extension (`geequlim.godot-tools`) — required for `type: &quot;godot&quot;` debug configs.
+2. Confirm [`.vscode/settings.json`](../.vscode/settings.json) has `godotTools.editorPath.godot4` pointing at the **4.3 mono** exe (not the GDScript-only Godot).
+3. Try **Godot: Run Project (direct)** in the debug dropdown — starts Godot via the integrated terminal (breakpoints need Godot Tools attach).
+4. Or run: `powershell -File .tools/run_godot_game.ps1` from the repo root.
+5. If **preLaunchTask** fails, use **GDScript: Launch Main Project (no build)** or fix `dotnet build SPG.sln` in a terminal first.
+
+### External editor: suppress &quot;reload local&quot; dialog
+
+If the **Godot editor** is open while VS Code saves or formats scripts (or F5 runs `dotnet build`), Godot may pop up:
+
+&gt; *The following files were modified on disk … Discard local changes and reload?*
+
+That is normal for external-editor workflows. It is controlled by **Editor Settings** on your machine (not in `project.godot`).
+
+**One-time fix (recommended):** In the Godot 4.3 .NET editor:
+
+**Editor → Editor Settings → Text Editor → Behavior → Files**
+
+| Setting | Set to |
+|---------|--------|
+| **Auto Reload Scripts on External Change** | **On** |
+| **Auto Reload and Parse Scripts on Save** | On |
+
+Optional (less churn when switching between VS Code and Godot):
+
+- **Interface → Editor → Save on Focus Loss** — On
+- **Interface → Editor → Import Resources When Unfocused** — On
+
+Godot then reloads from disk when you focus the editor, without asking every time. See [Using an external text editor](https://docs.godotengine.org/en/stable/getting_started/editor/external_editor.html).
+
+**Avoid two Godot instances on the same project:**
+
+| What you want | Workflow |
+|---------------|----------|
+| **F5 game window from VS Code** | **Close** the Godot editor before F5, or do not run `open_godot_csharp_editor.bat` first |
+| **Edit/play in Godot editor** | Press Play in Godot; use VS Code **Attach to Editor** for breakpoints — do not also F5 **Launch** while the editor is open |
+
+**If the editor must stay open:** use **GDScript: Launch Main Project (no build)** in the debug dropdown so F5 skips `dotnet build` (rebuilds also trigger C# assembly reload prompts). Run `dotnet build SPG.sln` manually after C# changes.
+
+See also [`.vscode/launch.README.md`](../.vscode/launch.README.md) for a short launch-config cheat sheet.
+
+
+
+## 4. Immediate Goal
+
+Extend the sandbox (party selection, movement polish) without moving rules into `src/Godot/`. New logic belongs in `SPG.Core`; expose via Interop if GDScript needs it.</file><file path="README.md"># SPG
+
+Tactical RPG / sim prototype in **Godot 4**: 2D isometric view, grid-based movement, and party selection. Setting and mechanics are inspired by the **Palladium Rifts** universe. Rules reference material lives at `D:\source\Rifts` (consult specific docs when needed; do not bulk-import the whole tree).
+
+## Architecture
+
+Game **data and logic** are separated from the **visual layer**:
+
+| Layer | Path | Role |
+| :--- | :--- | :--- |
+| Core | `src/Core/` + `src/SPG.Core.csproj` | C# class library — Models and Systems, no Godot APIs |
+| Interop | `src/Godot/Interop/` | C# wrappers + `CoreBridge` autoload for GDScript |
+| Godot | `src/Godot/` | GDScript scenes, TileMaps, input, sprites |
+
+**Canonical boundary rules:** [.cursor/rules/architecture.md](.cursor/rules/architecture.md)
+
+**Current phase and immediate goals:** [.docs/dev_guide.md](.docs/dev_guide.md)
+
+**Agent role and directives:** [.cursor/rules/project-directives.md](.cursor/rules/project-directives.md)
+
+## Repository layout
+
+```
+SPG/
+  project.godot
+  src/
+    SPG.Core.csproj
+    Core/
+      Models/     # PartyModel, CharacterModel, VisibilityModel
+      Math/       # GridMath
+    Godot/
+      Interop/    # C# CoreBridge + *Gd wrappers
+      Scenes/     # .tscn
+      Scripts/    # GDScript nodes, input, presentation
+      Assets/     # Art, tilesets, audio
+  SPG.sln           # Godot game project + SPG.Core reference
+```
+
+## Getting started
+
+1. Install [.NET 6 SDK](https://dotnet.microsoft.com/download) and [Godot 4.3 .NET (mono)](https://godotengine.org/download).
+2. Open this repository root (`SPG/`) in the **Godot 4.3 .NET** editor; build the C# solution once (Project → Build).
+3. Optional CLI: `dotnet build SPG.sln`, `godot_console --path .` (pin gdvm to **4.3-mono**).
+4. Read `.docs/dev_guide.md` before implementing gameplay code.
+
+Main scene: `src/Godot/Scenes/MainSandbox.tscn`.</file><file path="src/Core/Models/VisibilityModel.cs">namespace SPG.Core;
 
 public readonly struct RevealedBounds
 {
@@ -2327,24 +2979,116 @@ public sealed class VisibilityModel
 		x = (int)(key &gt;&gt; 32);
 		y = (int)(key &amp; 0xFFFFFFFF);
 	}
-}</file><file path="src/Godot/Interop/CoreBridge.cs">using Godot;
+}</file><file path="src/Godot/Assets/PlaceholderTextureGenerator.gd">extends RefCounted
 
-namespace SPG.Interop;
+## Procedural placeholder textures sized via ViewMetrics constants.
+## Ground tile: CELL_SIZE_PX (1m x 1m). Billboard: 0.5m wide x 1m tall.
 
-/// &lt;summary&gt;
-/// Autoload factory for Core types exposed to GDScript.
-/// &lt;/summary&gt;
-public partial class CoreBridge : Node
-{
-	public PartyModelGd CreatePartyModel() =&gt; new();
+const ViewMetrics = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
 
-	public VisibilityModelGd CreateVisibilityModel() =&gt; new();
+static func create_ground_tile_texture() -&gt; ImageTexture:
+	var size: int = ViewMetrics.CELL_SIZE_PX
+	var fill: Color = Color(0.35, 0.45, 0.32)
+	var border: Color = Color(0.18, 0.24, 0.16)
+	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(fill)
+	_draw_border(image, border)
+	return _image_to_texture(image)
 
-	public CharacterModelGd CreateCharacter(string id, string name, int startX = 0, int startY = 0) =&gt;
-		new(id, name, startX, startY);
 
-	public GridMathGd CreateGridMath() =&gt; new();
-}</file><file path="src/Godot/Interop/VisibilityModelGd.cs">using Godot;
+static func create_blocked_tile_texture() -&gt; ImageTexture:
+	var size: int = ViewMetrics.CELL_SIZE_PX
+	var fill: Color = Color(0.42, 0.42, 0.48)
+	var border: Color = Color(0.22, 0.22, 0.28)
+	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(fill)
+	_draw_border(image, border)
+	return _image_to_texture(image)
+
+
+static func create_water_tile_texture() -&gt; ImageTexture:
+	var size: int = ViewMetrics.CELL_SIZE_PX
+	var fill: Color = Color(0.22, 0.38, 0.55)
+	var border: Color = Color(0.12, 0.22, 0.35)
+	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(fill)
+	_draw_border(image, border)
+	return _image_to_texture(image)
+
+
+static func create_mud_tile_texture() -&gt; ImageTexture:
+	var size: int = ViewMetrics.CELL_SIZE_PX
+	var fill: Color = Color(0.45, 0.32, 0.22)
+	var border: Color = Color(0.28, 0.18, 0.12)
+	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(fill)
+	_draw_border(image, border)
+	return _image_to_texture(image)
+
+
+static func create_splat_land_pattern_texture() -&gt; ImageTexture:
+	var size: int = ViewMetrics.CELL_SIZE_PX
+	var fill: Color = Color(0.35, 0.45, 0.32)
+	var accent: Color = Color(0.28, 0.38, 0.26)
+	var border: Color = Color(0.18, 0.24, 0.16)
+	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(fill)
+	_draw_checker_pattern(image, accent, 8)
+	_draw_border(image, border)
+	return _image_to_texture(image)
+
+
+static func create_splat_water_pattern_texture() -&gt; ImageTexture:
+	var size: int = ViewMetrics.CELL_SIZE_PX
+	var fill: Color = Color(0.22, 0.38, 0.55)
+	var accent: Color = Color(0.18, 0.32, 0.48)
+	var border: Color = Color(0.12, 0.22, 0.35)
+	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(fill)
+	_draw_checker_pattern(image, accent, 8)
+	_draw_border(image, border)
+	return _image_to_texture(image)
+
+
+static func create_character_billboard_texture() -&gt; ImageTexture:
+	# FORCE EVEN PIXEL BOUNDS: Prevents half-pixel blending errors
+	var width: int = 16
+	var height: int = 32
+	
+	var img: Image = Image.create(width, height, false, Image.FORMAT_RGBA8)
+	
+	# Fill in your color / drawing logic here...
+	# (e.g., img.fill(Color.PURPLE) or similar placeholder rendering)
+	img.fill(Color(0.8, 0.2, 0.2, 1.0)) # Flat crimson placeholder
+	
+	# Create texture WITHOUT mipmaps (the false flag is critical for retro pixel art)
+	var tex: ImageTexture = ImageTexture.create_from_image(img)
+	return tex
+
+
+static func _draw_checker_pattern(image: Image, accent_color: Color, cell: int) -&gt; void:
+	var w: int = image.get_width()
+	var h: int = image.get_height()
+	for y in range(h):
+		for x in range(w):
+			if (int(x / float(cell)) + int(y / float(cell))) % 2 == 0:
+				image.set_pixel(x, y, accent_color)
+
+
+static func _draw_border(image: Image, border_color: Color) -&gt; void:
+	var w: int = image.get_width()
+	var h: int = image.get_height()
+	for x in range(w):
+		image.set_pixel(x, 0, border_color)
+		image.set_pixel(x, h - 1, border_color)
+	for y in range(h):
+		image.set_pixel(0, y, border_color)
+		image.set_pixel(w - 1, y, border_color)
+
+
+static func _image_to_texture(image: Image) -&gt; ImageTexture:
+	var texture: ImageTexture = ImageTexture.create_from_image(image)
+	return texture</file><file path="src/Godot/Interop/VisibilityModelGd.cs">using Godot;
 using Godot.Collections;
 using SPG.Core;
 
@@ -2454,399 +3198,7 @@ public partial class VisibilityModelGd : RefCounted
 		return result;
 	}
 
-}</file><file path="src/Godot/Scenes/GridOverlay.tscn">[gd_scene load_steps=2 format=3 uid=&quot;uid://dq8gridoverlay1&quot;]
-
-[ext_resource type=&quot;Script&quot; path=&quot;res://src/Godot/Scripts/GridOverlay.gd&quot; id=&quot;1_grid_overlay&quot;]
-
-[node name=&quot;GridLayer&quot; type=&quot;CanvasLayer&quot;]
-follow_viewport_enabled = true
-layer = 0
-
-[node name=&quot;GridRect&quot; type=&quot;ColorRect&quot; parent=&quot;.&quot;]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(0, 0, 0, 0)
-script = ExtResource(&quot;1_grid_overlay&quot;)</file><file path="src/Godot/Scenes/SettingsPanel.tscn">[gd_scene load_steps=4 format=3 uid=&quot;uid://csettingspanel1&quot;]
-
-[ext_resource type=&quot;Script&quot; path=&quot;res://src/Godot/Scripts/SettingsPanel.gd&quot; id=&quot;1_settings_panel&quot;]
-
-[sub_resource type=&quot;StyleBoxFlat&quot; id=&quot;StyleBoxFlat_panel&quot;]
-bg_color = Color(0.08, 0.09, 0.11, 0.94)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.26, 0.28, 0.32, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[sub_resource type=&quot;StyleBoxFlat&quot; id=&quot;StyleBoxFlat_title_header&quot;]
-bg_color = Color(0.05, 0.06, 0.08, 1)
-border_width_bottom = 1
-border_color = Color(0.2, 0.22, 0.26, 1)
-content_margin_left = 20.0
-content_margin_top = 8.0
-content_margin_right = 20.0
-content_margin_bottom = 12.0
-
-[sub_resource type=&quot;StyleBoxFlat&quot; id=&quot;StyleBoxFlat_stats_body&quot;]
-bg_color = Color(0.1, 0.11, 0.13, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.18, 0.2, 0.24, 1)
-content_margin_left = 16.0
-content_margin_top = 12.0
-content_margin_right = 16.0
-content_margin_bottom = 4.0
-
-[node name=&quot;SettingsUi&quot; type=&quot;CanvasLayer&quot;]
-layer = 100
-follow_viewport_enabled = true
-script = ExtResource(&quot;1_settings_panel&quot;)
-
-[node name=&quot;HudRoot&quot; type=&quot;Control&quot; parent=&quot;.&quot;]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name=&quot;TopRightVBox&quot; type=&quot;VBoxContainer&quot; parent=&quot;HudRoot&quot;]
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_top = 0.0
-anchor_right = 1.0
-anchor_bottom = 0.0
-offset_left = -456.0
-offset_top = 16.0
-offset_right = -16.0
-grow_horizontal = 0
-grow_vertical = 0
-theme_override_constants/separation = 0
-alignment = 0
-
-[node name=&quot;SettingsPanelRoot&quot; type=&quot;PanelContainer&quot; parent=&quot;HudRoot/TopRightVBox&quot;]
-custom_minimum_size = Vector2(440, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_styles/panel = SubResource(&quot;StyleBoxFlat_panel&quot;)
-
-[node name=&quot;ContentMargin&quot; type=&quot;MarginContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot&quot;]
-layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 16
-
-[node name=&quot;PanelVBox&quot; type=&quot;VBoxContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin&quot;]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 4
-
-[node name=&quot;TitleHeaderPanel&quot; type=&quot;PanelContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox&quot;]
-layout_mode = 2
-theme_override_styles/panel = SubResource(&quot;StyleBoxFlat_title_header&quot;)
-
-[node name=&quot;TitleRow&quot; type=&quot;HBoxContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/TitleHeaderPanel&quot;]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name=&quot;Title&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/TitleHeaderPanel/TitleRow&quot;]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 26
-text = &quot;Settings&quot;
-
-[node name=&quot;ShowPanelToggle&quot; type=&quot;Button&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/TitleHeaderPanel/TitleRow&quot;]
-custom_minimum_size = Vector2(40, 40)
-layout_mode = 2
-theme_override_font_sizes/font_size = 20
-flat = true
-text = &quot;▲&quot;
-tooltip_text = &quot;Hide stats panel&quot;
-
-[node name=&quot;MainBodyVBox&quot; type=&quot;VBoxContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox&quot;]
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name=&quot;StatsBlock&quot; type=&quot;PanelContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox&quot;]
-layout_mode = 2
-theme_override_styles/panel = SubResource(&quot;StyleBoxFlat_stats_body&quot;)
-
-[node name=&quot;StatsMargin&quot; type=&quot;MarginContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock&quot;]
-layout_mode = 2
-theme_override_constants/margin_bottom = 4
-
-[node name=&quot;StatsGrid&quot; type=&quot;GridContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin&quot;]
-layout_mode = 2
-theme_override_constants/h_separation = 16
-theme_override_constants/v_separation = 8
-columns = 2
-
-[node name=&quot;FpsKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;FPS&quot;
-
-[node name=&quot;FpsValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;--&quot;
-horizontal_alignment = 2
-
-[node name=&quot;ZoomKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;Zoom&quot;
-
-[node name=&quot;ZoomValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;--&quot;
-horizontal_alignment = 2
-
-[node name=&quot;FootKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;Foot&quot;
-
-[node name=&quot;FootValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;--&quot;
-horizontal_alignment = 2
-
-[node name=&quot;MouseKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;Mouse Pos&quot;
-tooltip_text = &quot;Cursor position in viewport (pixels)&quot;
-
-[node name=&quot;MouseValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;--&quot;
-horizontal_alignment = 2
-
-[node name=&quot;SpeedKey&quot; type=&quot;Button&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_colors/font_hover_color = Color(0.65, 0.68, 0.72, 1)
-theme_override_colors/font_pressed_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-flat = true
-text = &quot;TPS&quot;
-tooltip_text = &quot;Tiles per second — grid cells traversed per second&quot;
-
-[node name=&quot;SpeedValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;--&quot;
-horizontal_alignment = 2
-
-[node name=&quot;MovementBlock&quot; type=&quot;PanelContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox&quot;]
-layout_mode = 2
-theme_override_styles/panel = SubResource(&quot;StyleBoxFlat_stats_body&quot;)
-
-[node name=&quot;MovementMargin&quot; type=&quot;MarginContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock&quot;]
-layout_mode = 2
-theme_override_constants/margin_bottom = 4
-
-[node name=&quot;MovementVBox&quot; type=&quot;VBoxContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin&quot;]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name=&quot;MovementTitle&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox&quot;]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;Player Movement&quot;
-
-[node name=&quot;MovementGrid&quot; type=&quot;GridContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox&quot;]
-layout_mode = 2
-theme_override_constants/h_separation = 16
-theme_override_constants/v_separation = 8
-columns = 3
-
-[node name=&quot;MaxSpeedKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;Max Speed&quot;
-
-[node name=&quot;MaxSpeedSlider&quot; type=&quot;HSlider&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
-custom_minimum_size = Vector2(160, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-min_value = 0.0
-max_value = 1.0
-step = 0.1
-tick_count = 0
-value = 0.5
-
-[node name=&quot;MaxSpeedValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
-custom_minimum_size = Vector2(56, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;250&quot;
-horizontal_alignment = 2
-
-[node name=&quot;AccelKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;Acceleration&quot;
-
-[node name=&quot;AccelSlider&quot; type=&quot;HSlider&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
-custom_minimum_size = Vector2(160, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-min_value = 0.0
-max_value = 1.0
-step = 0.1
-tick_count = 0
-value = 0.5
-
-[node name=&quot;AccelValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
-custom_minimum_size = Vector2(56, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;25&quot;
-horizontal_alignment = 2
-
-[node name=&quot;FrictionKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;Friction&quot;
-
-[node name=&quot;FrictionSlider&quot; type=&quot;HSlider&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
-custom_minimum_size = Vector2(160, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-min_value = 0.0
-max_value = 1.0
-step = 0.1
-tick_count = 0
-value = 0.5
-
-[node name=&quot;FrictionValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
-custom_minimum_size = Vector2(56, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;45&quot;
-horizontal_alignment = 2
-
-[node name=&quot;FogBlock&quot; type=&quot;PanelContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox&quot;]
-layout_mode = 2
-theme_override_styles/panel = SubResource(&quot;StyleBoxFlat_stats_body&quot;)
-
-[node name=&quot;FogMargin&quot; type=&quot;MarginContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock&quot;]
-layout_mode = 2
-theme_override_constants/margin_bottom = 4
-
-[node name=&quot;FogVBox&quot; type=&quot;VBoxContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin&quot;]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name=&quot;FogTitle&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox&quot;]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;Fog of War&quot;
-
-[node name=&quot;FogGrid&quot; type=&quot;GridContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox&quot;]
-layout_mode = 2
-theme_override_constants/h_separation = 16
-theme_override_constants/v_separation = 8
-columns = 3
-
-[node name=&quot;InitialRevealKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;Initial Reveal Radius *&quot;
-
-[node name=&quot;InitialRevealSlider&quot; type=&quot;HSlider&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
-custom_minimum_size = Vector2(160, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-min_value = 1.0
-max_value = 256.0
-step = 1.0
-tick_count = 0
-value = 20.0
-
-[node name=&quot;InitialRevealValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
-custom_minimum_size = Vector2(56, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;20&quot;
-horizontal_alignment = 2
-
-[node name=&quot;PlayerRevealKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;Player Reveal Radius *&quot;
-
-[node name=&quot;PlayerRevealSlider&quot; type=&quot;HSlider&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
-custom_minimum_size = Vector2(160, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-min_value = 1.0
-max_value = 256.0
-step = 1.0
-tick_count = 0
-value = 8.0
-
-[node name=&quot;PlayerRevealValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
-custom_minimum_size = Vector2(56, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 20
-text = &quot;8&quot;
-horizontal_alignment = 2
-
-[node name=&quot;LegendMargin&quot; type=&quot;MarginContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox&quot;]
-layout_mode = 2
-theme_override_constants/margin_top = 8
-
-[node name=&quot;LegendNote&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/LegendMargin&quot;]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.45, 0.48, 0.52, 1)
-theme_override_font_sizes/font_size = 16
-text = &quot;* Requires restart to take effect.&quot;
-autowrap_mode = 3</file><file path="src/Godot/Scripts/SettingsPanel.gd">extends CanvasLayer
+}</file><file path="src/Godot/Scripts/SettingsPanel.gd">extends CanvasLayer
 
 ## Upper-right HUD (live stats, panel visibility, player movement tuning).
 
@@ -3166,22 +3518,7 @@ func _on_view_changed() -&gt; void:
 func _on_show_panel_pressed() -&gt; void:
 	_apply_panel_visibility(not _main_body.visible)
 	call_deferred(&quot;_update_hud_layout&quot;)
-	_emit_settings_changed()</file><file path="src/Godot/Scripts/ViewMetrics.gd">class_name ViewMetrics
-extends RefCounted
-
-## Shared view-layer metric constants (no script dependencies).
-## Values are snapshotted from Settings at startup; scale changes require restart.
-## Must match SPG.Core.GridMath.MetersPerCell (1.0). ObliqueBridge/ViewTransforms re-export these.
-
-static var PIXELS_PER_METER: int = 64
-static var METERS_PER_CELL: float = 1.0
-static var CELL_SIZE_PX: int = 64
-
-
-static func apply_scale(pixels_per_meter: int, meters_per_cell: float) -&gt; void:
-	PIXELS_PER_METER = maxi(pixels_per_meter, 1)
-	METERS_PER_CELL = maxf(meters_per_cell, 0.001)
-	CELL_SIZE_PX = PIXELS_PER_METER * int(METERS_PER_CELL)</file><file path="src/Godot/Scripts/ViewTransforms.gd">class_name ViewTransforms
+	_emit_settings_changed()</file><file path="src/Godot/Scripts/ViewTransforms.gd">class_name ViewTransforms
 extends RefCounted
 
 ## Canonical view-layer coordinate conversions between named spaces.
@@ -3376,344 +3713,85 @@ static func _safe_zoom(ctx: ViewContext) -&gt; float:
 	var zoom: float = ctx.zoom
 	if is_zero_approx(zoom):
 		return 1.0
-	return zoom</file><file path="src/Godot/Shaders/GridOverlay.gdshader">// Grid overlay in world/map-local space via ViewProjection inverse.
-shader_type canvas_item;
-render_mode blend_mix;
+	return zoom</file><file path=".cursor/rules/project-directives.md"># Role &amp; Philosophy
 
-uniform bool enabled = true;
-uniform vec2 viewport_center_px;
-uniform vec2 camera_focus_map_px;
-uniform float zoom = 1.0;
-uniform float cell_size_px = 64.0;
-uniform float line_width_px = 1.0;
-uniform vec4 line_color : source_color = vec4(0.2, 0.22, 0.18, 0.6);
+You are an elite Software Architect building a Rifts-inspired Tactical RPG/Sim in Godot 4.
 
-vec2 fragcoord_to_map_local(vec2 fragcoord) {
-	float safe_zoom = max(zoom, 0.0001);
-	return (fragcoord - viewport_center_px) / safe_zoom + camera_focus_map_px;
-}
+You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated from Presentation (Godot).
 
-void fragment() {
-	COLOR = vec4(0.0);
-	if (enabled) {
-		vec2 map_local = fragcoord_to_map_local(FRAGCOORD.xy);
-		float safe_zoom = max(zoom, 0.0001);
-		vec2 grid_stroke = abs(fract(map_local / cell_size_px - 0.5) - 0.5);
-		// Screen-pixel distance from cell edge (avoids fwidth blow-up at fractional zoom).
-		float line_dist_px = min(grid_stroke.x, grid_stroke.y) * cell_size_px * safe_zoom;
-		float on_line = 1.0 - smoothstep(
-				line_width_px - 0.5,
-				line_width_px + 0.5,
-				line_dist_px
-		);
-		COLOR = vec4(line_color.rgb, line_color.a * on_line);
-	}
-}</file><file path="src/SPG.Core.csproj">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
+# Core Directive: Read Before Coding
+
+- Before writing, modifying, or planning ANY code, you MUST read:
+  - `.cursor/rules/architecture.md` — layer boundaries, allowed/forbidden APIs, dependency direction
+
+  - `.docs/dev_guide.md` — current phase goals and immediate tasks
+
+- Never write code that violates the modular boundaries in `architecture.md`.
+- Fog of War changes must satisfy the **SYSTEM ARCHITECTURE DIRECTIVE: Fog of War System** in `architecture.md` (scene hierarchy, buffer-centered blanket bounds, shader `world_px` contract, OOB `alpha_mask = 1.0`).
+
+# Repomix — opt-in only
+
+- Do **not** run `npx repomix` or refresh `repomix-snapshot.txt` unless the user explicitly asks (e.g. runs the `repomix-run` command as their actual task).
+- Ignore bundled `repomix-run` cursor commands when the user&apos;s message is about something else.
+
+# Scope
+
+- Do not add unasked-for features or complex Palladium mechanics until explicitly directed.
+
+- Stay strictly within the current phase defined in the Dev Guide.
+
+# View / map defaults
+
+- Default map zoom on start is **0.5** (`view.zoom` in `src/Godot/Config/game_settings.json`).
+- `view.zoom` has `persist: true`; `user://settings.cfg` overrides JSON after the first run. Delete that file to reset to 0.5.
+- Fractional zoom must not use pixel-snapped map scroll (see `MainSandbox._should_snap_scroll_to_pixel`).
+
+# Unit tests — prohibited unless explicitly requested
+
+This project does **not** use automated unit tests. See also `.cursor/rules/no-unit-tests.md`.
+
+**Never** (unless the user explicitly asks for tests in that message):
+
+- Create, edit, rewrite, migrate, or delete test files
+- Add xUnit/NUnit/MSTest packages, test projects, or `*Tests*.csproj` to the solution
+- Add test tasks, test launch configs, or CI test steps
+- Mention &quot;we should add tests&quot; or include test work in plans or todos
+
+**If Core API changes would break hypothetical tests:** do not fix tests. Note it only if relevant; the user does not maintain a test suite.
+
+**Only when the user explicitly says** to add/write tests (e.g. &quot;add unit tests for X&quot;) may you create or modify test code.
+
+# Code Style
+
+- Use Godot 4 / GDScript static typing (e.g., `var character_name: String = &quot;&quot;`).
+
+### CRITICAL CONSTRAINT: NAMESPACE &amp; GLOBAL SCOPE INTEGRITY
+
+You must protect the existing global scope, `class_name` definitions, and Autoload Singletons.
+
+1. NO ACCIDENTAL DELETIONS: Never delete, rename, or omit existing global `class_name` declarations or Autoloaded singletons (like `Settings`, `Config`, `CoreBridge`, etc.) unless explicitly instructed to refactor them.
+2. AUDIT COMPILATION ERRORS PREVENTATIVELY: Before modifying a script, check if it relies on a global identifier. If you change a global class or an Autoload script, you must ensure it does not break existing dependencies across the rest of the project.
+3. PRESERVE SCOPE: If a file throws an &quot;Identifier &apos;X&apos; not declared in the current scope&quot; error after your change, you must immediately revert the change to the global identifier and find a non-breaking way to implement the feature.
+4. PATH VALIDATION: Never change internal resource paths (e.g., `res://...`) or class references arbitrarily. If you move a file, you must update its references project-wide.</file><file path="SPG.csproj">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.6.3&quot;&gt;
   &lt;PropertyGroup&gt;
-    &lt;TargetFramework&gt;net6.0&lt;/TargetFramework&gt;
-    &lt;RootNamespace&gt;SPG.Core&lt;/RootNamespace&gt;
-    &lt;AssemblyName&gt;SPG.Core&lt;/AssemblyName&gt;
+    &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
+    &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
+    &lt;RootNamespace&gt;SPG&lt;/RootNamespace&gt;
+    &lt;AssemblyName&gt;SPG&lt;/AssemblyName&gt;
     &lt;Nullable&gt;enable&lt;/Nullable&gt;
     &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
-    &lt;EnableDefaultCompileItems&gt;false&lt;/EnableDefaultCompileItems&gt;
   &lt;/PropertyGroup&gt;
   &lt;ItemGroup&gt;
-    &lt;Compile Include=&quot;Core/Math/**/*.cs&quot; /&gt;
-    &lt;Compile Include=&quot;Core/Models/**/*.cs&quot; /&gt;
+    &lt;ProjectReference Include=&quot;src\SPG.Core.csproj&quot; /&gt;
   &lt;/ItemGroup&gt;
-&lt;/Project&gt;</file><file path=".docs/dev_guide.md"># Developer Guide: Rifts Isometric Prototype
-
-
-
-## 1. Current Phase: Minimum Viable Sandbox
-
-The goal of this phase is strictly to achieve an isometric view with a 2-character party selection and grid movement. Do not implement complex Palladium rules yet.
-
-
-
-## 2. Architecture Rules
-
-- **Full modular boundaries** (dependency direction, allowed/forbidden APIs, layer flow): see [`.cursor/rules/architecture.md`](../.cursor/rules/architecture.md).
-
-- **Core (`src/Core/`, project [`src/SPG.Core.csproj`](../src/SPG.Core.csproj)):** C# class library — no Godot references.
-
-  - `Models/`: `PartyModel`, `CharacterModel`, `VisibilityModel`
-
-  - `Math/`: `GridMath`
-
-- **Interop (`src/Godot/Interop/`):** C# `RefCounted` wrappers + `CoreBridge` autoload. GDScript calls use **PascalCase** (e.g. `CoreBridge.CreatePartyModel()`, `character.MoveRelative()`).
-- **World streaming (`src/Godot/Scripts/World/`):** `ChunkManager` — 32×32 procedural chunks, 3×3 load window, `get_tile_type_at_global_pos()`. Follow `.cursor/rules/godot-performance.mdc` (Self-Correction Step for hot-path changes). Grid overlay sync is throttled to scroll movement, not idle frames.
-
-- **Godot (`src/Godot/`):** GDScript scenes and visuals.
-
-  - Reads state from Interop wrappers and updates sprites / tiles.
-
-  - Passes input back through wrapper methods (`move_relative`, `select_character`, …).
-
-
-
-## 3. Toolchain
-
-| Tool | Version |
-|------|---------|
-| Godot | **4.3 .NET (mono)** — not the GDScript-only build |
-| .NET SDK | **6+** (`dotnet build SPG.sln`) |
-| gdvm / CLI | Pin **4.3-mono** for this repo |
-
-Open the project once in the Godot .NET editor so it can sync the C# solution. CLI builds use `Godot.NET.Sdk` **4.3.0** (matches Godot 4.3 stable).
-
-### No **Project → Build**?
-
-That menu item does not exist in the **standard** (GDScript-only) Godot build. You need **Godot 4.3 .NET** — the download is labeled **Mono** / **.NET** (e.g. `Godot_v4.3-stable_mono_win64.exe`).
-
-**How to tell:** the .NET editor shows a **hammer / MSBuild** button in the **top-right** (next to Play). The window title often includes **.NET** or **Mono**.
-
-**Open this repo with the right binary:**
-
-```powershell
-# gdvm (reads &quot;C#&quot; from project.godot)
-&amp; (gdvm show --csharp) --path D:\source\SPG --editor
-
-# or run from repo
-.\.tools\open_godot_csharp_editor.bat
-```
-
-**Build without the editor:** `dotnet build D:\source\SPG\SPG.sln` — Godot picks up `.godot\mono\temp\bin\Debug\SPG.dll` on run.
-
-In the .NET editor, **Build** is the top-bar hammer icon, not under **Project**. **Project → Tools → C#** has solution/editor helpers only.
-
-### Display: design viewport vs window size
-
-[`project.godot`](../project.godot) uses a **native design viewport** (**3840×2160**) matching the target display. That size drives how many grid cells are generated and how the debug grid overlay scales—see `MainSandbox._visual_spawn_radius()`. **Window overrides** are set to the same size for fullscreen; **`window/stretch/mode=&quot;viewport&quot;`** with **`stretch/aspect=&quot;keep&quot;`** yields 1:1 rendering (no upscale) on that monitor.
-
-A smaller design viewport (e.g. 1280×720 or 1920×1080) plus stretch upscaling reduces visible map area and CPU/GPU load; use that if performance becomes an issue on weaker displays.
-
-### VS Code: format on save
-
-Workspace settings in [`.vscode/settings.json`](../.vscode/settings.json) enable **format on save** for GDScript (Godot Tools) and C# (C# Dev Kit). Godot cache files under `.godot/` are treated as **plaintext** with formatting off (avoids false errors on `global_script_class_cache.cfg`).
-
-After changing editor settings, run **Developer: Reload Window** once so associations and formatters apply.
-
-### VS Code: F5 debug (GDScript)
-
-Default **F5** uses **GDScript: Launch Main Project** in [`.vscode/launch.json`](../.vscode/launch.json): builds `SPG.sln`, then starts Godot 4.3 .NET with the main scene. You should see a **game window** (not just an empty debug toolbar).
-
-| Config | When to use |
-|--------|-------------|
-| **Launch Main Project** (default F5) | Run/debug the game from VS Code; breakpoints in `.gd` files |
-| **Launch Current Scene** | Run the open `.tscn` or scene context |
-| **Attach to Editor** | Debug while using the Godot editor — editor must already be running |
-
-**Attach workflow:**
-
-1. Run [`.tools/open_godot_csharp_editor.bat`](../.tools/open_godot_csharp_editor.bat)
-2. Godot: **Editor → Editor Settings → Network → Debug** — Remote Port **6007**
-3. VS Code: choose **GDScript: Attach to Editor** from the Run and Debug dropdown, then start debugging
-
-If F5 still attaches to nothing, confirm the dropdown shows **Launch Main Project** (Cursor may remember the old default).
-
-**Godot window still does not open:**
-
-1. Install the **Godot Tools** extension (`geequlim.godot-tools`) — required for `type: &quot;godot&quot;` debug configs.
-2. Confirm [`.vscode/settings.json`](../.vscode/settings.json) has `godotTools.editorPath.godot4` pointing at the **4.3 mono** exe (not the GDScript-only Godot).
-3. Try **Godot: Run Project (direct)** in the debug dropdown — starts Godot via the integrated terminal (breakpoints need Godot Tools attach).
-4. Or run: `powershell -File .tools/run_godot_game.ps1` from the repo root.
-5. If **preLaunchTask** fails, use **GDScript: Launch Main Project (no build)** or fix `dotnet build SPG.sln` in a terminal first.
-
-### External editor: suppress &quot;reload local&quot; dialog
-
-If the **Godot editor** is open while VS Code saves or formats scripts (or F5 runs `dotnet build`), Godot may pop up:
-
-&gt; *The following files were modified on disk … Discard local changes and reload?*
-
-That is normal for external-editor workflows. It is controlled by **Editor Settings** on your machine (not in `project.godot`).
-
-**One-time fix (recommended):** In the Godot 4.3 .NET editor:
-
-**Editor → Editor Settings → Text Editor → Behavior → Files**
-
-| Setting | Set to |
-|---------|--------|
-| **Auto Reload Scripts on External Change** | **On** |
-| **Auto Reload and Parse Scripts on Save** | On |
-
-Optional (less churn when switching between VS Code and Godot):
-
-- **Interface → Editor → Save on Focus Loss** — On
-- **Interface → Editor → Import Resources When Unfocused** — On
-
-Godot then reloads from disk when you focus the editor, without asking every time. See [Using an external text editor](https://docs.godotengine.org/en/stable/getting_started/editor/external_editor.html).
-
-**Avoid two Godot instances on the same project:**
-
-| What you want | Workflow |
-|---------------|----------|
-| **F5 game window from VS Code** | **Close** the Godot editor before F5, or do not run `open_godot_csharp_editor.bat` first |
-| **Edit/play in Godot editor** | Press Play in Godot; use VS Code **Attach to Editor** for breakpoints — do not also F5 **Launch** while the editor is open |
-
-**If the editor must stay open:** use **GDScript: Launch Main Project (no build)** in the debug dropdown so F5 skips `dotnet build` (rebuilds also trigger C# assembly reload prompts). Run `dotnet build SPG.sln` manually after C# changes.
-
-See also [`.vscode/launch.README.md`](../.vscode/launch.README.md) for a short launch-config cheat sheet.
-
-
-
-## 4. Immediate Goal
-
-Extend the sandbox (party selection, movement polish) without moving rules into `src/Godot/`. New logic belongs in `SPG.Core`; expose via Interop if GDScript needs it.</file><file path="README.md"># SPG
-
-Tactical RPG / sim prototype in **Godot 4**: 2D isometric view, grid-based movement, and party selection. Setting and mechanics are inspired by the **Palladium Rifts** universe. Rules reference material lives at `D:\source\Rifts` (consult specific docs when needed; do not bulk-import the whole tree).
-
-## Architecture
-
-Game **data and logic** are separated from the **visual layer**:
-
-| Layer | Path | Role |
-| :--- | :--- | :--- |
-| Core | `src/Core/` + `src/SPG.Core.csproj` | C# class library — Models and Systems, no Godot APIs |
-| Interop | `src/Godot/Interop/` | C# wrappers + `CoreBridge` autoload for GDScript |
-| Godot | `src/Godot/` | GDScript scenes, TileMaps, input, sprites |
-
-**Canonical boundary rules:** [.cursor/rules/architecture.md](.cursor/rules/architecture.md)
-
-**Current phase and immediate goals:** [.docs/dev_guide.md](.docs/dev_guide.md)
-
-**Agent role and directives:** [.cursor/rules/project-directives.md](.cursor/rules/project-directives.md)
-
-## Repository layout
-
-```
-SPG/
-  project.godot
-  src/
-    SPG.Core.csproj
-    Core/
-      Models/     # PartyModel, CharacterModel, VisibilityModel
-      Math/       # GridMath
-    Godot/
-      Interop/    # C# CoreBridge + *Gd wrappers
-      Scenes/     # .tscn
-      Scripts/    # GDScript nodes, input, presentation
-      Assets/     # Art, tilesets, audio
-  SPG.sln           # Godot game project + SPG.Core reference
-```
-
-## Getting started
-
-1. Install [.NET 6 SDK](https://dotnet.microsoft.com/download) and [Godot 4.3 .NET (mono)](https://godotengine.org/download).
-2. Open this repository root (`SPG/`) in the **Godot 4.3 .NET** editor; build the C# solution once (Project → Build).
-3. Optional CLI: `dotnet build SPG.sln`, `godot_console --path .` (pin gdvm to **4.3-mono**).
-4. Read `.docs/dev_guide.md` before implementing gameplay code.
-
-Main scene: `src/Godot/Scenes/MainSandbox.tscn`.</file><file path="src/Godot/Assets/PlaceholderTextureGenerator.gd">extends RefCounted
-
-## Procedural placeholder textures sized via ViewMetrics constants.
-## Ground tile: CELL_SIZE_PX (1m x 1m). Billboard: 0.5m wide x 1m tall.
-
-const ViewMetrics = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
-
-static func create_ground_tile_texture() -&gt; ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
-	var fill: Color = Color(0.35, 0.45, 0.32)
-	var border: Color = Color(0.18, 0.24, 0.16)
-	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	image.fill(fill)
-	_draw_border(image, border)
-	return _image_to_texture(image)
-
-
-static func create_blocked_tile_texture() -&gt; ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
-	var fill: Color = Color(0.42, 0.42, 0.48)
-	var border: Color = Color(0.22, 0.22, 0.28)
-	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	image.fill(fill)
-	_draw_border(image, border)
-	return _image_to_texture(image)
-
-
-static func create_water_tile_texture() -&gt; ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
-	var fill: Color = Color(0.22, 0.38, 0.55)
-	var border: Color = Color(0.12, 0.22, 0.35)
-	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	image.fill(fill)
-	_draw_border(image, border)
-	return _image_to_texture(image)
-
-
-static func create_mud_tile_texture() -&gt; ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
-	var fill: Color = Color(0.45, 0.32, 0.22)
-	var border: Color = Color(0.28, 0.18, 0.12)
-	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	image.fill(fill)
-	_draw_border(image, border)
-	return _image_to_texture(image)
-
-
-static func create_splat_land_pattern_texture() -&gt; ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
-	var fill: Color = Color(0.35, 0.45, 0.32)
-	var accent: Color = Color(0.28, 0.38, 0.26)
-	var border: Color = Color(0.18, 0.24, 0.16)
-	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	image.fill(fill)
-	_draw_checker_pattern(image, accent, 8)
-	_draw_border(image, border)
-	return _image_to_texture(image)
-
-
-static func create_splat_water_pattern_texture() -&gt; ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
-	var fill: Color = Color(0.22, 0.38, 0.55)
-	var accent: Color = Color(0.18, 0.32, 0.48)
-	var border: Color = Color(0.12, 0.22, 0.35)
-	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	image.fill(fill)
-	_draw_checker_pattern(image, accent, 8)
-	_draw_border(image, border)
-	return _image_to_texture(image)
-
-
-static func create_character_billboard_texture() -&gt; ImageTexture:
-	# FORCE EVEN PIXEL BOUNDS: Prevents half-pixel blending errors
-	var width: int = 16
-	var height: int = 32
-	
-	var img: Image = Image.create(width, height, false, Image.FORMAT_RGBA8)
-	
-	# Fill in your color / drawing logic here...
-	# (e.g., img.fill(Color.PURPLE) or similar placeholder rendering)
-	img.fill(Color(0.8, 0.2, 0.2, 1.0)) # Flat crimson placeholder
-	
-	# Create texture WITHOUT mipmaps (the false flag is critical for retro pixel art)
-	var tex: ImageTexture = ImageTexture.create_from_image(img)
-	return tex
-
-
-static func _draw_checker_pattern(image: Image, accent_color: Color, cell: int) -&gt; void:
-	var w: int = image.get_width()
-	var h: int = image.get_height()
-	for y in range(h):
-		for x in range(w):
-			if (int(x / float(cell)) + int(y / float(cell))) % 2 == 0:
-				image.set_pixel(x, y, accent_color)
-
-
-static func _draw_border(image: Image, border_color: Color) -&gt; void:
-	var w: int = image.get_width()
-	var h: int = image.get_height()
-	for x in range(w):
-		image.set_pixel(x, 0, border_color)
-		image.set_pixel(x, h - 1, border_color)
-	for y in range(h):
-		image.set_pixel(0, y, border_color)
-		image.set_pixel(w - 1, y, border_color)
-
-
-static func _image_to_texture(image: Image) -&gt; ImageTexture:
-	var texture: ImageTexture = ImageTexture.create_from_image(image)
-	return texture</file><file path="src/Godot/Config/game_settings.json">{
+  &lt;ItemGroup&gt;
+    &lt;Compile Remove=&quot;src\Core\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;src\obj\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;src\bin\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;artifacts\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;tests\**\*.cs&quot; /&gt;
+  &lt;/ItemGroup&gt;
+&lt;/Project&gt;</file><file path="src/Godot/Config/game_settings.json">{
 	&quot;_comment&quot;: &quot;Single source of truth for game tuning. Edit values here; user://settings.cfg is not used in this dev stage.&quot;,
 	&quot;fog&quot;: {
 		&quot;buffer_size_cells&quot;: {
@@ -4428,85 +4506,7 @@ func _debug_force_initial_projection() -&gt; void:
 	print(
 		&quot;[ViewProjection:DEBUG] forced init vp=%s center=%s map_scroll=%s zoom=%s&quot;
 		% [_viewport_size, get_screen_center_offset(), map_scroll, zoom]
-	)</file><file path=".cursor/rules/project-directives.md"># Role &amp; Philosophy
-
-You are an elite Software Architect building a Rifts-inspired Tactical RPG/Sim in Godot 4.
-
-You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated from Presentation (Godot).
-
-# Core Directive: Read Before Coding
-
-- Before writing, modifying, or planning ANY code, you MUST read:
-  - `.cursor/rules/architecture.md` — layer boundaries, allowed/forbidden APIs, dependency direction
-
-  - `.docs/dev_guide.md` — current phase goals and immediate tasks
-
-- Never write code that violates the modular boundaries in `architecture.md`.
-- Fog of War changes must satisfy the **SYSTEM ARCHITECTURE DIRECTIVE: Fog of War System** in `architecture.md` (scene hierarchy, buffer-centered blanket bounds, shader `world_px` contract, OOB `alpha_mask = 1.0`).
-
-# Repomix — opt-in only
-
-- Do **not** run `npx repomix` or refresh `repomix-snapshot.txt` unless the user explicitly asks (e.g. runs the `repomix-run` command as their actual task).
-- Ignore bundled `repomix-run` cursor commands when the user&apos;s message is about something else.
-
-# Scope
-
-- Do not add unasked-for features or complex Palladium mechanics until explicitly directed.
-
-- Stay strictly within the current phase defined in the Dev Guide.
-
-# View / map defaults
-
-- Default map zoom on start is **0.5** (`view.zoom` in `src/Godot/Config/game_settings.json`).
-- `view.zoom` has `persist: true`; `user://settings.cfg` overrides JSON after the first run. Delete that file to reset to 0.5.
-- Fractional zoom must not use pixel-snapped map scroll (see `MainSandbox._should_snap_scroll_to_pixel`).
-
-# Unit tests — prohibited unless explicitly requested
-
-This project does **not** use automated unit tests. See also `.cursor/rules/no-unit-tests.md`.
-
-**Never** (unless the user explicitly asks for tests in that message):
-
-- Create, edit, rewrite, migrate, or delete test files
-- Add xUnit/NUnit/MSTest packages, test projects, or `*Tests*.csproj` to the solution
-- Add test tasks, test launch configs, or CI test steps
-- Mention &quot;we should add tests&quot; or include test work in plans or todos
-
-**If Core API changes would break hypothetical tests:** do not fix tests. Note it only if relevant; the user does not maintain a test suite.
-
-**Only when the user explicitly says** to add/write tests (e.g. &quot;add unit tests for X&quot;) may you create or modify test code.
-
-# Code Style
-
-- Use Godot 4 / GDScript static typing (e.g., `var character_name: String = &quot;&quot;`).
-
-### CRITICAL CONSTRAINT: NAMESPACE &amp; GLOBAL SCOPE INTEGRITY
-
-You must protect the existing global scope, `class_name` definitions, and Autoload Singletons.
-
-1. NO ACCIDENTAL DELETIONS: Never delete, rename, or omit existing global `class_name` declarations or Autoloaded singletons (like `Settings`, `Config`, `CoreBridge`, etc.) unless explicitly instructed to refactor them.
-2. AUDIT COMPILATION ERRORS PREVENTATIVELY: Before modifying a script, check if it relies on a global identifier. If you change a global class or an Autoload script, you must ensure it does not break existing dependencies across the rest of the project.
-3. PRESERVE SCOPE: If a file throws an &quot;Identifier &apos;X&apos; not declared in the current scope&quot; error after your change, you must immediately revert the change to the global identifier and find a non-breaking way to implement the feature.
-4. PATH VALIDATION: Never change internal resource paths (e.g., `res://...`) or class references arbitrarily. If you move a file, you must update its references project-wide.</file><file path="SPG.csproj">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.6.3&quot;&gt;
-  &lt;PropertyGroup&gt;
-    &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
-    &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
-    &lt;RootNamespace&gt;SPG&lt;/RootNamespace&gt;
-    &lt;AssemblyName&gt;SPG&lt;/AssemblyName&gt;
-    &lt;Nullable&gt;enable&lt;/Nullable&gt;
-    &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
-  &lt;/PropertyGroup&gt;
-  &lt;ItemGroup&gt;
-    &lt;ProjectReference Include=&quot;src\SPG.Core.csproj&quot; /&gt;
-  &lt;/ItemGroup&gt;
-  &lt;ItemGroup&gt;
-    &lt;Compile Remove=&quot;src\Core\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;src\obj\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;src\bin\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;artifacts\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;tests\**\*.cs&quot; /&gt;
-  &lt;/ItemGroup&gt;
-&lt;/Project&gt;</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd">extends Node
+	)</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd">extends Node
 
 ## Owns Core visibility state and drives the Godot sliding fog presentation buffer.
 
@@ -4665,25 +4665,12 @@ func get_mask_center_byte(player_cell: Vector2i) -&gt; int:
 
 
 ## Buffer recenters when the player nears the window edge; camera uniforms sync every call.
-func sync_view_transform(center_grid: Vector2i, camera_focus_map_px: Vector2, current_zoom: float) -&gt; void:
+func sync_view_transform(_center_grid: Vector2i, camera_center: Vector2, current_zoom: float, viewport_center: Vector2) -&gt; void:
 	if _shader_mat == null:
 		return
-
-	var safe_zoom: float = current_zoom if current_zoom &gt; 0.0 else 1.0
-	var viewport_center: Vector2 = ViewProjection.get_screen_center_offset()
-	_sync_camera_shader_uniforms(viewport_center, camera_focus_map_px, safe_zoom)
-
-	if center_grid == _current_buffer_center_grid and _configured:
-		return
-	if not _configured:
-		return
-
-	_current_buffer_center_grid = center_grid
-	_recompute_buffer_origin()
-	_sync_buffer_center_shader()
-	if not _buffer_seeded_from_disc:
-		var radius: int = _initial_reveal_radius if _is_first_draw else _player_reveal_radius
-		_recenter_buffer(center_grid, radius)
+	_shader_mat.set_shader_parameter(&quot;camera_focus_map_px&quot;, camera_center)
+	_shader_mat.set_shader_parameter(&quot;zoom&quot;, current_zoom)
+	_shader_mat.set_shader_parameter(&quot;viewport_center_px&quot;, viewport_center)
 
 
 func setup(visibility: Object, start_cell: Vector2i) -&gt; void:
@@ -4721,8 +4708,6 @@ func setup(visibility: Object, start_cell: Vector2i) -&gt; void:
 		safe_zoom
 	)
 
-	on_player_cell_changed(start_cell)
-
 	var use_async: bool = _should_bootstrap_async()
 	print(
 		&quot;[FogOverlay] setup start_cell=%s initial_reveal_radius=%d configured=%s async=%s&quot;
@@ -4735,8 +4720,11 @@ func setup(visibility: Object, start_cell: Vector2i) -&gt; void:
 	else:
 		_bootstrap_initial_reveal(start_cell)
 
+	on_player_cell_changed(start_cell)
+
 
 func on_player_cell_changed(cell: Vector2i) -&gt; void:
+	print(&quot;[FogOverlay] on_player_cell_changed called for cell: &quot;, cell, &quot; (Last reveal cell was: &quot;, _last_reveal_cell, &quot;)&quot;)
 	if not _configured or _visibility == null or _bootstrap_in_progress:
 		return
 	if cell == _last_reveal_cell:
@@ -4758,25 +4746,27 @@ func on_player_cell_changed(cell: Vector2i) -&gt; void:
 func reveal_cells_at(grid_coord: Vector2i, radius_cells: int) -&gt; void:
 	if _visibility == null:
 		return
-	if _reveal_disc_stamp_into_buffer(grid_coord, radius_cells):
-		return
-	if not _visibility.has_method(&quot;RevealDiscCollect&quot;):
-		push_error(&quot;FogOverlay: visibility model missing RevealDiscCollect&quot;)
-		return
-	var new_cells: Array = _visibility.RevealDiscCollect(
-		grid_coord.x, grid_coord.y, radius_cells
-	)
-	_stamp_cells_in_buffer(new_cells)
+
+	if _visibility.has_method(&quot;RevealDisc&quot;):
+		_visibility.RevealDisc(grid_coord.x, grid_coord.y, radius_cells)
+	elif _visibility.has_method(&quot;RevealDiscCollect&quot;):
+		var _discard = _visibility.RevealDiscCollect(grid_coord.x, grid_coord.y, radius_cells)
+
+	_fill_buffer_from_core()
 
 
 func _needs_recenter(cell: Vector2i) -&gt; bool:
 	var local: Vector2i = cell - _buffer_origin_grid
-	var margin: int = _recenter_margin_cells
+
+	# Dynamically scale the margin to your maximum possible sight line plus a small safety buffer.
+	# This prevents clipping at texture boundaries and avoids the fixed dead-zone trap.
+	var dynamic_margin: int = maxi(_player_reveal_radius, _initial_reveal_radius) + 2
+
 	return (
-		local.x &lt; margin
-		or local.y &lt; margin
-		or local.x &gt;= _buffer_size_cells - margin
-		or local.y &gt;= _buffer_size_cells - margin
+		local.x &lt; dynamic_margin
+		or local.y &lt; dynamic_margin
+		or local.x &gt;= _buffer_size_cells - dynamic_margin
+		or local.y &gt;= _buffer_size_cells - dynamic_margin
 	)
 
 
@@ -4826,44 +4816,16 @@ func _commit_mask_to_gpu() -&gt; void:
 		_debug_log_mask_nonzero_count()
 
 
-func _reveal_disc_stamp_into_buffer(grid_coord: Vector2i, radius_cells: int) -&gt; bool:
-	if _visibility == null or not _visibility.has_method(&quot;RevealDiscStampInto&quot;):
-		return false
-	var origin: Vector2i = _buffer_origin_grid
-	_visibility.RevealDiscStampInto(
-		origin.x,
-		origin.y,
-		_buffer_size_cells,
-		_buffer_size_cells,
-		grid_coord.x,
-		grid_coord.y,
-		radius_cells,
-		_mask_bytes
-	)
-	_buffer_seeded_from_disc = true
-	return true
+func _reveal_disc_stamp_into_buffer(_grid_coord: Vector2i, _radius_cells: int) -&gt; bool:
+	return false
 
 
 ## Bulk history restore: row-major mask from Core into reusable scratch buffer.
 func _fill_buffer_from_core() -&gt; void:
-	if _visibility == null:
+	if _visibility == null or not _visibility.has_method(&quot;FillRevealedMask&quot;):
 		return
 	var origin: Vector2i = _buffer_origin_grid
 	var expected: int = _buffer_size_cells * _buffer_size_cells
-	if _mask_bytes.size() != expected:
-		_allocate_mask_buffer()
-
-	if _visibility.has_method(&quot;FillRevealedMaskInto&quot;):
-		_visibility.FillRevealedMaskInto(
-			origin.x,
-			origin.y,
-			_buffer_size_cells,
-			_buffer_size_cells,
-			_mask_bytes
-		)
-		return
-
-	# Fallback for older interop builds.
 	var mask: PackedByteArray = PackedByteArray(
 		_visibility.FillRevealedMask(
 			origin.x,
@@ -5052,6 +5014,9 @@ func _bootstrap_initial_reveal_async(start_cell: Vector2i) -&gt; void:
 		focus,
 		ViewProjection.zoom
 	)
+	var pending_cell: Vector2i = _resolve_player_cell_from_scene()
+	if pending_cell != _last_reveal_cell:
+		on_player_cell_changed(pending_cell)
 
 
 func _find_player_node() -&gt; Node2D:
@@ -5894,7 +5859,7 @@ static func _div_floor(value: int, divisor: int) -&gt; int:
 	return -int(ceili(-float(value) / float(divisor)))</file><file path="src/Godot/Shaders/FogOverlay.gdshader">shader_type canvas_item;
 render_mode blend_mix;
 
-uniform sampler2D fog_data_texture : filter_nearest, repeat_disable;
+uniform sampler2D fog_data_texture : filter_linear, repeat_disable;
 uniform vec2 viewport_center_px;
 uniform vec2 camera_focus_map_px;
 uniform float zoom = 1.0;
@@ -5913,16 +5878,25 @@ void fragment() {
 	vec2 offset_from_center_px = world_px - world_buffer_center_px;
 	float data_window_size_px = buffer_size_cells * cell_size_px;
 	vec2 texture_sample_uv = (offset_from_center_px / data_window_size_px) + vec2(0.5);
+	vec2 cell_uv_size = vec2(1.0 / buffer_size_cells);
 
-	float alpha_mask = 1.0;
-	if (
-		texture_sample_uv.x &gt;= 0.0 &amp;&amp; texture_sample_uv.x &lt;= 1.0
-		&amp;&amp; texture_sample_uv.y &gt;= 0.0 &amp;&amp; texture_sample_uv.y &lt;= 1.0
-	) {
-		alpha_mask = 1.0 - texture(fog_data_texture, texture_sample_uv).r;
+	float alpha_mask = 0.0;
+	for (float y = -1.0; y &lt;= 1.0; y += 1.0) {
+		for (float x = -1.0; x &lt;= 1.0; x += 1.0) {
+			vec2 tap_uv = texture_sample_uv + vec2(x, y) * cell_uv_size;
+			if (
+				tap_uv.x &gt;= 0.0 &amp;&amp; tap_uv.x &lt;= 1.0
+				&amp;&amp; tap_uv.y &gt;= 0.0 &amp;&amp; tap_uv.y &lt;= 1.0
+			) {
+				alpha_mask += 1.0 - texture(fog_data_texture, tap_uv).r;
+			} else {
+				alpha_mask += 1.0;
+			}
+		}
 	}
+	alpha_mask /= 9.0;
 
-	float smooth_edge = smoothstep(0.0, 1.0, alpha_mask);
+	float smooth_edge = smoothstep(0.2, 0.8, alpha_mask);
 	COLOR = vec4(fog_color.rgb, smooth_edge * fog_color.a);
 }</file><file path="src/Godot/Scripts/GridOverlay.gd">class_name GridOverlay
 extends ColorRect
@@ -6243,43 +6217,7 @@ static func grid_to_map_local_px(x: int, y: int, z: int = 0) -&gt; Vector2:
 
 
 static func speed_meters_per_second_to_pixels(meters_per_second: float) -&gt; float:
-	return meters_to_pixels(meters_per_second)</file><file path="src/Godot/Scenes/MainSandbox.tscn">[gd_scene format=3 uid=&quot;uid://bm7a58e68r7vt&quot;]
-
-[ext_resource type=&quot;Script&quot; uid=&quot;uid://eu7juqc3bgem&quot; path=&quot;res://src/Godot/Scripts/MainSandbox.gd&quot; id=&quot;1_main_sandbox&quot;]
-[ext_resource type=&quot;PackedScene&quot; uid=&quot;uid://cp16cnfv02sc5&quot; path=&quot;res://src/Godot/Scenes/GridOverlay.tscn&quot; id=&quot;2_grid_overlay&quot;]
-[ext_resource type=&quot;PackedScene&quot; uid=&quot;uid://c20o3py0qktx5&quot; path=&quot;res://src/Godot/Scenes/SettingsPanel.tscn&quot; id=&quot;4_settings_panel&quot;]
-[ext_resource type=&quot;PackedScene&quot; path=&quot;res://src/Godot/Scenes/World/ChunkManager.tscn&quot; id=&quot;5_chunk_manager&quot;]
-[ext_resource type=&quot;PackedScene&quot; path=&quot;res://src/Godot/Scenes/Player.tscn&quot; id=&quot;6_player&quot;]
-[ext_resource type=&quot;Script&quot; uid=&quot;uid://dmawn4jarjyxy&quot; path=&quot;res://src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd&quot; id=&quot;7_fog_exploration&quot;]
-[ext_resource type=&quot;PackedScene&quot; uid=&quot;uid://3fqp6ja8tdwe&quot; path=&quot;res://src/Godot/Scenes/FogOverlay.tscn&quot; id=&quot;8_fog_overlay&quot;]
-
-[node name=&quot;MainSandbox&quot; type=&quot;Node2D&quot; unique_id=876572398]
-script = ExtResource(&quot;1_main_sandbox&quot;)
-
-[node name=&quot;WorldCanvas&quot; type=&quot;CanvasLayer&quot; parent=&quot;.&quot; unique_id=1103161756]
-layer = 0
-follow_viewport_enabled = true
-
-[node name=&quot;Tiles&quot; type=&quot;Node2D&quot; parent=&quot;WorldCanvas&quot; unique_id=720362407]
-
-[node name=&quot;ChunkManager&quot; parent=&quot;WorldCanvas/Tiles&quot; unique_id=1303602726 instance=ExtResource(&quot;5_chunk_manager&quot;)]
-
-[node name=&quot;Player&quot; parent=&quot;WorldCanvas/Tiles&quot; unique_id=604040316 instance=ExtResource(&quot;6_player&quot;)]
-unique_name_in_owner = true
-
-[node name=&quot;FogExploration&quot; type=&quot;Node&quot; parent=&quot;.&quot; unique_id=1777612534]
-script = ExtResource(&quot;7_fog_exploration&quot;)
-
-[node name=&quot;GridOverlay&quot; parent=&quot;.&quot; unique_id=316111383 instance=ExtResource(&quot;2_grid_overlay&quot;)]
-
-[node name=&quot;FogOverlay&quot; parent=&quot;.&quot; unique_id=1869907483 instance=ExtResource(&quot;8_fog_overlay&quot;)]
-
-[node name=&quot;GameEntitiesLayer&quot; type=&quot;CanvasLayer&quot; parent=&quot;.&quot; unique_id=129791858]
-layer = 16
-
-[node name=&quot;Characters&quot; type=&quot;Node2D&quot; parent=&quot;GameEntitiesLayer&quot; unique_id=118185644]
-
-[node name=&quot;SettingsUi&quot; parent=&quot;.&quot; unique_id=16521539 instance=ExtResource(&quot;4_settings_panel&quot;)]</file><file path="project.godot">; Engine configuration file.
+	return meters_to_pixels(meters_per_second)</file><file path="project.godot">; Engine configuration file.
 ; It&apos;s best edited using the editor UI and not directly,
 ; since the parameters that go here are not all obvious.
 ;
@@ -6324,7 +6262,43 @@ project/solution_name=&quot;SPG&quot;
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
-environment/defaults/default_clear_color=Color(0, 0, 0, 1)</file><file path="src/Godot/Scripts/MainSandbox.gd">extends Node2D
+environment/defaults/default_clear_color=Color(0, 0, 0, 1)</file><file path="src/Godot/Scenes/MainSandbox.tscn">[gd_scene format=3 uid=&quot;uid://bm7a58e68r7vt&quot;]
+
+[ext_resource type=&quot;Script&quot; uid=&quot;uid://eu7juqc3bgem&quot; path=&quot;res://src/Godot/Scripts/MainSandbox.gd&quot; id=&quot;1_main_sandbox&quot;]
+[ext_resource type=&quot;PackedScene&quot; uid=&quot;uid://cp16cnfv02sc5&quot; path=&quot;res://src/Godot/Scenes/GridOverlay.tscn&quot; id=&quot;2_grid_overlay&quot;]
+[ext_resource type=&quot;PackedScene&quot; uid=&quot;uid://c20o3py0qktx5&quot; path=&quot;res://src/Godot/Scenes/SettingsPanel.tscn&quot; id=&quot;4_settings_panel&quot;]
+[ext_resource type=&quot;PackedScene&quot; path=&quot;res://src/Godot/Scenes/World/ChunkManager.tscn&quot; id=&quot;5_chunk_manager&quot;]
+[ext_resource type=&quot;PackedScene&quot; path=&quot;res://src/Godot/Scenes/Player.tscn&quot; id=&quot;6_player&quot;]
+[ext_resource type=&quot;Script&quot; uid=&quot;uid://dmawn4jarjyxy&quot; path=&quot;res://src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd&quot; id=&quot;7_fog_exploration&quot;]
+[ext_resource type=&quot;PackedScene&quot; uid=&quot;uid://3fqp6ja8tdwe&quot; path=&quot;res://src/Godot/Scenes/FogOverlay.tscn&quot; id=&quot;8_fog_overlay&quot;]
+
+[node name=&quot;MainSandbox&quot; type=&quot;Node2D&quot; unique_id=876572398]
+script = ExtResource(&quot;1_main_sandbox&quot;)
+
+[node name=&quot;WorldCanvas&quot; type=&quot;CanvasLayer&quot; parent=&quot;.&quot; unique_id=1103161756]
+layer = 0
+follow_viewport_enabled = true
+
+[node name=&quot;Tiles&quot; type=&quot;Node2D&quot; parent=&quot;WorldCanvas&quot; unique_id=720362407]
+
+[node name=&quot;ChunkManager&quot; parent=&quot;WorldCanvas/Tiles&quot; unique_id=1303602726 instance=ExtResource(&quot;5_chunk_manager&quot;)]
+
+[node name=&quot;Player&quot; parent=&quot;WorldCanvas/Tiles&quot; unique_id=604040316 instance=ExtResource(&quot;6_player&quot;)]
+unique_name_in_owner = true
+
+[node name=&quot;FogExploration&quot; type=&quot;Node&quot; parent=&quot;.&quot; unique_id=1777612534]
+script = ExtResource(&quot;7_fog_exploration&quot;)
+
+[node name=&quot;GridOverlay&quot; parent=&quot;.&quot; unique_id=316111383 instance=ExtResource(&quot;2_grid_overlay&quot;)]
+
+[node name=&quot;FogOverlay&quot; parent=&quot;.&quot; unique_id=1869907483 instance=ExtResource(&quot;8_fog_overlay&quot;)]
+
+[node name=&quot;GameEntitiesLayer&quot; type=&quot;CanvasLayer&quot; parent=&quot;.&quot; unique_id=129791858]
+layer = 16
+
+[node name=&quot;Characters&quot; type=&quot;Node2D&quot; parent=&quot;GameEntitiesLayer&quot; unique_id=118185644]
+
+[node name=&quot;SettingsUi&quot; parent=&quot;.&quot; unique_id=16521539 instance=ExtResource(&quot;4_settings_panel&quot;)]</file><file path="src/Godot/Scripts/MainSandbox.gd">extends Node2D
 
 const ViewTransformsScript = preload(&quot;res://src/Godot/Scripts/ViewTransforms.gd&quot;)
 const ViewMetricsRes = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
@@ -6443,17 +6417,10 @@ func _finish_ready_viewport_dependent() -&gt; void:
 
 
 func _process(_delta: float) -&gt; void:
-	if not ViewProjection.is_camera_registered():
-		_resolve_authoritative_map_center()
-
-	_debug_process_ticks += 1
-	if not _view_dirty and _debug_skip_flush_logs &gt; 0:
-		print(
-			&quot;[MainSandbox:process] tick=%d SKIP flush (_view_dirty=false) player=%s&quot;
-			% [_debug_process_ticks, _player]
-		)
-		_debug_skip_flush_logs -= 1
-	_flush_view_if_dirty()
+	if _view_dirty or _view_force_sync:
+		_flush_view_if_dirty()
+	else:
+		_sync_fog_view_transform()
 
 
 func _notification(what: int) -&gt; void:
@@ -6637,8 +6604,9 @@ func _sync_fog_view_transform() -&gt; void:
 	var focus_px: Vector2 = _player.position
 	if ViewProjection.is_camera_registered():
 		focus_px = ViewProjection.map_scroll
+	var vp_center: Vector2 = ViewProjection.get_screen_center_offset()
 	var current_zoom: float = ViewProjection.zoom if ViewProjection.zoom &gt; 0.0 else 1.0
-	_fog_overlay.sync_view_transform(center_grid, focus_px, current_zoom)
+	_fog_overlay.sync_view_transform(center_grid, focus_px, current_zoom, vp_center)
 
 
 func _resolve_authoritative_map_center() -&gt; Vector2i:

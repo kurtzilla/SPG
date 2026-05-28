@@ -104,18 +104,12 @@ func get_mask_center_byte(player_cell: Vector2i) -> int:
 
 
 ## Buffer recenters when the player nears the window edge; camera uniforms sync every call.
-func sync_view_transform(center_grid: Vector2i, camera_center: Vector2, current_zoom: float, viewport_center: Vector2) -> void:
+func sync_view_transform(_center_grid: Vector2i, camera_center: Vector2, current_zoom: float, viewport_center: Vector2) -> void:
 	if _shader_mat == null:
 		return
 	_shader_mat.set_shader_parameter("camera_focus_map_px", camera_center)
 	_shader_mat.set_shader_parameter("zoom", current_zoom)
 	_shader_mat.set_shader_parameter("viewport_center_px", viewport_center)
-	if not _configured:
-		return
-	if center_grid == _current_buffer_center_grid:
-		return
-	_current_buffer_center_grid = center_grid
-	_recenter_buffer(center_grid, _player_reveal_radius)
 
 
 func setup(visibility: Object, start_cell: Vector2i) -> void:
@@ -190,28 +184,27 @@ func on_player_cell_changed(cell: Vector2i) -> void:
 func reveal_cells_at(grid_coord: Vector2i, radius_cells: int) -> void:
 	if _visibility == null:
 		return
-	if _reveal_disc_stamp_into_buffer(grid_coord, radius_cells):
-		return
-	if not _visibility.has_method("RevealDiscCollect"):
-		push_error("FogOverlay: visibility model missing RevealDiscCollect")
-		return
-	var new_cells: Array = _visibility.RevealDiscCollect(
-		grid_coord.x, grid_coord.y, radius_cells
-	)
-	if not new_cells.is_empty():
+
+	if _visibility.has_method("RevealDiscCollect"):
+		var new_cells: Array = _visibility.RevealDiscCollect(grid_coord.x, grid_coord.y, radius_cells)
 		_stamp_cells_in_buffer(new_cells)
-	elif _visibility.has_method("GetRevealedCount") and int(_visibility.GetRevealedCount()) > 0:
+	elif _visibility.has_method("RevealDisc"):
+		_visibility.RevealDisc(grid_coord.x, grid_coord.y, radius_cells)
 		_fill_buffer_from_core()
 
 
 func _needs_recenter(cell: Vector2i) -> bool:
 	var local: Vector2i = cell - _buffer_origin_grid
-	var margin: int = _recenter_margin_cells
+
+	# Dynamically scale the margin to your maximum possible sight line plus a small safety buffer.
+	# This prevents clipping at texture boundaries and avoids the fixed dead-zone trap.
+	var dynamic_margin: int = maxi(_player_reveal_radius, _initial_reveal_radius) + 2
+
 	return (
-		local.x < margin
-		or local.y < margin
-		or local.x >= _buffer_size_cells - margin
-		or local.y >= _buffer_size_cells - margin
+		local.x < dynamic_margin
+		or local.y < dynamic_margin
+		or local.x >= _buffer_size_cells - dynamic_margin
+		or local.y >= _buffer_size_cells - dynamic_margin
 	)
 
 
@@ -261,52 +254,16 @@ func _commit_mask_to_gpu() -> void:
 		_debug_log_mask_nonzero_count()
 
 
-func _reveal_disc_stamp_into_buffer(grid_coord: Vector2i, radius_cells: int) -> bool:
-	if _visibility == null or not _visibility.has_method("RevealDiscStampInto"):
-		return false
-	var origin: Vector2i = _buffer_origin_grid
-	_visibility.RevealDiscStampInto(
-		origin.x,
-		origin.y,
-		_buffer_size_cells,
-		_buffer_size_cells,
-		grid_coord.x,
-		grid_coord.y,
-		radius_cells,
-		_mask_bytes
-	)
-	if _mask_has_revealed_cells():
-		_buffer_seeded_from_disc = true
-		return true
-	# Into may have updated Core without writing back to PackedByteArray; resync mask.
-	_fill_buffer_from_core()
-	if _mask_has_revealed_cells():
-		_buffer_seeded_from_disc = true
-		return true
+func _reveal_disc_stamp_into_buffer(_grid_coord: Vector2i, _radius_cells: int) -> bool:
 	return false
 
 
 ## Bulk history restore: row-major mask from Core into reusable scratch buffer.
 func _fill_buffer_from_core() -> void:
-	if _visibility == null:
+	if _visibility == null or not _visibility.has_method("FillRevealedMask"):
 		return
 	var origin: Vector2i = _buffer_origin_grid
 	var expected: int = _buffer_size_cells * _buffer_size_cells
-	if _mask_bytes.size() != expected:
-		_allocate_mask_buffer()
-
-	if _visibility.has_method("FillRevealedMaskInto"):
-		_visibility.FillRevealedMaskInto(
-			origin.x,
-			origin.y,
-			_buffer_size_cells,
-			_buffer_size_cells,
-			_mask_bytes
-		)
-		if _mask_has_revealed_cells():
-			return
-
-	# Fallback when Into interop did not write back or method is unavailable.
 	var mask: PackedByteArray = PackedByteArray(
 		_visibility.FillRevealedMask(
 			origin.x,
@@ -408,13 +365,6 @@ func _mask_index_for_cell(player_cell: Vector2i) -> int:
 	return idx
 
 
-func _mask_has_revealed_cells() -> bool:
-	for i: int in _mask_bytes.size():
-		if _mask_bytes[i] != 0:
-			return true
-	return false
-
-
 func _debug_log_mask_nonzero_count() -> void:
 	var nonzero: int = 0
 	for i: int in _mask_bytes.size():
@@ -502,6 +452,9 @@ func _bootstrap_initial_reveal_async(start_cell: Vector2i) -> void:
 		focus,
 		ViewProjection.zoom
 	)
+	var pending_cell: Vector2i = _resolve_player_cell_from_scene()
+	if pending_cell != _last_reveal_cell:
+		on_player_cell_changed(pending_cell)
 
 
 func _find_player_node() -> Node2D:

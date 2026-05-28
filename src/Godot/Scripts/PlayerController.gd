@@ -31,6 +31,7 @@ var _cached_max_speed: float = 250.0
 
 
 func _ready() -> void:
+	process_priority = 10
 	motion_mode = MOTION_MODE_FLOATING
 	collision_layer = 0
 	collision_mask = 0
@@ -57,7 +58,7 @@ func _invalidate_zoom_speed_cache() -> void:
 	_cached_zoom = -1.0
 
 
-func _physics_process(delta: float) -> void:
+func _process(delta: float) -> void:
 	var zoom: float = ViewProjection.zoom
 	var max_speed: float = _max_speed_for_zoom_cached(zoom)
 	var steer_scale: float = max_speed / _max_speed if _max_speed > 0.0 else 1.0
@@ -75,7 +76,7 @@ func _physics_process(delta: float) -> void:
 		velocity = ZERO
 
 	move_and_slide()
-	ViewProjection.update_camera_position(position)
+	ViewProjection.set_camera_focus(position)
 
 	if input_dir != ZERO or not velocity.is_zero_approx():
 		map_position_changed.emit(position)

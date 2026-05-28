@@ -262,15 +262,22 @@ func register_camera(camera_node: Node2D) -> void:
 		update_camera_position(_camera_source.position, true)
 
 
-## Updates map-local camera focus; emits projection_changed / view_changed when focus moves.
-func update_camera_position(map_px: Vector2, force_emit: bool = false) -> void:
-	if not force_emit and map_px.is_equal_approx(_camera_position):
+## Updates map-local camera focus without emitting view/projection signals (per-frame follow).
+func set_camera_focus(map_px: Vector2) -> void:
+	if map_px.is_equal_approx(_camera_position):
 		return
 	_camera_position = map_px
 	map_scroll = map_px
 	_camera_registered = true
-	_last_emitted_map_px = map_px
 	_cached_visual_radius = -1
+
+
+## Updates map-local camera focus; emits projection_changed / view_changed when focus moves.
+func update_camera_position(map_px: Vector2, force_emit: bool = false) -> void:
+	if not force_emit and map_px.is_equal_approx(_camera_position):
+		return
+	set_camera_focus(map_px)
+	_last_emitted_map_px = map_px
 	projection_changed.emit()
 	view_changed.emit()
 

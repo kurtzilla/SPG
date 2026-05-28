@@ -1,7 +1,7 @@
 shader_type canvas_item;
 render_mode blend_mix;
 
-uniform sampler2D fog_data_texture : filter_nearest, repeat_disable;
+uniform sampler2D fog_data_texture : filter_linear, repeat_disable;
 uniform vec2 viewport_center_px;
 uniform vec2 camera_focus_map_px;
 uniform float zoom = 1.0;
@@ -20,15 +20,24 @@ void fragment() {
 	vec2 offset_from_center_px = world_px - world_buffer_center_px;
 	float data_window_size_px = buffer_size_cells * cell_size_px;
 	vec2 texture_sample_uv = (offset_from_center_px / data_window_size_px) + vec2(0.5);
+	vec2 cell_uv_size = vec2(1.0 / buffer_size_cells);
 
-	float alpha_mask = 1.0;
-	if (
-		texture_sample_uv.x >= 0.0 && texture_sample_uv.x <= 1.0
-		&& texture_sample_uv.y >= 0.0 && texture_sample_uv.y <= 1.0
-	) {
-		alpha_mask = 1.0 - texture(fog_data_texture, texture_sample_uv).r;
+	float alpha_mask = 0.0;
+	for (float y = -1.0; y <= 1.0; y += 1.0) {
+		for (float x = -1.0; x <= 1.0; x += 1.0) {
+			vec2 tap_uv = texture_sample_uv + vec2(x, y) * cell_uv_size;
+			if (
+				tap_uv.x >= 0.0 && tap_uv.x <= 1.0
+				&& tap_uv.y >= 0.0 && tap_uv.y <= 1.0
+			) {
+				alpha_mask += 1.0 - texture(fog_data_texture, tap_uv).r;
+			} else {
+				alpha_mask += 1.0;
+			}
+		}
 	}
+	alpha_mask /= 9.0;
 
-	float smooth_edge = smoothstep(0.0, 1.0, alpha_mask);
+	float smooth_edge = smoothstep(0.2, 0.8, alpha_mask);
 	COLOR = vec4(fog_color.rgb, smooth_edge * fog_color.a);
 }
