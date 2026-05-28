@@ -40,6 +40,9 @@ var _bootstrap_phase: BootstrapPhase = BootstrapPhase.NONE
 var _spawn_safe_zone_x: int = 0
 var _spawn_safe_zone_y: int = 0
 var _safe_zone_radius: int = 2
+var _load_radius: int = 2
+var _load_radius_buffer: int = 1
+var _load_radius_view_padding: int = 2
 
 var _noise: FastNoiseLite
 var _tile_set: TileSet
@@ -54,7 +57,7 @@ var _atlas_mud: Vector2i
 
 var _pending_coords: Array[Vector2i] = []
 var _pending_loads: Dictionary = {}
-var _active_jobs: Array = []
+var _active_jobs: Array[ChunkLoadJob] = []
 var _unload_queue: Array[Vector2i] = []
 var _keep_wanted: Dictionary = {}
 var _prefetch_wanted: Dictionary = {}
@@ -111,32 +114,27 @@ func _read_world_settings() -> void:
 	_spawn_safe_zone_x = Settings.get_int("world.spawn_safe_zone_x")
 	_spawn_safe_zone_y = Settings.get_int("world.spawn_safe_zone_y")
 	_safe_zone_radius = Settings.get_int("world.safe_zone_radius")
+	_load_radius = Settings.get_int("world.load_radius")
+	_load_radius_buffer = Settings.get_int("world.load_radius_buffer")
+	if Settings.has("world.load_radius_view_padding"):
+		_load_radius_view_padding = maxi(Settings.get_int("world.load_radius_view_padding"), 0)
 	_cells_paint_per_frame = mini(_cells_paint_per_frame, _cells_per_frame)
 	_bootstrap_cells_paint_per_frame = mini(_bootstrap_cells_paint_per_frame, _bootstrap_cells_per_frame)
 
 
 func _compute_prefetch_radius() -> int:
-	var base_radius: int = Settings.get_int("world.load_radius")
-	var buffer: int = Settings.get_int("world.load_radius_buffer")
-	var vp: Viewport = get_viewport()
-	if vp == null:
+	var base_radius: int = _load_radius
+	var buffer: int = _load_radius_buffer
+	if not ViewProjection.are_viewport_metrics_ready():
 		return base_radius + buffer
-	var zoom: float = ViewProjection.zoom
-	var cell_px: float = float(_tile_size) * maxf(zoom, 0.0001)
-	var vp_size: Vector2 = vp.get_visible_rect().size
-	var half_x: int = int(ceil(vp_size.x * 0.5 / cell_px))
-	var half_y: int = int(ceil(vp_size.y * 0.5 / cell_px))
-	var half: int = maxi(half_x, half_y) + buffer
-	var viewport_radius: int = _div_floor(half, _chunk_size) + 1
-	var view_padding: int = 2
-	if Settings.has("world.load_radius_view_padding"):
-		view_padding = maxi(Settings.get_int("world.load_radius_view_padding"), 0)
-	return maxi(base_radius + buffer, viewport_radius + view_padding)
+	var cell_radius: int = ViewProjection.get_visual_radius(buffer)
+	var viewport_radius: int = _div_floor(cell_radius, _chunk_size) + 1
+	return maxi(base_radius + buffer, viewport_radius + _load_radius_view_padding)
 
 
 func _build_chunk_offsets() -> void:
 	_keep_offsets.clear()
-	var keep_radius: int = Settings.get_int("world.load_radius")
+	var keep_radius: int = _load_radius
 	for dy: int in range(-keep_radius, keep_radius + 1):
 		for dx: int in range(-keep_radius, keep_radius + 1):
 			_keep_offsets.append(Vector2i(dx, dy))
@@ -226,7 +224,7 @@ func get_tile_type_at_grid(grid_tile: Vector2i) -> int:
 	var chunk_coord := grid_to_chunk_coord(grid_tile)
 	var local := grid_tile - chunk_coord * _chunk_size
 	if _chunks.has(chunk_coord):
-		var data = _chunks[chunk_coord]
+		var data: ChunkData = _chunks[chunk_coord]
 		return data.get_tile_index(local.y * _chunk_size + local.x)
 	return _terrain_at_grid_tile(grid_tile)
 
@@ -341,7 +339,7 @@ func _step_unload_budget() -> void:
 
 
 func _is_chunk_pending(coord: Vector2i) -> bool:
-	for job in _active_jobs:
+	for job: ChunkLoadJob in _active_jobs:
 		if job.coord == coord:
 			return true
 	return _pending_loads.has(coord)
@@ -350,7 +348,7 @@ func _is_chunk_pending(coord: Vector2i) -> bool:
 func _cancel_loads_not_in_prefetch(prefetch_wanted: Dictionary) -> void:
 	var i: int = _active_jobs.size() - 1
 	while i >= 0:
-		var job = _active_jobs[i]
+		var job: ChunkLoadJob = _active_jobs[i]
 		if not prefetch_wanted.has(job.coord):
 			_cancel_job(job)
 			_active_jobs.remove_at(i)
@@ -465,7 +463,7 @@ func _try_start_jobs() -> void:
 
 
 func _start_job(chunk_coord: Vector2i) -> void:
-	var job = ChunkLoadJobScript.new()
+	var job: ChunkLoadJob = ChunkLoadJobScript.new()
 	job.coord = chunk_coord
 	job.origin = chunk_coord * _chunk_size
 	job.layer = _acquire_layer(chunk_coord)
@@ -495,7 +493,7 @@ func _step_active_jobs() -> void:
 		if gen_budget <= 0 and paint_budget <= 0:
 			break
 
-		var job = _active_jobs[job_index]
+		var job: ChunkLoadJob = _active_jobs[job_index]
 		var step := _step_job(job, deadline, gen_budget, paint_budget)
 		gen_budget = step.gen_budget
 		paint_budget = step.paint_budget
@@ -505,7 +503,7 @@ func _step_active_jobs() -> void:
 		job_index += 1
 
 
-func _step_job(job, deadline: int, gen_budget: int, paint_budget: int) -> Dictionary:
+func _step_job(job: ChunkLoadJob, deadline: int, gen_budget: int, paint_budget: int) -> Dictionary:
 	var result := {"finished": false, "gen_budget": gen_budget, "paint_budget": paint_budget}
 	match job.phase:
 		ChunkLoadJobScript.Phase.WAIT_TREE:
@@ -537,7 +535,7 @@ func _step_job(job, deadline: int, gen_budget: int, paint_budget: int) -> Dictio
 			return result
 
 
-func _step_generate_job(job, deadline: int, cell_cap: int) -> int:
+func _step_generate_job(job: ChunkLoadJob, deadline: int, cell_cap: int) -> int:
 	var processed: int = 0
 
 	if job.fill_land:
@@ -573,7 +571,7 @@ func _step_generate_job(job, deadline: int, cell_cap: int) -> int:
 	return processed
 
 
-func _step_paint_job(job, deadline: int, cell_cap: int) -> int:
+func _step_paint_job(job: ChunkLoadJob, deadline: int, cell_cap: int) -> int:
 	var processed: int = 0
 	var source_id: int = TerrainSandboxTileSetScript.SOURCE_ID
 
@@ -596,13 +594,13 @@ func _step_paint_job(job, deadline: int, cell_cap: int) -> int:
 	return processed
 
 
-func _finish_job(job) -> void:
+func _finish_job(job: ChunkLoadJob) -> void:
 	_chunks[job.coord] = job.data
 	_layers[job.coord] = job.layer
 	job.phase = ChunkLoadJobScript.Phase.DONE
 
 
-func _cancel_job(job) -> void:
+func _cancel_job(job: ChunkLoadJob) -> void:
 	if job.layer != null:
 		_release_layer(job.layer)
 

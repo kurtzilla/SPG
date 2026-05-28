@@ -29,7 +29,7 @@ static func grid_to_meters(x: int, y: int) -> Vector2:
 	return ViewTransformsRes.grid_to_world_m(float(x), float(y))
 
 
-static func data_to_screen(x: float, y: float) -> Vector2:
+static func data_to_map_local_px(x: float, y: float) -> Vector2:
 	return ViewTransformsRes.grid_to_map_local_px(x, y)
 
 
@@ -38,20 +38,11 @@ static func global_screen_to_grid(screen_pos: Vector2, _map_scroll: Node2D = nul
 	return ViewTransformsRes.map_local_px_to_grid(map_px)
 
 
-static func grid_to_screen(x: int, y: int, z: int = 0) -> Vector2:
+static func grid_to_map_local_px(x: int, y: int, z: int = 0) -> Vector2:
 	var base: Vector2 = ViewTransformsRes.grid_to_map_local_px(float(x), float(y))
 	if z != 0:
 		base.y -= ViewTransformsRes.meters_to_pixels(float(z))
 	return base
-
-
-static func grid_to_screen_centered(
-	x: int,
-	y: int,
-	viewport_center: Vector2,
-	z: int = 0
-) -> Vector2:
-	return viewport_center + grid_to_screen(x, y, z)
 
 
 static func speed_meters_per_second_to_pixels(meters_per_second: float) -> float:

@@ -7,9 +7,9 @@ var tiles: PackedByteArray
 var chunk_size: int = 32
 
 
-func _init(chunk_coord: Vector2i, p_chunk_size: int = -1) -> void:
+func _init(chunk_coord: Vector2i, p_chunk_size: int) -> void:
 	coord = chunk_coord
-	chunk_size = p_chunk_size if p_chunk_size > 0 else Settings.get_int("world.chunk_size")
+	chunk_size = p_chunk_size
 	tiles = PackedByteArray()
 	tiles.resize(chunk_size * chunk_size)
 	tiles.fill(0)

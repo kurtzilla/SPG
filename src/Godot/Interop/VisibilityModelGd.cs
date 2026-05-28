@@ -23,6 +23,8 @@ public partial class VisibilityModelGd : RefCounted
 		set => _model.MovementRevealRadius = value;
 	}
 
+	public int GetRevealedCount() => _model.RevealedCount;
+
 	public bool IsRevealed(int x, int y) => _model.IsRevealed(x, y);
 
 	public int GetVisibility(int x, int y) => (int)_model.GetVisibility(x, y);
@@ -35,6 +37,20 @@ public partial class VisibilityModelGd : RefCounted
 	public int RevealDisc(int centerX, int centerY, int radius) =>
 		_model.RevealDisc(centerX, centerY, radius);
 
+	/// <summary>Reveals disc in Core and returns newly revealed grid cells.</summary>
+	public Array<Vector2I> RevealDiscCollect(int centerX, int centerY, int radius)
+	{
+		var newly = new System.Collections.Generic.List<(int X, int Y)>();
+		_model.RevealDisc(centerX, centerY, radius, newly);
+		var result = new Array<Vector2I>();
+		foreach (var (x, y) in newly)
+		{
+			result.Add(new Vector2I(x, y));
+		}
+
+		return result;
+	}
+
 	public void ClearAll() => _model.ClearAll();
 
 	public byte[] FillRevealedMask(int originX, int originY, int width, int height)
@@ -43,6 +59,24 @@ public partial class VisibilityModelGd : RefCounted
 		_model.FillRevealedMask(originX, originY, width, height, mask);
 		return mask;
 	}
+
+	/// <summary>Writes row-major R8 mask into caller buffer (no allocation).</summary>
+	public void FillRevealedMaskInto(int originX, int originY, int width, int height, byte[] buffer)
+	{
+		_model.FillRevealedMask(originX, originY, width, height, buffer);
+	}
+
+	/// <summary>Reveals disc in Core and stamps R8 mask into caller buffer (no cell list).</summary>
+	public int RevealDiscStampInto(
+		int originX,
+		int originY,
+		int width,
+		int height,
+		int centerX,
+		int centerY,
+		int radius,
+		byte[] buffer) =>
+		_model.RevealDiscStampInto(originX, originY, width, height, centerX, centerY, radius, buffer);
 
 	public bool TryGetRevealedBounds(out int minX, out int minY, out int maxX, out int maxY)
 	{

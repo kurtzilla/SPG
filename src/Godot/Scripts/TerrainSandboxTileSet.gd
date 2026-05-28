@@ -37,7 +37,7 @@ static func build() -> TileSet:
 	atlas.texture_region_size = Vector2i(tile_size, tile_size)
 	atlas.texture = _build_atlas_texture(tile_size)
 
-	var _source_id: int = tile_set.add_source(atlas, SOURCE_ID)
+	tile_set.add_source(atlas, SOURCE_ID)
 	for atlas_coords in [ATLAS_LAND, ATLAS_WATER, ATLAS_MUD]:
 		atlas.create_tile(atlas_coords)
 

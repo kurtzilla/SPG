@@ -49,7 +49,7 @@ enum SpeedUnit { TPS, MPS }
 @onready var _player_reveal_slider: HSlider = get_node(FOG_GRID + "/PlayerRevealSlider") as HSlider
 @onready var _player_reveal_value: Label = get_node(FOG_GRID + "/PlayerRevealValue") as Label
 
-var _party = null
+var _party: PartyModelGd = null
 var _player: CharacterBody2D = null
 var _speed_unit: SpeedUnit = SpeedUnit.TPS
 var _movement_sliders_bound: bool = false
@@ -82,8 +82,7 @@ func _notification(what: int) -> void:
 
 
 func setup(
-	party = null,
-	_map_scroll: Node2D = null,
+	party: PartyModelGd = null,
 	player: CharacterBody2D = null
 ) -> void:
 	_party = party
@@ -239,7 +238,7 @@ func _update_stats_labels() -> void:
 	_fps_value.text = "%d" % int(round(Engine.get_frames_per_second()))
 	_zoom_value.text = "%.1f" % ViewProjection.zoom
 
-	var character = _party.GetSelectedCharacter() if _party != null else null
+	var character: CharacterModelGd = _party.GetSelectedCharacter() if _party != null else null
 	if character != null:
 		_foot_value.text = "(%d, %d)" % [character.X, character.Y]
 	else:

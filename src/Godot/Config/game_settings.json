@@ -34,6 +34,17 @@
 			"context": "game",
 			"min": 4.0,
 			"value": 24.0
+		},
+		"bootstrap_rows_per_frame": {
+			"comment": "Spread initial reveal mask stamping across frames (0 = sync). Used when initial_reveal_radius >= 32.",
+			"context": "game",
+			"min": 0.0,
+			"value": 0.0
+		},
+		"debug_disable_overlay": {
+			"comment": "Set true to hide fog overlay for terrain isolation testing",
+			"context": "game",
+			"value": false
 		}
 	},
 	"grid": {

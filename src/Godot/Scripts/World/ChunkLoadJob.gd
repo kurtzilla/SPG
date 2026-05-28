@@ -8,7 +8,7 @@ enum Phase { WAIT_TREE, GENERATE, PAINT, DONE }
 var coord: Vector2i
 var phase: Phase = Phase.WAIT_TREE
 var layer: TileMapLayer
-var data
+var data: ChunkData
 var origin: Vector2i
 var cell_index: int = 0
 ## Chunk AABB does not overlap spawn safe zone — skip per-cell safe checks.

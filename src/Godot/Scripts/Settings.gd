@@ -117,6 +117,11 @@ var player_reveal_radius: int:
 		set_int("fog.player_reveal_radius", value)
 
 
+var velocity_snap_threshold_sq: float:
+	get:
+		return get_float("player_movement.velocity_snap_threshold_sq")
+
+
 # --- Typed getters ---
 
 func get_setting(path: String, default_value: Variant = null) -> Variant:

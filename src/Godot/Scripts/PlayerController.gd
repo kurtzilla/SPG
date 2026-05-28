@@ -10,6 +10,7 @@ const ViewMetricsRes = preload("res://src/Godot/Scripts/ViewMetrics.gd")
 const PlaceholderTextureGenerator = preload("res://src/Godot/Assets/PlaceholderTextureGenerator.gd")
 
 signal grid_cell_changed(cell: Vector2i)
+signal map_position_changed(map_px: Vector2)
 
 @export_group("Zoom speed")
 @export var min_zoom_speed: float = 50.0
@@ -34,6 +35,7 @@ func _ready() -> void:
 	collision_layer = 0
 	collision_mask = 0
 	z_index = 1
+	add_to_group("player")
 	_setup_sprite()
 	_last_grid_cell = _grid_cell_from_position()
 	if not Settings.movement_changed.is_connected(_apply_movement_settings):
@@ -48,7 +50,7 @@ func _apply_movement_settings() -> void:
 	_max_speed = Settings.max_speed
 	_acceleration = Settings.acceleration
 	_friction = Settings.friction
-	_velocity_snap_threshold_sq = Settings.get_float("player_movement.velocity_snap_threshold_sq")
+	_velocity_snap_threshold_sq = Settings.velocity_snap_threshold_sq
 
 
 func _invalidate_zoom_speed_cache() -> void:
@@ -73,6 +75,10 @@ func _physics_process(delta: float) -> void:
 		velocity = ZERO
 
 	move_and_slide()
+	ViewProjection.update_camera_position(position)
+
+	if input_dir != ZERO or not velocity.is_zero_approx():
+		map_position_changed.emit(position)
 	_emit_grid_cell_if_changed()
 
 

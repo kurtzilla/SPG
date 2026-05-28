@@ -85,8 +85,6 @@ src/Godot/Scripts/GridOverlay.gd
 src/Godot/Scripts/GridOverlay.gd.uid
 src/Godot/Scripts/MainSandbox.gd
 src/Godot/Scripts/MainSandbox.gd.uid
-src/Godot/Scripts/Math2D.gd
-src/Godot/Scripts/Math2D.gd.uid
 src/Godot/Scripts/ObliqueBridge.gd
 src/Godot/Scripts/ObliqueBridge.gd.uid
 src/Godot/Scripts/PlayerController.gd
@@ -105,6 +103,8 @@ src/Godot/Scripts/TerrainSandboxTileSet.gd
 src/Godot/Scripts/TerrainSandboxTileSet.gd.uid
 src/Godot/Scripts/TerrainTileTextures.gd
 src/Godot/Scripts/TerrainTileTextures.gd.uid
+src/Godot/Scripts/ViewCameraTracker.gd
+src/Godot/Scripts/ViewCameraTracker.gd.uid
 src/Godot/Scripts/ViewContext.gd
 src/Godot/Scripts/ViewContext.gd.uid
 src/Godot/Scripts/ViewMetrics.gd
@@ -125,7 +125,39 @@ src/Godot/Shaders/FogOverlay.gdshader
 src/Godot/Shaders/FogOverlay.gdshader.uid
 src/Godot/Shaders/GridOverlay.gdshader
 src/Godot/Shaders/GridOverlay.gdshader.uid
-src/SPG.Core.csproj</directory_structure><files>This section contains the contents of the repository&apos;s files.<file path=".cursor/plans/fog_viewport_screen_quad.plan.md">---
+src/SPG.Core.csproj</directory_structure><files>This section contains the contents of the repository&apos;s files.<file path="src/Godot/Scripts/ViewCameraTracker.gd">extends Node
+
+## Pushes a Node2D focus (player or Camera2D) into ViewProjection each physics tick.
+
+var _camera_source: Node2D = null
+
+
+func _ready() -&gt; void:
+	var parent_source := get_parent() as Node2D
+	if parent_source != null:
+		register_source(parent_source)
+
+
+func register_source(source: Node2D) -&gt; void:
+	_camera_source = source
+	if _camera_source != null:
+		ViewProjection.register_camera(_camera_source)
+
+
+func _physics_process(_delta: float) -&gt; void:
+	if _camera_source == null or not is_instance_valid(_camera_source):
+		return
+	ViewProjection.update_camera_position(_camera_source.position)</file><file path="src/Godot/Scripts/ViewCameraTracker.gd.uid">uid://d37omkq736u53</file><file path=".cursor/commands/repomix-run.md">---
+description: Generates a codebase snapshot quietly
+---
+
+# Your Context Action Prompt
+
+Please execute this exact command in the terminal to cleanly compile the new snapshot:
+
+```bash
+npx repomix &amp;&amp; echo &quot;✅ Repomix run successful!&quot;
+```</file><file path=".cursor/plans/fog_viewport_screen_quad.plan.md">---
 name: Fog Viewport Screen Quad
 overview: Move fog to a fullscreen CanvasLayer ColorRect; shader projects screen UV to map-local world_px via camera_center_px + zoom. No world-space quad sizing; _recenter_buffer only updates buffer shader center.
 todos:
@@ -235,17 +267,7 @@ Fragment unchanged except drop `fog_quad_origin_map_px` dependency; keep `1.0 - 
 
 ## Execution note
 
-Implementation was prepared but blocked by **Plan mode**. Approve this plan or switch to **Agent mode** to apply the edits.</file><file path=".cursor/commands/repomix-run.md">---
-description: Generates a codebase snapshot quietly
----
-
-# Your Context Action Prompt
-
-Please execute this exact command in the terminal to cleanly compile the new snapshot:
-
-```bash
-npx repomix &amp;&amp; echo &quot;✅ Repomix run successful!&quot;
-```</file><file path=".cursor/plans/settings_panel_fog_ui.plan.md">---
+Implementation was prepared but blocked by **Plan mode**. Approve this plan or switch to **Agent mode** to apply the edits.</file><file path=".cursor/plans/settings_panel_fog_ui.plan.md">---
 name: Settings Panel Fog UI
 overview: Double the HUD settings panel, add fog radius sliders, canonicalize fog settings keys (initial 8 / player 3), and bind them into FogOverlay boot so Core VisibilityModel receives the correct RevealDisc radii on new game startup.
 todos:
@@ -924,88 +946,7 @@ public partial class PartyModelGd : RefCounted
 [ext_resource type=&quot;Script&quot; path=&quot;res://src/Godot/Scripts/World/ChunkManager.gd&quot; id=&quot;1_chunk_manager&quot;]
 
 [node name=&quot;ChunkManager&quot; type=&quot;Node2D&quot;]
-script = ExtResource(&quot;1_chunk_manager&quot;)</file><file path="src/Godot/Scripts/.gitkeep"></file><file path="src/Godot/Scripts/GridOverlay.gd.uid">uid://dqnh5ej7e7thq</file><file path="src/Godot/Scripts/MainSandbox.gd.uid">uid://eu7juqc3bgem</file><file path="src/Godot/Scripts/Math2D.gd">class_name Math2D
-extends RefCounted
-
-## Engine-agnostic 2D math helpers (no coordinate-space semantics).
-
-
-static func remap(value: float, from_min: float, from_max: float, to_min: float, to_max: float) -&gt; float:
-	if is_equal_approx(from_min, from_max):
-		return to_min
-	var t: float = (value - from_min) / (from_max - from_min)
-	return lerpf(to_min, to_max, t)
-
-
-static func inverse_remap(value: float, from_min: float, from_max: float, to_min: float, to_max: float) -&gt; float:
-	return remap(value, to_min, to_max, from_min, from_max)
-
-
-static func smoothstep(edge0: float, edge1: float, x: float) -&gt; float:
-	if is_equal_approx(edge0, edge1):
-		return 0.0 if x &lt; edge0 else 1.0
-	var t: float = clampf((x - edge0) / (edge1 - edge0), 0.0, 1.0)
-	return t * t * (3.0 - 2.0 * t)
-
-
-static func distance_squared(a: Vector2, b: Vector2) -&gt; float:
-	var dx: float = a.x - b.x
-	var dy: float = a.y - b.y
-	return dx * dx + dy * dy
-
-
-static func point_in_rect(point: Vector2, rect: Rect2) -&gt; bool:
-	return rect.has_point(point)
-
-
-static func closest_point_on_rect(point: Vector2, rect: Rect2) -&gt; Vector2:
-	return Vector2(
-		clampf(point.x, rect.position.x, rect.end.x),
-		clampf(point.y, rect.position.y, rect.end.y)
-	)
-
-
-static func rect_intersects_circle(rect: Rect2, center: Vector2, radius: float) -&gt; bool:
-	var closest: Vector2 = closest_point_on_rect(center, rect)
-	return center.distance_squared_to(closest) &lt;= radius * radius
-
-
-static func wrap_angle(radians: float) -&gt; float:
-	var tau: float = TAU
-	return fposmod(radians + PI, tau) - PI
-
-
-static func angle_from_direction(direction: Vector2) -&gt; float:
-	return direction.angle()
-
-
-static func direction_from_angle(radians: float) -&gt; Vector2:
-	return Vector2.from_angle(radians)
-
-
-static func snap_to_step(value: float, step: float) -&gt; float:
-	if is_zero_approx(step):
-		return value
-	return round(value / step) * step
-
-
-static func snap_vector_to_grid(vector: Vector2, cell_size: float) -&gt; Vector2:
-	return Vector2(
-		snap_to_step(vector.x, cell_size),
-		snap_to_step(vector.y, cell_size)
-	)
-
-
-static func expand_rect(rect: Rect2, margin: float) -&gt; Rect2:
-	return rect.grow(margin)
-
-
-static func rect_union(a: Rect2, b: Rect2) -&gt; Rect2:
-	return a.merge(b)
-
-
-static func rect_from_center_size(center: Vector2, size: Vector2) -&gt; Rect2:
-	return Rect2(center - size * 0.5, size)</file><file path="src/Godot/Scripts/Math2D.gd.uid">uid://cpg6j68n5hns7</file><file path="src/Godot/Scripts/ObliqueBridge.gd.uid">uid://0tvbb2g6n0ch</file><file path="src/Godot/Scripts/PlayerController.gd.uid">uid://n4t34sr8qh7s</file><file path="src/Godot/Scripts/Settings.gd.uid">uid://bi2n75uvmnxk7</file><file path="src/Godot/Scripts/SettingsContext.gd">class_name SettingsContext
+script = ExtResource(&quot;1_chunk_manager&quot;)</file><file path="src/Godot/Scripts/.gitkeep"></file><file path="src/Godot/Scripts/GridOverlay.gd.uid">uid://dqnh5ej7e7thq</file><file path="src/Godot/Scripts/MainSandbox.gd.uid">uid://eu7juqc3bgem</file><file path="src/Godot/Scripts/ObliqueBridge.gd.uid">uid://0tvbb2g6n0ch</file><file path="src/Godot/Scripts/PlayerController.gd.uid">uid://n4t34sr8qh7s</file><file path="src/Godot/Scripts/Settings.gd.uid">uid://bi2n75uvmnxk7</file><file path="src/Godot/Scripts/SettingsContext.gd">class_name SettingsContext
 extends RefCounted
 
 ## Settings scope for persistence and future per-context overrides.
@@ -1033,14 +974,13 @@ static func to_section_name(ctx: Context) -&gt; String:
 			return &quot;game&quot;</file><file path="src/Godot/Scripts/SettingsContext.gd.uid">uid://cn0jai533kk4m</file><file path="src/Godot/Scripts/SettingsPanel.gd.uid">uid://xps63hp34thj</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd.uid">uid://dmawn4jarjyxy</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd.uid">uid://de0pe5d3agf4l</file><file path="src/Godot/Scripts/TerrainSandboxTileSet.gd.uid">uid://ci2487hxkfw0j</file><file path="src/Godot/Scripts/TerrainTileTextures.gd">class_name TerrainTileTextures
 extends RefCounted
 
-## Solid terrain tiles, transition overlays, and noise masks for grid rendering.
+## Solid terrain tiles for grid rendering.
 
 const ViewMetrics = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
 
 const SOLID_LAND_COLOR: Color = Color(0.35, 0.45, 0.32)
 const SOLID_WATER_COLOR: Color = Color(0.22, 0.38, 0.55)
 const SOLID_MUD_COLOR: Color = Color(0.45, 0.32, 0.22)
-const TRANSITION_BLEED: float = 0.4
 
 
 static func create_solid_land_texture() -&gt; ImageTexture:
@@ -1055,62 +995,11 @@ static func create_solid_mud_texture() -&gt; ImageTexture:
 	return _create_solid_fill_texture(SOLID_MUD_COLOR)
 
 
-static func create_directional_transition_texture(
-	transition_color: Color,
-	neighbor_flags: Vector4,
-	noise_mask: Texture2D
-) -&gt; ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
-	var noise_image: Image = noise_mask.get_image()
-	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	var bleed: float = TRANSITION_BLEED
-
-	for y in range(size):
-		for x in range(size):
-			var uv_x: float = (float(x) + 0.5) / float(size)
-			var uv_y: float = (float(y) + 0.5) / float(size)
-			var alpha: float = 0.0
-
-			if neighbor_flags.x &gt; 0.0:
-				alpha = maxf(alpha, 1.0 - _smoothstep(0.0, bleed, uv_y))
-			if neighbor_flags.y &gt; 0.0:
-				alpha = maxf(alpha, _smoothstep(1.0 - bleed, 1.0, uv_y))
-			if neighbor_flags.z &gt; 0.0:
-				alpha = maxf(alpha, _smoothstep(1.0 - bleed, 1.0, uv_x))
-			if neighbor_flags.w &gt; 0.0:
-				alpha = maxf(alpha, 1.0 - _smoothstep(0.0, bleed, uv_x))
-
-			var noise_sample: float = noise_image.get_pixel(x, y).r
-			alpha *= noise_sample
-			image.set_pixel(x, y, Color(transition_color.r, transition_color.g, transition_color.b, alpha))
-
-	return _image_to_texture(image)
-
-
-static func create_seamless_noise_mask_texture() -&gt; ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
-	var noise: FastNoiseLite = FastNoiseLite.new()
-	noise.seed = 1337
-	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
-	noise.frequency = 0.04
-	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	for y in range(size):
-		for x in range(size):
-			var n: float = (noise.get_noise_2d(float(x), float(y)) + 1.0) * 0.5
-			image.set_pixel(x, y, Color(n, n, n, 1.0))
-	return _image_to_texture(image)
-
-
 static func _create_solid_fill_texture(fill: Color) -&gt; ImageTexture:
 	var size: int = ViewMetrics.CELL_SIZE_PX
 	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
 	image.fill(fill)
 	return _image_to_texture(image)
-
-
-static func _smoothstep(edge0: float, edge1: float, x: float) -&gt; float:
-	var t: float = clampf((x - edge0) / (edge1 - edge0), 0.0, 1.0)
-	return t * t * (3.0 - 2.0 * t)
 
 
 static func _image_to_texture(image: Image) -&gt; ImageTexture:
@@ -1124,7 +1013,7 @@ enum Phase { WAIT_TREE, GENERATE, PAINT, DONE }
 var coord: Vector2i
 var phase: Phase = Phase.WAIT_TREE
 var layer: TileMapLayer
-var data
+var data: ChunkData
 var origin: Vector2i
 var cell_index: int = 0
 ## Chunk AABB does not overlap spawn safe zone — skip per-cell safe checks.
@@ -1150,26 +1039,7 @@ Before writing any complex system (like chunk management, procedural generation,
 
 - Explicitly state any potential performance traps or inefficiencies in your initial thought process.
 - Explain how you are bypassing them (e.g., using Dictionaries instead of Arrays, avoiding per-frame node instantiations).
-- Only provide code that has passed your own internal performance audit.</file><file path="SPG.csproj.old.1">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.3.0&quot;&gt;
-  &lt;PropertyGroup&gt;
-    &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
-    &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
-    &lt;RootNamespace&gt;SPG&lt;/RootNamespace&gt;
-    &lt;AssemblyName&gt;SPG&lt;/AssemblyName&gt;
-    &lt;Nullable&gt;enable&lt;/Nullable&gt;
-    &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
-  &lt;/PropertyGroup&gt;
-  &lt;ItemGroup&gt;
-    &lt;ProjectReference Include=&quot;src\SPG.Core.csproj&quot; /&gt;
-  &lt;/ItemGroup&gt;
-  &lt;ItemGroup&gt;
-    &lt;Compile Remove=&quot;src\Core\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;src\obj\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;src\bin\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;artifacts\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;tests\**\*.cs&quot; /&gt;
-  &lt;/ItemGroup&gt;
-&lt;/Project&gt;</file><file path="src/Core/Models/CellVisibility.cs">namespace SPG.Core;
+- Only provide code that has passed your own internal performance audit.</file><file path="src/Core/Models/CellVisibility.cs">namespace SPG.Core;
 
 public enum CellVisibility
 {
@@ -1177,20 +1047,20 @@ public enum CellVisibility
 	Revealed = 1,
 	// Reserved for future three-state visibility (e.g. in-sight vs explored).
 	// Visible = 2,
-}</file><file path="src/Godot/Scenes/Player.tscn">[gd_scene load_steps=3 format=3]
-
-[ext_resource type=&quot;Script&quot; path=&quot;res://src/Godot/Scripts/PlayerController.gd&quot; id=&quot;1_player_controller&quot;]
-
-[sub_resource type=&quot;RectangleShape2D&quot; id=&quot;RectangleShape2D_player&quot;]
-size = Vector2(16, 16)
-
-[node name=&quot;Player&quot; type=&quot;CharacterBody2D&quot;]
-physics_interpolation_mode = 1
-script = ExtResource(&quot;1_player_controller&quot;)
-
-[node name=&quot;Sprite2D&quot; type=&quot;Sprite2D&quot; parent=&quot;.&quot;]
-
-[node name=&quot;CollisionShape2D&quot; type=&quot;CollisionShape2D&quot; parent=&quot;.&quot;]
+}</file><file path="src/Godot/Scenes/Player.tscn">[gd_scene load_steps=3 format=3]
+
+[ext_resource type=&quot;Script&quot; path=&quot;res://src/Godot/Scripts/PlayerController.gd&quot; id=&quot;1_player_controller&quot;]
+
+[sub_resource type=&quot;RectangleShape2D&quot; id=&quot;RectangleShape2D_player&quot;]
+size = Vector2(16, 16)
+
+[node name=&quot;Player&quot; type=&quot;CharacterBody2D&quot;]
+physics_interpolation_mode = 1
+script = ExtResource(&quot;1_player_controller&quot;)
+
+[node name=&quot;Sprite2D&quot; type=&quot;Sprite2D&quot; parent=&quot;.&quot;]
+
+[node name=&quot;CollisionShape2D&quot; type=&quot;CollisionShape2D&quot; parent=&quot;.&quot;]
 shape = SubResource(&quot;RectangleShape2D_player&quot;)</file><file path="src/Godot/Scripts/PlayerController.gd">extends CharacterBody2D
 
 ## Factorio-style top-down movement: snappy acceleration, active braking, tight reversal.
@@ -1203,6 +1073,7 @@ const ViewMetricsRes = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot
 const PlaceholderTextureGenerator = preload(&quot;res://src/Godot/Assets/PlaceholderTextureGenerator.gd&quot;)
 
 signal grid_cell_changed(cell: Vector2i)
+signal map_position_changed(map_px: Vector2)
 
 @export_group(&quot;Zoom speed&quot;)
 @export var min_zoom_speed: float = 50.0
@@ -1227,6 +1098,7 @@ func _ready() -&gt; void:
 	collision_layer = 0
 	collision_mask = 0
 	z_index = 1
+	add_to_group(&quot;player&quot;)
 	_setup_sprite()
 	_last_grid_cell = _grid_cell_from_position()
 	if not Settings.movement_changed.is_connected(_apply_movement_settings):
@@ -1241,7 +1113,7 @@ func _apply_movement_settings() -&gt; void:
 	_max_speed = Settings.max_speed
 	_acceleration = Settings.acceleration
 	_friction = Settings.friction
-	_velocity_snap_threshold_sq = Settings.get_float(&quot;player_movement.velocity_snap_threshold_sq&quot;)
+	_velocity_snap_threshold_sq = Settings.velocity_snap_threshold_sq
 
 
 func _invalidate_zoom_speed_cache() -&gt; void:
@@ -1266,6 +1138,10 @@ func _physics_process(delta: float) -&gt; void:
 		velocity = ZERO
 
 	move_and_slide()
+	ViewProjection.update_camera_position(position)
+
+	if input_dir != ZERO or not velocity.is_zero_approx():
+		map_position_changed.emit(position)
 	_emit_grid_cell_if_changed()
 
 
@@ -1438,6 +1314,11 @@ var player_reveal_radius: int:
 		return get_int(&quot;fog.player_reveal_radius&quot;)
 	set(value):
 		set_int(&quot;fog.player_reveal_radius&quot;, value)
+
+
+var velocity_snap_threshold_sq: float:
+	get:
+		return get_float(&quot;player_movement.velocity_snap_threshold_sq&quot;)
 
 
 # --- Typed getters ---
@@ -1935,7 +1816,7 @@ static func build() -&gt; TileSet:
 	atlas.texture_region_size = Vector2i(tile_size, tile_size)
 	atlas.texture = _build_atlas_texture(tile_size)
 
-	var _source_id: int = tile_set.add_source(atlas, SOURCE_ID)
+	tile_set.add_source(atlas, SOURCE_ID)
 	for atlas_coords in [ATLAS_LAND, ATLAS_WATER, ATLAS_MUD]:
 		atlas.create_tile(atlas_coords)
 
@@ -1983,9 +1864,9 @@ var tiles: PackedByteArray
 var chunk_size: int = 32
 
 
-func _init(chunk_coord: Vector2i, p_chunk_size: int = -1) -&gt; void:
+func _init(chunk_coord: Vector2i, p_chunk_size: int) -&gt; void:
 	coord = chunk_coord
-	chunk_size = p_chunk_size if p_chunk_size &gt; 0 else Settings.get_int(&quot;world.chunk_size&quot;)
+	chunk_size = p_chunk_size
 	tiles = PackedByteArray()
 	tiles.resize(chunk_size * chunk_size)
 	tiles.fill(0)
@@ -2015,6 +1896,25 @@ mono_crash.*.json
 bin/
 obj/
 artifacts/</file><file path="SPG.csproj.old">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.6.3&quot;&gt;
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
+    &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
+    &lt;RootNamespace&gt;SPG&lt;/RootNamespace&gt;
+    &lt;AssemblyName&gt;SPG&lt;/AssemblyName&gt;
+    &lt;Nullable&gt;enable&lt;/Nullable&gt;
+    &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
+  &lt;/PropertyGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;ProjectReference Include=&quot;src\SPG.Core.csproj&quot; /&gt;
+  &lt;/ItemGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;Compile Remove=&quot;src\Core\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;src\obj\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;src\bin\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;artifacts\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;tests\**\*.cs&quot; /&gt;
+  &lt;/ItemGroup&gt;
+&lt;/Project&gt;</file><file path="SPG.csproj.old.1">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.3.0&quot;&gt;
   &lt;PropertyGroup&gt;
     &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
     &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
@@ -2166,6 +2066,8 @@ public sealed class VisibilityModel
 	private int _initialRevealRadius = DefaultInitialRevealRadius;
 	private int _movementRevealRadius = DefaultMovementRevealRadius;
 
+	public int RevealedCount =&gt; _revealed.Count;
+
 	public bool IsRevealed(int x, int y) =&gt; _revealed.Contains(MakeKey(x, y));
 
 	public CellVisibility GetVisibility(int x, int y) =&gt;
@@ -2243,13 +2145,80 @@ public sealed class VisibilityModel
 	}
 
 	/// &lt;summary&gt;
+	/// Reveals an ellipse and stamps 255 into &lt;paramref name=&quot;outMask&quot;/&gt; for cells inside the window.
+	/// Avoids allocating a newly-revealed cell list for presentation updates.
+	/// &lt;/summary&gt;
+	public int RevealDiscStampInto(
+		int originX,
+		int originY,
+		int width,
+		int height,
+		int centerX,
+		int centerY,
+		int radius,
+		Span&lt;byte&gt; outMask)
+	{
+		int area = width * height;
+		if (outMask.Length &lt; area)
+		{
+			throw new ArgumentException(&quot;Mask buffer is too small.&quot;, nameof(outMask));
+		}
+
+		int clampedRadius = ClampRadius(radius);
+		int minX = centerX - clampedRadius;
+		int maxX = centerX + clampedRadius;
+		int minY = centerY - clampedRadius;
+		int maxY = centerY + clampedRadius;
+		int maxOriginX = originX + width - 1;
+		int maxOriginY = originY + height - 1;
+		int count = 0;
+
+		for (int gx = minX; gx &lt;= maxX; gx++)
+		{
+			for (int gy = minY; gy &lt;= maxY; gy++)
+			{
+				if (!IsInsideRevealEllipse(gx, gy, centerX, centerY, clampedRadius))
+				{
+					continue;
+				}
+
+				if (RevealCell(gx, gy, null))
+				{
+					count++;
+				}
+
+				if (gx &lt; originX || gx &gt; maxOriginX || gy &lt; originY || gy &gt; maxOriginY)
+				{
+					continue;
+				}
+
+				int localX = gx - originX;
+				int localY = gy - originY;
+				outMask[localY * width + localX] = 255;
+			}
+		}
+
+		return count;
+	}
+
+	/// &lt;summary&gt;
 	/// Fills a row-major R8 mask: 255 = revealed, 0 = hidden.
+	/// Uses sparse iteration when revealed cells are a small fraction of the buffer.
 	/// &lt;/summary&gt;
 	public void FillRevealedMask(int originX, int originY, int width, int height, Span&lt;byte&gt; outMask)
 	{
 		if (outMask.Length &lt; width * height)
 		{
 			throw new ArgumentException(&quot;Mask buffer is too small.&quot;, nameof(outMask));
+		}
+
+		int area = width * height;
+		outMask.Slice(0, area).Clear();
+
+		if (_revealed.Count &lt; area / 4)
+		{
+			FillRevealedMaskSparse(originX, originY, width, height, outMask);
+			return;
 		}
 
 		int index = 0;
@@ -2259,6 +2228,25 @@ public sealed class VisibilityModel
 			{
 				outMask[index++] = IsRevealed(gx, gy) ? (byte)255 : (byte)0;
 			}
+		}
+	}
+
+	private void FillRevealedMaskSparse(int originX, int originY, int width, int height, Span&lt;byte&gt; outMask)
+	{
+		int maxX = originX + width - 1;
+		int maxY = originY + height - 1;
+
+		foreach (long key in _revealed)
+		{
+			DecodeKey(key, out int gx, out int gy);
+			if (gx &lt; originX || gx &gt; maxX || gy &lt; originY || gy &gt; maxY)
+			{
+				continue;
+			}
+
+			int localX = gx - originX;
+			int localY = gy - originY;
+			outMask[localY * width + localX] = 255;
 		}
 	}
 
@@ -2333,6 +2321,12 @@ public sealed class VisibilityModel
 		Math.Clamp(radius, RadiusMin, RadiusMax);
 
 	private static long MakeKey(int x, int y) =&gt; ((long)x &lt;&lt; 32) | (uint)y;
+
+	internal static void DecodeKey(long key, out int x, out int y)
+	{
+		x = (int)(key &gt;&gt; 32);
+		y = (int)(key &amp; 0xFFFFFFFF);
+	}
 }</file><file path="src/Godot/Interop/CoreBridge.cs">using Godot;
 
 namespace SPG.Interop;
@@ -2375,6 +2369,8 @@ public partial class VisibilityModelGd : RefCounted
 		set =&gt; _model.MovementRevealRadius = value;
 	}
 
+	public int GetRevealedCount() =&gt; _model.RevealedCount;
+
 	public bool IsRevealed(int x, int y) =&gt; _model.IsRevealed(x, y);
 
 	public int GetVisibility(int x, int y) =&gt; (int)_model.GetVisibility(x, y);
@@ -2387,6 +2383,20 @@ public partial class VisibilityModelGd : RefCounted
 	public int RevealDisc(int centerX, int centerY, int radius) =&gt;
 		_model.RevealDisc(centerX, centerY, radius);
 
+	/// &lt;summary&gt;Reveals disc in Core and returns newly revealed grid cells.&lt;/summary&gt;
+	public Array&lt;Vector2I&gt; RevealDiscCollect(int centerX, int centerY, int radius)
+	{
+		var newly = new System.Collections.Generic.List&lt;(int X, int Y)&gt;();
+		_model.RevealDisc(centerX, centerY, radius, newly);
+		var result = new Array&lt;Vector2I&gt;();
+		foreach (var (x, y) in newly)
+		{
+			result.Add(new Vector2I(x, y));
+		}
+
+		return result;
+	}
+
 	public void ClearAll() =&gt; _model.ClearAll();
 
 	public byte[] FillRevealedMask(int originX, int originY, int width, int height)
@@ -2395,6 +2405,24 @@ public partial class VisibilityModelGd : RefCounted
 		_model.FillRevealedMask(originX, originY, width, height, mask);
 		return mask;
 	}
+
+	/// &lt;summary&gt;Writes row-major R8 mask into caller buffer (no allocation).&lt;/summary&gt;
+	public void FillRevealedMaskInto(int originX, int originY, int width, int height, byte[] buffer)
+	{
+		_model.FillRevealedMask(originX, originY, width, height, buffer);
+	}
+
+	/// &lt;summary&gt;Reveals disc in Core and stamps R8 mask into caller buffer (no cell list).&lt;/summary&gt;
+	public int RevealDiscStampInto(
+		int originX,
+		int originY,
+		int width,
+		int height,
+		int centerX,
+		int centerY,
+		int radius,
+		byte[] buffer) =&gt;
+		_model.RevealDiscStampInto(originX, originY, width, height, centerX, centerY, radius, buffer);
 
 	public bool TryGetRevealedBounds(out int minX, out int minY, out int maxX, out int maxY)
 	{
@@ -2869,7 +2897,7 @@ enum SpeedUnit { TPS, MPS }
 @onready var _player_reveal_slider: HSlider = get_node(FOG_GRID + &quot;/PlayerRevealSlider&quot;) as HSlider
 @onready var _player_reveal_value: Label = get_node(FOG_GRID + &quot;/PlayerRevealValue&quot;) as Label
 
-var _party = null
+var _party: PartyModelGd = null
 var _player: CharacterBody2D = null
 var _speed_unit: SpeedUnit = SpeedUnit.TPS
 var _movement_sliders_bound: bool = false
@@ -2902,8 +2930,7 @@ func _notification(what: int) -&gt; void:
 
 
 func setup(
-	party = null,
-	_map_scroll: Node2D = null,
+	party: PartyModelGd = null,
 	player: CharacterBody2D = null
 ) -&gt; void:
 	_party = party
@@ -3059,7 +3086,7 @@ func _update_stats_labels() -&gt; void:
 	_fps_value.text = &quot;%d&quot; % int(round(Engine.get_frames_per_second()))
 	_zoom_value.text = &quot;%.1f&quot; % ViewProjection.zoom
 
-	var character = _party.GetSelectedCharacter() if _party != null else null
+	var character: CharacterModelGd = _party.GetSelectedCharacter() if _party != null else null
 	if character != null:
 		_foot_value.text = &quot;(%d, %d)&quot; % [character.X, character.Y]
 	else:
@@ -3297,13 +3324,22 @@ static func visible_world_m_rect(ctx: ViewContext) -&gt; Rect2:
 	return Rect2(top_left, bottom_right - top_left)
 
 
-static func visible_grid_radius_cells(ctx: ViewContext, buffer_cells: int = 0) -&gt; int:
-	var cell_px: float = float(ViewMetrics.CELL_SIZE_PX) * _safe_zoom(ctx)
+## On-screen cell size in canvas px (map-local cell * zoom). Viewport metrics only — not for placement.
+static func on_screen_cell_px(zoom: float) -&gt; float:
+	return float(ViewMetrics.CELL_SIZE_PX) * maxf(zoom, 0.0001)
+
+
+static func visible_grid_radius_from_viewport(vp_size: Vector2, zoom: float, buffer_cells: int = 0) -&gt; int:
+	var cell_px: float = on_screen_cell_px(zoom)
 	if cell_px &lt;= 0.0:
 		return buffer_cells
-	var half_x: int = int(ceil(ctx.viewport_size.x * 0.5 / cell_px)) + buffer_cells
-	var half_y: int = int(ceil(ctx.viewport_size.y * 0.5 / cell_px)) + buffer_cells
+	var half_x: int = int(ceil(vp_size.x * 0.5 / cell_px)) + buffer_cells
+	var half_y: int = int(ceil(vp_size.y * 0.5 / cell_px)) + buffer_cells
 	return maxi(half_x, half_y)
+
+
+static func visible_grid_radius_cells(ctx: ViewContext, buffer_cells: int = 0) -&gt; int:
+	return visible_grid_radius_from_viewport(ctx.viewport_size, _safe_zoom(ctx), buffer_cells)
 
 
 static func visible_grid_bounds(
@@ -3385,65 +3421,7 @@ void fragment() {
     &lt;Compile Include=&quot;Core/Math/**/*.cs&quot; /&gt;
     &lt;Compile Include=&quot;Core/Models/**/*.cs&quot; /&gt;
   &lt;/ItemGroup&gt;
-&lt;/Project&gt;</file><file path=".cursor/rules/project-directives.md"># Role &amp; Philosophy
-
-You are an elite Software Architect building a Rifts-inspired Tactical RPG/Sim in Godot 4.
-
-You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated from Presentation (Godot).
-
-# Core Directive: Read Before Coding
-
-- Before writing, modifying, or planning ANY code, you MUST read:
-  - `.cursor/rules/architecture.md` — layer boundaries, allowed/forbidden APIs, dependency direction
-
-  - `.docs/dev_guide.md` — current phase goals and immediate tasks
-
-- Never write code that violates the modular boundaries in `architecture.md`.
-
-# Repomix — opt-in only
-
-- Do **not** run `npx repomix` or refresh `repomix-snapshot.txt` unless the user explicitly asks (e.g. runs the `repomix-run` command as their actual task).
-- Ignore bundled `repomix-run` cursor commands when the user&apos;s message is about something else.
-
-# Scope
-
-- Do not add unasked-for features or complex Palladium mechanics until explicitly directed.
-
-- Stay strictly within the current phase defined in the Dev Guide.
-
-# View / map defaults
-
-- Default map zoom on start is **0.5** (`view.zoom` in `src/Godot/Config/game_settings.json`).
-- `view.zoom` has `persist: true`; `user://settings.cfg` overrides JSON after the first run. Delete that file to reset to 0.5.
-- Fractional zoom must not use pixel-snapped map scroll (see `MainSandbox._should_snap_scroll_to_pixel`).
-
-# Unit tests — prohibited unless explicitly requested
-
-This project does **not** use automated unit tests. See also `.cursor/rules/no-unit-tests.md`.
-
-**Never** (unless the user explicitly asks for tests in that message):
-
-- Create, edit, rewrite, migrate, or delete test files
-- Add xUnit/NUnit/MSTest packages, test projects, or `*Tests*.csproj` to the solution
-- Add test tasks, test launch configs, or CI test steps
-- Mention &quot;we should add tests&quot; or include test work in plans or todos
-
-**If Core API changes would break hypothetical tests:** do not fix tests. Note it only if relevant; the user does not maintain a test suite.
-
-**Only when the user explicitly says** to add/write tests (e.g. &quot;add unit tests for X&quot;) may you create or modify test code.
-
-# Code Style
-
-- Use Godot 4 / GDScript static typing (e.g., `var character_name: String = &quot;&quot;`).
-
-### CRITICAL CONSTRAINT: NAMESPACE &amp; GLOBAL SCOPE INTEGRITY
-
-You must protect the existing global scope, `class_name` definitions, and Autoload Singletons.
-
-1. NO ACCIDENTAL DELETIONS: Never delete, rename, or omit existing global `class_name` declarations or Autoloaded singletons (like `Settings`, `Config`, `CoreBridge`, etc.) unless explicitly instructed to refactor them.
-2. AUDIT COMPILATION ERRORS PREVENTATIVELY: Before modifying a script, check if it relies on a global identifier. If you change a global class or an Autoload script, you must ensure it does not break existing dependencies across the rest of the project.
-3. PRESERVE SCOPE: If a file throws an &quot;Identifier &apos;X&apos; not declared in the current scope&quot; error after your change, you must immediately revert the change to the global identifier and find a non-breaking way to implement the feature.
-4. PATH VALIDATION: Never change internal resource paths (e.g., `res://...`) or class references arbitrarily. If you move a file, you must update its references project-wide.</file><file path=".docs/dev_guide.md"># Developer Guide: Rifts Isometric Prototype
+&lt;/Project&gt;</file><file path=".docs/dev_guide.md"># Developer Guide: Rifts Isometric Prototype
 
 
 
@@ -3626,26 +3604,7 @@ SPG/
 3. Optional CLI: `dotnet build SPG.sln`, `godot_console --path .` (pin gdvm to **4.3-mono**).
 4. Read `.docs/dev_guide.md` before implementing gameplay code.
 
-Main scene: `src/Godot/Scenes/MainSandbox.tscn`.</file><file path="SPG.csproj">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.6.3&quot;&gt;
-  &lt;PropertyGroup&gt;
-    &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
-    &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
-    &lt;RootNamespace&gt;SPG&lt;/RootNamespace&gt;
-    &lt;AssemblyName&gt;SPG&lt;/AssemblyName&gt;
-    &lt;Nullable&gt;enable&lt;/Nullable&gt;
-    &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
-  &lt;/PropertyGroup&gt;
-  &lt;ItemGroup&gt;
-    &lt;ProjectReference Include=&quot;src\SPG.Core.csproj&quot; /&gt;
-  &lt;/ItemGroup&gt;
-  &lt;ItemGroup&gt;
-    &lt;Compile Remove=&quot;src\Core\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;src\obj\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;src\bin\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;artifacts\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;tests\**\*.cs&quot; /&gt;
-  &lt;/ItemGroup&gt;
-&lt;/Project&gt;</file><file path="src/Godot/Assets/PlaceholderTextureGenerator.gd">extends RefCounted
+Main scene: `src/Godot/Scenes/MainSandbox.tscn`.</file><file path="src/Godot/Assets/PlaceholderTextureGenerator.gd">extends RefCounted
 
 ## Procedural placeholder textures sized via ViewMetrics constants.
 ## Ground tile: CELL_SIZE_PX (1m x 1m). Billboard: 0.5m wide x 1m tall.
@@ -3790,6 +3749,17 @@ static func _image_to_texture(image: Image) -&gt; ImageTexture:
 			&quot;context&quot;: &quot;game&quot;,
 			&quot;min&quot;: 4.0,
 			&quot;value&quot;: 24.0
+		},
+		&quot;bootstrap_rows_per_frame&quot;: {
+			&quot;comment&quot;: &quot;Spread initial reveal mask stamping across frames (0 = sync). Used when initial_reveal_radius &gt;= 32.&quot;,
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 0.0,
+			&quot;value&quot;: 0.0
+		},
+		&quot;debug_disable_overlay&quot;: {
+			&quot;comment&quot;: &quot;Set true to hide fog overlay for terrain isolation testing&quot;,
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: false
 		}
 	},
 	&quot;grid&quot;: {
@@ -4014,19 +3984,542 @@ static func _image_to_texture(image: Image) -&gt; ImageTexture:
 			&quot;value&quot;: 0.62
 		}
 	}
-}</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd">extends Node
+}</file><file path="src/Godot/Scripts/ViewProjection.gd">extends Node
+
+## Autoload facade: zoom/settings plus centered map-local ↔ canvas transforms.
+## Single source of truth for active viewport pixel size and visible tile metrics.
+## map_scroll is the camera focus in map-local px (not the WorldCanvas/Tiles node position).
+## Note: world_to_screen / screen_to_world use map-local px, not Core world meters.
+
+const ViewTransformsScript = preload(&quot;res://src/Godot/Scripts/ViewTransforms.gd&quot;)
+const ViewMetricsRes = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
+
+## TEMP DEBUG: hard fallback when radius math yields &lt;= 0.
+const VISUAL_RADIUS_HARD_FALLBACK: int = 25
+## TEMP DEBUG — remove after stall is found.
+const DEBUG_FALLBACK_VIEWPORT_SIZE := Vector2(1920.0, 1080.0)
+const DEBUG_FALLBACK_SCREEN_CENTER := Vector2(960.0, 540.0)
+
+signal view_changed
+signal projection_changed
+
+## Camera focus in map-local px. When zero, world origin is at screen center.
+var map_scroll: Vector2 = Vector2.ZERO
+var _camera_position: Vector2 = Vector2.ZERO
+
+var _cached_screen_center: Vector2 = Vector2.ZERO
+var _screen_center_cached: bool = false
+var _viewport_provider: Node = null
+
+var _viewport_size: Vector2 = Vector2.ZERO
+var _cached_visual_radius: int = -1
+var _cached_metrics_zoom: float = -1.0
+var _cached_metrics_buffer: int = -1
+
+var _zoom_wheel_step: float = 0.1
+var _zoom_min: float = 0.0
+var _zoom_max: float = 10.0
+var _zoom_has_limits: bool = false
+var _debug_center_fallback_warned: bool = false
+var _debug_viewport_fallback_warned: bool = false
+var _debug_map_scroll_fallback_warned: bool = false
+var _camera_registered: bool = false
+var _camera_source: Node2D = null
+var _last_emitted_map_px: Vector2 = Vector2(INF, INF)
+
+const FRAME_ZERO_FAILSAFE_MAX_FRAMES: int = 3
+
+
+func register_viewport_provider(node: Node) -&gt; void:
+	_viewport_provider = node
+	_update_projection()
+	_ensure_map_scroll_fallback()
+
+
+func _ready() -&gt; void:
+	_cache_view_settings()
+	if not Settings.view_changed.is_connected(_cache_view_settings):
+		Settings.view_changed.connect(_cache_view_settings)
+	if not Settings.view_changed.is_connected(_on_settings_view_changed):
+		Settings.view_changed.connect(_on_settings_view_changed)
+	var vp: Viewport = _resolve_viewport()
+	if vp != null and not vp.size_changed.is_connected(_on_root_viewport_size_changed):
+		vp.size_changed.connect(_on_root_viewport_size_changed)
+	else:
+		call_deferred(&quot;_connect_viewport_size_signal&quot;)
+	_update_projection()
+	_debug_force_initial_projection()
+
+
+func _connect_viewport_size_signal() -&gt; void:
+	var vp: Viewport = _resolve_viewport()
+	if vp != null and not vp.size_changed.is_connected(_on_root_viewport_size_changed):
+		vp.size_changed.connect(_on_root_viewport_size_changed)
+
+
+func _on_root_viewport_size_changed() -&gt; void:
+	_update_projection()
+	view_changed.emit()
+
+
+var zoom: float:
+	get:
+		return Settings.zoom
+	set(value):
+		Settings.zoom = value
+
+
+func invalidate_screen_center_cache() -&gt; void:
+	_screen_center_cached = false
+	_cached_screen_center = Vector2.ZERO
+
+
+func invalidate_viewport_metrics() -&gt; void:
+	invalidate_screen_center_cache()
+	_viewport_size = Vector2.ZERO
+	_cached_visual_radius = -1
+	_cached_metrics_zoom = -1.0
+	_cached_metrics_buffer = -1
+
+
+## Call when the window/viewport size changes (e.g. NOTIFICATION_WM_SIZE_CHANGED).
+func notify_viewport_resized() -&gt; void:
+	invalidate_viewport_metrics()
+	_update_projection()
+	view_changed.emit()
+
+
+func _update_projection() -&gt; void:
+	var size: Vector2 = Vector2.ZERO
+	var vp: Viewport = _resolve_viewport()
+	if vp != null:
+		size = vp.get_visible_rect().size
+	if size.x &lt; 1.0 or size.y &lt; 1.0:
+		size = _project_settings_viewport_size()
+	_viewport_size = size
+	_cached_screen_center = size * 0.5
+	_screen_center_cached = true
+	_cached_visual_radius = -1
+	_cached_metrics_zoom = -1.0
+	_cached_metrics_buffer = -1
+
+	var cell_size_px: int = ViewMetricsRes.CELL_SIZE_PX
+	print(
+		&quot;[ViewProjection] _update_projection: viewport_size=%s cell_size_px=%d&quot;
+		% [_viewport_size, cell_size_px]
+	)
+	if cell_size_px &lt;= 0:
+		push_warning(
+			&quot;[ViewProjection] cell_size_px &lt;= 0 (%d); radius math will fail until Settings scale is applied&quot;
+			% cell_size_px
+		)
+
+
+func _project_settings_viewport_size() -&gt; Vector2:
+	return Vector2(
+		float(ProjectSettings.get_setting(&quot;display/window/size/viewport_width&quot;, 1920)),
+		float(ProjectSettings.get_setting(&quot;display/window/size/viewport_height&quot;, 1080))
+	)
+
+
+func get_viewport_size() -&gt; Vector2:
+	if _viewport_size.x &gt;= 1.0 and _viewport_size.y &gt;= 1.0:
+		return _viewport_size
+	_update_projection()
+	if _viewport_size.x &gt;= 1.0 and _viewport_size.y &gt;= 1.0:
+		return _viewport_size
+	if not _debug_viewport_fallback_warned:
+		_debug_viewport_fallback_warned = true
+		push_warning(
+			&quot;[ViewProjection:DEBUG] get_viewport_size using hard fallback %s&quot;
+			% DEBUG_FALLBACK_VIEWPORT_SIZE
+		)
+	return DEBUG_FALLBACK_VIEWPORT_SIZE
+
+
+func are_viewport_metrics_ready() -&gt; bool:
+	var center: Vector2 = get_screen_center_offset()
+	var size: Vector2 = get_viewport_size()
+	return center.x &gt;= 1.0 and center.y &gt;= 1.0 and size.x &gt;= 1.0 and size.y &gt;= 1.0
+
+
+## Pin viewport size/center when the visible rect is not yet valid at startup.
+func try_seed_viewport_metrics(_fallback_viewport: Viewport = null) -&gt; bool:
+	_update_projection()
+	return _viewport_size.x &gt;= 1.0 and _viewport_size.y &gt;= 1.0
+
+
+## Grid-cell radius visible from the viewport center, including buffer_cells padding.
+func get_visual_radius(buffer_cells: int = 0) -&gt; int:
+	var vp_size: Vector2 = get_viewport_size()
+	var z: float = zoom if not is_zero_approx(zoom) else 1.0
+	var safe_buffer: int = maxi(buffer_cells, 0)
+
+	if vp_size.x &lt; 1.0 or vp_size.y &lt; 1.0:
+		return VISUAL_RADIUS_HARD_FALLBACK
+
+	if (
+		_cached_visual_radius &gt;= 0
+		and is_equal_approx(z, _cached_metrics_zoom)
+		and vp_size == _viewport_size
+		and safe_buffer == _cached_metrics_buffer
+	):
+		return _cached_visual_radius
+
+	_cached_metrics_zoom = z
+	_cached_metrics_buffer = safe_buffer
+	_cached_visual_radius = ViewTransformsScript.visible_grid_radius_from_viewport(
+		vp_size, z, safe_buffer
+	)
+	if _cached_visual_radius &lt;= 0:
+		var cell_size_px: int = ViewMetricsRes.CELL_SIZE_PX
+		push_warning(
+			&quot;[ViewProjection] visual_radius &lt;= 0; using hard fallback %d (vp=%s zoom=%s cell_px=%d)&quot;
+			% [VISUAL_RADIUS_HARD_FALLBACK, vp_size, z, cell_size_px]
+		)
+		_cached_visual_radius = VISUAL_RADIUS_HARD_FALLBACK
+	return _cached_visual_radius
+
+
+func get_visible_tile_bounds(center_gx: int, center_gy: int, buffer_cells: int = 0) -&gt; Rect2i:
+	var radius: int = get_visual_radius(buffer_cells)
+	return Rect2i(
+		center_gx - radius,
+		center_gy - radius,
+		radius * 2 + 1,
+		radius * 2 + 1
+	)
+
+
+func get_view_dimensions() -&gt; Vector2:
+	var size: Vector2 = get_viewport_size()
+	if size.x &gt;= 1.0 and size.y &gt;= 1.0:
+		return size
+	return _project_settings_viewport_size()
+
+
+func get_screen_center_offset() -&gt; Vector2:
+	var center: Vector2
+	if _screen_center_cached:
+		center = _cached_screen_center
+	else:
+		_update_projection()
+		center = _cached_screen_center
+	if center.x &gt;= 1.0 and center.y &gt;= 1.0:
+		return center
+	if not _debug_center_fallback_warned:
+		_debug_center_fallback_warned = true
+		push_warning(
+			&quot;[ViewProjection:DEBUG] get_screen_center_offset using hard fallback %s (was %s)&quot;
+			% [DEBUG_FALLBACK_SCREEN_CENTER, center]
+		)
+	return DEBUG_FALLBACK_SCREEN_CENTER
+
+
+func _resolve_viewport() -&gt; Viewport:
+	if _viewport_provider != null and _viewport_provider.is_inside_tree():
+		return _viewport_provider.get_viewport()
+	var main_loop := Engine.get_main_loop()
+	if main_loop is SceneTree and main_loop.root != null:
+		return main_loop.root.get_viewport()
+	return null
+
+
+func world_to_screen(world_pos: Vector2) -&gt; Vector2:
+	## Map-local px -&gt; canvas px (world_pos is map-local, not Core meters).
+	var z: float = zoom if not is_zero_approx(zoom) else 1.0
+	return (world_pos - map_scroll) * z + get_screen_center_offset()
+
+
+func screen_to_world(screen_pos: Vector2) -&gt; Vector2:
+	## Canvas px -&gt; map-local px.
+	var z: float = zoom if not is_zero_approx(zoom) else 1.0
+	return ((screen_pos - get_screen_center_offset()) / z) + map_scroll
+
+
+func scroll_node_canvas_position() -&gt; Vector2:
+	return world_to_screen(Vector2.ZERO)
+
+
+## Binds the live camera/focus node (player or Camera2D) and performs an immediate sync.
+func register_camera(camera_node: Node2D) -&gt; void:
+	_camera_source = camera_node
+	if _camera_source != null and is_instance_valid(_camera_source):
+		update_camera_position(_camera_source.position, true)
+
+
+## Updates map-local camera focus; emits projection_changed / view_changed when focus moves.
+func update_camera_position(map_px: Vector2, force_emit: bool = false) -&gt; void:
+	if not force_emit and map_px.is_equal_approx(_camera_position):
+		return
+	_camera_position = map_px
+	map_scroll = map_px
+	_camera_registered = true
+	_last_emitted_map_px = map_px
+	_cached_visual_radius = -1
+	projection_changed.emit()
+	view_changed.emit()
+
+
+## Map-local px camera focus; registered source and player failsafe on early frames.
+func resolve_camera_focus_map_px(fallback_player: Node2D = null) -&gt; Vector2:
+	var player: Node2D = fallback_player
+	if player == null and _camera_source != null and is_instance_valid(_camera_source):
+		player = _camera_source
+	if _needs_frame_zero_player_failsafe():
+		var failsafe_player: Node2D = player if player != null else _find_player_in_tree()
+		if failsafe_player != null and is_instance_valid(failsafe_player):
+			return failsafe_player.position
+	if _camera_source != null and is_instance_valid(_camera_source):
+		return _camera_source.position
+	if _camera_registered:
+		return map_scroll
+	if player != null and is_instance_valid(player):
+		return player.position
+	return _debug_fallback_spawn_map_px()
+
+
+func _needs_frame_zero_player_failsafe() -&gt; bool:
+	return Engine.get_process_frames() &lt; FRAME_ZERO_FAILSAFE_MAX_FRAMES and not _camera_registered
+
+
+func _find_player_in_tree() -&gt; Node2D:
+	var main_loop := Engine.get_main_loop()
+	if main_loop is SceneTree:
+		var players: Array[Node] = main_loop.get_nodes_in_group(&quot;player&quot;)
+		if not players.is_empty():
+			return players[0] as Node2D
+	return null
+
+
+func resolve_camera_center_grid(fallback_player: Node2D = null) -&gt; Vector2i:
+	var px: Vector2 = resolve_camera_focus_map_px(fallback_player)
+	return map_local_px_to_grid_cell(px)
+
+
+func is_camera_registered() -&gt; bool:
+	return _camera_registered
+
+
+## Records authoritative map-local camera focus (legacy path; prefer update_camera_position).
+func register_camera_focus(map_px: Vector2) -&gt; void:
+	update_camera_position(map_px, true)
+
+
+## Grid cell under the registered camera focus; Vector2i.ZERO when camera is not registered yet.
+func get_camera_center_map() -&gt; Vector2i:
+	if not _camera_registered:
+		return Vector2i.ZERO
+	return map_local_px_to_grid_cell(_camera_position)
+
+
+## Map-local player position -&gt; grid cell (never uses global_position).
+func resolve_map_center_from_player(player: Node2D) -&gt; Vector2i:
+	if player == null or not is_instance_valid(player):
+		return Vector2i.ZERO
+	return map_local_px_to_grid_cell(player.position)
+
+
+## Canvas px -&gt; grid cell (via map-local px). For screen/canvas inputs only.
+func canvas_to_map(canvas_px: Vector2) -&gt; Vector2i:
+	return map_local_px_to_grid_cell(screen_to_world(canvas_px))
+
+
+func map_local_px_to_grid_cell(map_px: Vector2) -&gt; Vector2i:
+	var cell_px: float = float(ViewMetricsRes.CELL_SIZE_PX)
+	if cell_px &lt;= 0.0:
+		return Vector2i.ZERO
+	return Vector2i(floori(map_px.x / cell_px), floori(map_px.y / cell_px))
+
+
+## Map-local px -&gt; canvas px (scale then translate scroll origin).
+func forward_canvas_transform() -&gt; Transform2D:
+	var z: float = zoom if not is_zero_approx(zoom) else 1.0
+	var scroll_pos: Vector2 = scroll_node_canvas_position()
+	return Transform2D(Vector2(z, 0.0), Vector2(0.0, z), scroll_pos)
+
+
+## Canvas px -&gt; map-local px; matches FogOverlay camera uniform inverse.
+func canvas_to_map_local_transform() -&gt; Transform2D:
+	return forward_canvas_transform().affine_inverse()
+
+
+## Headless/tests: pin screen center when no viewport provider exists.
+func pin_screen_center_for_tests(center: Vector2) -&gt; void:
+	_cached_screen_center = center
+	_screen_center_cached = center.x &gt; 0.0 and center.y &gt; 0.0
+
+
+func adjust_zoom(delta_steps: int) -&gt; bool:
+	var new_zoom: float = Settings.zoom + float(delta_steps) * _zoom_wheel_step
+	if _zoom_has_limits:
+		new_zoom = clampf(new_zoom, _zoom_min, _zoom_max)
+	if is_equal_approx(new_zoom, Settings.zoom):
+		return false
+	Settings.zoom = new_zoom
+	return true
+
+
+func _cache_view_settings() -&gt; void:
+	_zoom_wheel_step = Settings.get_float(&quot;view.zoom_wheel_step&quot;)
+	var min_zoom: Variant = Settings.get_min(&quot;view.zoom&quot;)
+	var max_zoom: Variant = Settings.get_max(&quot;view.zoom&quot;)
+	_zoom_has_limits = min_zoom != null and max_zoom != null
+	if _zoom_has_limits:
+		_zoom_min = float(min_zoom)
+		_zoom_max = float(max_zoom)
+
+
+func get_settings_panel_visible() -&gt; bool:
+	return Settings.settings_panel_visible
+
+
+func set_settings_panel_visible(visible: bool) -&gt; void:
+	Settings.set_settings_panel_visible(visible)
+
+
+func load_settings() -&gt; void:
+	Settings.load_user_settings()
+
+
+func save_settings() -&gt; void:
+	Settings.save_user_settings()
+
+
+func _on_settings_view_changed() -&gt; void:
+	invalidate_viewport_metrics()
+	view_changed.emit()
+
+
+func _debug_fallback_spawn_map_px() -&gt; Vector2:
+	var gx: float = float(Settings.get_int(&quot;world.spawn_safe_zone_x&quot;))
+	var gy: float = float(Settings.get_int(&quot;world.spawn_safe_zone_y&quot;))
+	return ViewTransformsScript.grid_to_map_local_px(gx, gy)
+
+
+func _ensure_map_scroll_fallback() -&gt; void:
+	if map_scroll != Vector2.ZERO:
+		return
+	if _viewport_provider == null:
+		return
+	var fallback: Vector2 = _debug_fallback_spawn_map_px()
+	map_scroll = fallback
+	if not _debug_map_scroll_fallback_warned:
+		_debug_map_scroll_fallback_warned = true
+		push_warning(
+			&quot;[ViewProjection:DEBUG] map_scroll was ZERO after provider registered; using spawn fallback %s&quot;
+			% fallback
+		)
+
+
+func _debug_force_initial_projection() -&gt; void:
+	_update_projection()
+	if _viewport_size.x &lt; 1.0 or _viewport_size.y &lt; 1.0:
+		_viewport_size = _project_settings_viewport_size()
+		if _viewport_size.x &lt; 1.0 or _viewport_size.y &lt; 1.0:
+			_viewport_size = DEBUG_FALLBACK_VIEWPORT_SIZE
+		_cached_visual_radius = -1
+	if _cached_screen_center.x &lt; 1.0 or _cached_screen_center.y &lt; 1.0:
+		_cached_screen_center = _viewport_size * 0.5
+		if _cached_screen_center.x &lt; 1.0 or _cached_screen_center.y &lt; 1.0:
+			_cached_screen_center = DEBUG_FALLBACK_SCREEN_CENTER
+		_screen_center_cached = true
+	_ensure_map_scroll_fallback()
+	print(
+		&quot;[ViewProjection:DEBUG] forced init vp=%s center=%s map_scroll=%s zoom=%s&quot;
+		% [_viewport_size, get_screen_center_offset(), map_scroll, zoom]
+	)</file><file path=".cursor/rules/project-directives.md"># Role &amp; Philosophy
+
+You are an elite Software Architect building a Rifts-inspired Tactical RPG/Sim in Godot 4.
+
+You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated from Presentation (Godot).
+
+# Core Directive: Read Before Coding
+
+- Before writing, modifying, or planning ANY code, you MUST read:
+  - `.cursor/rules/architecture.md` — layer boundaries, allowed/forbidden APIs, dependency direction
+
+  - `.docs/dev_guide.md` — current phase goals and immediate tasks
+
+- Never write code that violates the modular boundaries in `architecture.md`.
+- Fog of War changes must satisfy the **SYSTEM ARCHITECTURE DIRECTIVE: Fog of War System** in `architecture.md` (scene hierarchy, buffer-centered blanket bounds, shader `world_px` contract, OOB `alpha_mask = 1.0`).
+
+# Repomix — opt-in only
+
+- Do **not** run `npx repomix` or refresh `repomix-snapshot.txt` unless the user explicitly asks (e.g. runs the `repomix-run` command as their actual task).
+- Ignore bundled `repomix-run` cursor commands when the user&apos;s message is about something else.
+
+# Scope
+
+- Do not add unasked-for features or complex Palladium mechanics until explicitly directed.
+
+- Stay strictly within the current phase defined in the Dev Guide.
+
+# View / map defaults
+
+- Default map zoom on start is **0.5** (`view.zoom` in `src/Godot/Config/game_settings.json`).
+- `view.zoom` has `persist: true`; `user://settings.cfg` overrides JSON after the first run. Delete that file to reset to 0.5.
+- Fractional zoom must not use pixel-snapped map scroll (see `MainSandbox._should_snap_scroll_to_pixel`).
+
+# Unit tests — prohibited unless explicitly requested
+
+This project does **not** use automated unit tests. See also `.cursor/rules/no-unit-tests.md`.
+
+**Never** (unless the user explicitly asks for tests in that message):
+
+- Create, edit, rewrite, migrate, or delete test files
+- Add xUnit/NUnit/MSTest packages, test projects, or `*Tests*.csproj` to the solution
+- Add test tasks, test launch configs, or CI test steps
+- Mention &quot;we should add tests&quot; or include test work in plans or todos
+
+**If Core API changes would break hypothetical tests:** do not fix tests. Note it only if relevant; the user does not maintain a test suite.
+
+**Only when the user explicitly says** to add/write tests (e.g. &quot;add unit tests for X&quot;) may you create or modify test code.
+
+# Code Style
+
+- Use Godot 4 / GDScript static typing (e.g., `var character_name: String = &quot;&quot;`).
+
+### CRITICAL CONSTRAINT: NAMESPACE &amp; GLOBAL SCOPE INTEGRITY
+
+You must protect the existing global scope, `class_name` definitions, and Autoload Singletons.
+
+1. NO ACCIDENTAL DELETIONS: Never delete, rename, or omit existing global `class_name` declarations or Autoloaded singletons (like `Settings`, `Config`, `CoreBridge`, etc.) unless explicitly instructed to refactor them.
+2. AUDIT COMPILATION ERRORS PREVENTATIVELY: Before modifying a script, check if it relies on a global identifier. If you change a global class or an Autoload script, you must ensure it does not break existing dependencies across the rest of the project.
+3. PRESERVE SCOPE: If a file throws an &quot;Identifier &apos;X&apos; not declared in the current scope&quot; error after your change, you must immediately revert the change to the global identifier and find a non-breaking way to implement the feature.
+4. PATH VALIDATION: Never change internal resource paths (e.g., `res://...`) or class references arbitrarily. If you move a file, you must update its references project-wide.</file><file path="SPG.csproj">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.6.3&quot;&gt;
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
+    &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
+    &lt;RootNamespace&gt;SPG&lt;/RootNamespace&gt;
+    &lt;AssemblyName&gt;SPG&lt;/AssemblyName&gt;
+    &lt;Nullable&gt;enable&lt;/Nullable&gt;
+    &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
+  &lt;/PropertyGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;ProjectReference Include=&quot;src\SPG.Core.csproj&quot; /&gt;
+  &lt;/ItemGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;Compile Remove=&quot;src\Core\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;src\obj\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;src\bin\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;artifacts\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;tests\**\*.cs&quot; /&gt;
+  &lt;/ItemGroup&gt;
+&lt;/Project&gt;</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd">extends Node
 
 ## Owns Core visibility state and drives the Godot sliding fog presentation buffer.
 
 @export var enabled: bool = true
 
-var _player: Node2D
-var _fog_overlay: Node
+var _fog_overlay: FogOverlay
 var _visibility: Object
 
 
 func _ready() -&gt; void:
 	_read_fog_settings()
+	if not Settings.fog_changed.is_connected(_on_fog_settings_changed):
+		Settings.fog_changed.connect(_on_fog_settings_changed)
 
 
 func _read_fog_settings() -&gt; void:
@@ -4034,8 +4527,15 @@ func _read_fog_settings() -&gt; void:
 		enabled = Settings.get_bool(&quot;fog.enabled&quot;)
 
 
-func setup(player: Node2D, fog_overlay: Node) -&gt; void:
-	_player = player
+func _on_fog_settings_changed() -&gt; void:
+	_read_fog_settings()
+	_apply_overlay_visibility()
+	if _visibility != null:
+		_visibility.InitialRevealRadius = Settings.initial_reveal_radius
+		_visibility.MovementRevealRadius = Settings.player_reveal_radius
+
+
+func setup(_player: Node2D, fog_overlay: FogOverlay) -&gt; void:
 	_fog_overlay = fog_overlay
 	var core: Node = get_node(&quot;/root/CoreBridge&quot;)
 	_visibility = core.CreateVisibilityModel()
@@ -4048,36 +4548,38 @@ func setup(player: Node2D, fog_overlay: Node) -&gt; void:
 func bootstrap_exploration(start_cell: Vector2i) -&gt; void:
 	if _visibility == null or _fog_overlay == null:
 		return
-	if _fog_overlay.has_method(&quot;setup&quot;):
-		_fog_overlay.setup(_visibility, start_cell)
-	if _fog_overlay.has_method(&quot;on_player_cell_changed&quot;):
-		_fog_overlay.on_player_cell_changed(start_cell)
+	_fog_overlay.setup(_visibility, start_cell)
 
 
 func on_player_cell_changed(cell: Vector2i) -&gt; void:
 	if not enabled or _fog_overlay == null:
 		return
-	if _fog_overlay.has_method(&quot;on_player_cell_changed&quot;):
-		_fog_overlay.on_player_cell_changed(cell)
+	_fog_overlay.on_player_cell_changed(cell)
 
 
 func _apply_overlay_visibility() -&gt; void:
-	if _fog_overlay != null and _fog_overlay.has_method(&quot;set_enabled_visible&quot;):
-		_fog_overlay.set_enabled_visible(enabled)</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd">extends Node
+	if _fog_overlay != null:
+		_fog_overlay.set_enabled_visible(enabled)</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd">class_name FogOverlay
+extends CanvasLayer
 
 ## Sliding-window fog presentation buffer (1 texel = 1 grid cell).
-## Screen-space ColorRect + shader world projection; data buffer recenters on grid thresholds.
+## Screen-space fullscreen quad; shader projects canvas px to map-local via ViewProjection uniforms.
 
 const FOG_SHADER: Shader = preload(&quot;res://src/Godot/Shaders/FogOverlay.gdshader&quot;)
 const ViewMetricsRes = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
+const ViewTransformsScript = preload(&quot;res://src/Godot/Scripts/ViewTransforms.gd&quot;)
 
-const PATH_INITIAL_REVEAL: String = &quot;fog.initial_reveal_radius&quot;
-const PATH_PLAYER_REVEAL: String = &quot;fog.player_reveal_radius&quot;
+const PATH_BOOTSTRAP_ROWS: String = &quot;fog.bootstrap_rows_per_frame&quot;
 
 const DEFAULT_BUFFER_SIZE_CELLS: int = 128
 const DEFAULT_RECENTER_MARGIN_CELLS: int = 24
 const DEFAULT_INITIAL_REVEAL_RADIUS: int = 20
 const DEFAULT_PLAYER_REVEAL_RADIUS: int = 8
+const DEFAULT_BOOTSTRAP_ROWS_PER_FRAME: int = 0
+const ASYNC_BOOTSTRAP_MIN_RADIUS: int = 32
+const ASYNC_BOOTSTRAP_CELLS_PER_ROW_BATCH: int = 256
+
+const REVEALED_BYTE: int = 255
 
 @onready var _fog_rect: ColorRect = $FogRect
 
@@ -4086,29 +4588,48 @@ var _visibility: Object
 
 var _fog_image: Image
 var _fog_texture: ImageTexture
+var _mask_bytes: PackedByteArray = PackedByteArray()
 
 var _buffer_size_cells: int = DEFAULT_BUFFER_SIZE_CELLS
 var _recenter_margin_cells: int = DEFAULT_RECENTER_MARGIN_CELLS
 var _initial_reveal_radius: int = DEFAULT_INITIAL_REVEAL_RADIUS
 var _player_reveal_radius: int = DEFAULT_PLAYER_REVEAL_RADIUS
+var _bootstrap_rows_per_frame: int = DEFAULT_BOOTSTRAP_ROWS_PER_FRAME
 
 var _current_buffer_center_grid: Vector2i = Vector2i.ZERO
 var _buffer_origin_grid: Vector2i = Vector2i.ZERO
 var _last_reveal_cell: Vector2i = Vector2i(999999, 999999)
 var _is_first_draw: bool = true
 var _configured: bool = false
+var _buffer_seeded_from_disc: bool = false
+var _bootstrap_in_progress: bool = false
+var _projection_aligned: bool = false
+var _fog_enabled: bool = false
+
+var _cached_viewport_center: Vector2 = Vector2(-99999.0, -99999.0)
+var _cached_camera_focus: Vector2 = Vector2(-99999.0, -99999.0)
+var _cached_zoom: float = -1.0
 
 
 func _ready() -&gt; void:
 	_fog_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fog_rect.color = Color(0.0, 0.0, 0.0, 0.0)
 	_fog_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_fog_rect.set_offsets_preset(Control.PRESET_FULL_RECT)
+	_fog_rect.anchor_right = 1.0
+	_fog_rect.anchor_bottom = 1.0
+	_fog_rect.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_fog_rect.grow_vertical = Control.GROW_DIRECTION_BOTH
 
 	_shader_mat = ShaderMaterial.new()
 	_shader_mat.shader = FOG_SHADER
 	_fog_rect.material = _shader_mat
 
+	_fog_rect.visible = false
+
+	if not Settings.fog_changed.is_connected(_on_fog_settings_changed):
+		Settings.fog_changed.connect(_on_fog_settings_changed)
+	if not ViewProjection.view_changed.is_connected(_on_view_projection_changed):
+		ViewProjection.view_changed.connect(_on_view_projection_changed)
 	_read_buffer_settings()
 
 
@@ -4117,27 +4638,52 @@ func get_shader_material() -&gt; ShaderMaterial:
 
 
 func set_enabled_visible(fog_enabled: bool) -&gt; void:
-	_fog_rect.visible = fog_enabled
+	_fog_enabled = fog_enabled
+	_update_fog_rect_visibility()
 
 
-## Camera uniforms each scroll/zoom; buffer recenters when the player nears the window edge.
-func sync_view_transform(
-	_viewport_size: Vector2,
-	zoom: float,
-	player_cell: Vector2i,
-	camera_center: Vector2
-) -&gt; void:
-	if not _configured or _visibility == null:
+func _update_fog_rect_visibility() -&gt; void:
+	var debug_bypass: bool = Settings.has(&quot;fog.debug_disable_overlay&quot;) and Settings.get_bool(&quot;fog.debug_disable_overlay&quot;)
+	_fog_rect.visible = _configured and _fog_enabled and not debug_bypass
+
+
+func get_buffer_center_grid() -&gt; Vector2i:
+	return _current_buffer_center_grid
+
+
+func is_configured() -&gt; bool:
+	return _configured
+
+
+func get_mask_center_byte(player_cell: Vector2i) -&gt; int:
+	if not _configured or _mask_bytes.is_empty():
+		return 0
+	var idx: int = _mask_index_for_cell(player_cell)
+	if idx &lt; 0:
+		return 0
+	return int(_mask_bytes[idx])
+
+
+## Buffer recenters when the player nears the window edge; camera uniforms sync every call.
+func sync_view_transform(center_grid: Vector2i, camera_focus_map_px: Vector2, current_zoom: float) -&gt; void:
+	if _shader_mat == null:
 		return
 
-	_sync_camera_shader_uniforms(camera_center, zoom)
-	_warn_if_viewport_exceeds_buffer(_viewport_size, zoom)
+	var safe_zoom: float = current_zoom if current_zoom &gt; 0.0 else 1.0
+	var viewport_center: Vector2 = ViewProjection.get_screen_center_offset()
+	_sync_camera_shader_uniforms(viewport_center, camera_focus_map_px, safe_zoom)
 
-	if player_cell != _current_buffer_center_grid or _needs_recenter(player_cell):
-		_recenter_buffer(player_cell, 0)
-	else:
-		_fill_buffer_from_core()
-		_fog_texture.update(_fog_image)
+	if center_grid == _current_buffer_center_grid and _configured:
+		return
+	if not _configured:
+		return
+
+	_current_buffer_center_grid = center_grid
+	_recompute_buffer_origin()
+	_sync_buffer_center_shader()
+	if not _buffer_seeded_from_disc:
+		var radius: int = _initial_reveal_radius if _is_first_draw else _player_reveal_radius
+		_recenter_buffer(center_grid, radius)
 
 
 func setup(visibility: Object, start_cell: Vector2i) -&gt; void:
@@ -4145,8 +4691,10 @@ func setup(visibility: Object, start_cell: Vector2i) -&gt; void:
 	_read_buffer_settings()
 	_load_reveal_radii_from_settings()
 
+	_allocate_mask_buffer()
+
 	_fog_image = Image.create(_buffer_size_cells, _buffer_size_cells, false, Image.FORMAT_R8)
-	_fog_image.fill(Color(0, 0, 0, 1))
+	_apply_mask_to_image()
 
 	_fog_texture = ImageTexture.create_from_image(_fog_image)
 
@@ -4157,12 +4705,39 @@ func setup(visibility: Object, start_cell: Vector2i) -&gt; void:
 
 	_configured = true
 	_is_first_draw = true
+	_buffer_seeded_from_disc = false
+	_projection_aligned = false
 	_last_reveal_cell = Vector2i(999999, 999999)
-	_bootstrap_initial_reveal(start_cell)
+
+	var spawn_focus: Vector2 = ViewTransformsScript.grid_to_map_local_px(
+		float(start_cell.x), float(start_cell.y)
+	)
+	var safe_zoom: float = ViewProjection.zoom
+	if is_zero_approx(safe_zoom):
+		safe_zoom = 1.0
+	_sync_camera_shader_uniforms(
+		ViewProjection.get_screen_center_offset(),
+		spawn_focus,
+		safe_zoom
+	)
+
+	on_player_cell_changed(start_cell)
+
+	var use_async: bool = _should_bootstrap_async()
+	print(
+		&quot;[FogOverlay] setup start_cell=%s initial_reveal_radius=%d configured=%s async=%s&quot;
+		% [start_cell, _initial_reveal_radius, _configured, use_async]
+	)
+
+	if use_async:
+		_bootstrap_in_progress = true
+		_bootstrap_initial_reveal_async(start_cell)
+	else:
+		_bootstrap_initial_reveal(start_cell)
 
 
 func on_player_cell_changed(cell: Vector2i) -&gt; void:
-	if not _configured or _visibility == null:
+	if not _configured or _visibility == null or _bootstrap_in_progress:
 		return
 	if cell == _last_reveal_cell:
 		return
@@ -4171,20 +4746,27 @@ func on_player_cell_changed(cell: Vector2i) -&gt; void:
 	if _is_first_draw:
 		_is_first_draw = false
 	_last_reveal_cell = cell
+	_buffer_seeded_from_disc = false
 
 	if _needs_recenter(cell):
 		_recenter_buffer(cell, radius)
 	else:
 		reveal_cells_at(cell, radius)
-		_fog_texture.update(_fog_image)
+		_commit_mask_to_gpu()
 
 
 func reveal_cells_at(grid_coord: Vector2i, radius_cells: int) -&gt; void:
 	if _visibility == null:
 		return
-
-	_visibility.RevealDisc(grid_coord.x, grid_coord.y, radius_cells)
-	_stamp_disc_in_buffer(grid_coord, radius_cells)
+	if _reveal_disc_stamp_into_buffer(grid_coord, radius_cells):
+		return
+	if not _visibility.has_method(&quot;RevealDiscCollect&quot;):
+		push_error(&quot;FogOverlay: visibility model missing RevealDiscCollect&quot;)
+		return
+	var new_cells: Array = _visibility.RevealDiscCollect(
+		grid_coord.x, grid_coord.y, radius_cells
+	)
+	_stamp_cells_in_buffer(new_cells)
 
 
 func _needs_recenter(cell: Vector2i) -&gt; bool:
@@ -4199,15 +4781,17 @@ func _needs_recenter(cell: Vector2i) -&gt; bool:
 
 
 func _recenter_buffer(new_center: Vector2i, pending_radius: int) -&gt; void:
+	_buffer_seeded_from_disc = false
 	_current_buffer_center_grid = new_center
 	_recompute_buffer_origin()
 	_sync_buffer_center_shader()
 
-	_fog_image.fill(Color(0, 0, 0, 1))
+	_clear_mask_bytes()
 	_fill_buffer_from_core()
 	var radius: int = _effective_reveal_radius(pending_radius)
 	reveal_cells_at(new_center, radius)
-	_fog_texture.update(_fog_image)
+	_commit_mask_to_gpu()
+	_verify_center_revealed(new_center)
 
 
 func _effective_reveal_radius(pending_radius: int) -&gt; int:
@@ -4218,9 +4802,68 @@ func _effective_reveal_radius(pending_radius: int) -&gt; int:
 	return _player_reveal_radius
 
 
-## Bulk history restore: row-major mask from Core (one IsRevealed per buffer texel).
-func _fill_buffer_from_core() -&gt; void:
+func _allocate_mask_buffer() -&gt; void:
+	var mask_size: int = _buffer_size_cells * _buffer_size_cells
+	_mask_bytes.resize(mask_size)
+	_clear_mask_bytes()
+
+
+func _clear_mask_bytes() -&gt; void:
+	_mask_bytes.fill(0)
+
+
+func _apply_mask_to_image() -&gt; void:
+	if _fog_image == null:
+		return
+	_fog_image.set_data(_buffer_size_cells, _buffer_size_cells, false, Image.FORMAT_R8, _mask_bytes)
+
+
+func _commit_mask_to_gpu() -&gt; void:
+	_apply_mask_to_image()
+	if _fog_texture != null:
+		_fog_texture.update(_fog_image)
+	if OS.is_debug_build():
+		_debug_log_mask_nonzero_count()
+
+
+func _reveal_disc_stamp_into_buffer(grid_coord: Vector2i, radius_cells: int) -&gt; bool:
+	if _visibility == null or not _visibility.has_method(&quot;RevealDiscStampInto&quot;):
+		return false
 	var origin: Vector2i = _buffer_origin_grid
+	_visibility.RevealDiscStampInto(
+		origin.x,
+		origin.y,
+		_buffer_size_cells,
+		_buffer_size_cells,
+		grid_coord.x,
+		grid_coord.y,
+		radius_cells,
+		_mask_bytes
+	)
+	_buffer_seeded_from_disc = true
+	return true
+
+
+## Bulk history restore: row-major mask from Core into reusable scratch buffer.
+func _fill_buffer_from_core() -&gt; void:
+	if _visibility == null:
+		return
+	var origin: Vector2i = _buffer_origin_grid
+	var expected: int = _buffer_size_cells * _buffer_size_cells
+	if _mask_bytes.size() != expected:
+		_allocate_mask_buffer()
+
+	if _visibility.has_method(&quot;FillRevealedMaskInto&quot;):
+		_visibility.FillRevealedMaskInto(
+			origin.x,
+			origin.y,
+			_buffer_size_cells,
+			_buffer_size_cells,
+			_mask_bytes
+		)
+		return
+
+	# Fallback for older interop builds.
 	var mask: PackedByteArray = PackedByteArray(
 		_visibility.FillRevealedMask(
 			origin.x,
@@ -4229,36 +4872,33 @@ func _fill_buffer_from_core() -&gt; void:
 			_buffer_size_cells
 		)
 	)
-	if mask.size() != _buffer_size_cells * _buffer_size_cells:
+	if mask.size() != expected:
 		push_warning(
 			&quot;FogOverlay: FillRevealedMask size mismatch (got %d, expected %d)&quot;
-			% [mask.size(), _buffer_size_cells * _buffer_size_cells]
+			% [mask.size(), expected]
 		)
 		return
-	_fog_image.set_data(_buffer_size_cells, _buffer_size_cells, false, Image.FORMAT_R8, mask)
+	_mask_bytes = mask
 
 
-func _stamp_disc_in_buffer(center: Vector2i, radius_cells: int) -&gt; void:
-	var r_sq: int = radius_cells * radius_cells
-	var min_x: int = center.x - radius_cells
-	var max_x: int = center.x + radius_cells
-	var min_y: int = center.y - radius_cells
-	var max_y: int = center.y + radius_cells
-	var revealed := Color(1, 1, 1, 1)
-
-	for gy in range(min_y, max_y + 1):
-		var dy: int = gy - center.y
-		var dy_sq: int = dy * dy
-		for gx in range(min_x, max_x + 1):
-			var dx: int = gx - center.x
-			if dx * dx + dy_sq &gt; r_sq:
-				continue
-			var local: Vector2i = Vector2i(gx, gy) - _buffer_origin_grid
-			if local.x &lt; 0 or local.y &lt; 0:
-				continue
-			if local.x &gt;= _buffer_size_cells or local.y &gt;= _buffer_size_cells:
-				continue
-			_fog_image.set_pixel(local.x, local.y, revealed)
+func _stamp_cells_in_buffer(cells: Array) -&gt; void:
+	var w: int = _buffer_size_cells
+	for cell in cells:
+		var gx: int
+		var gy: int
+		if cell is Vector2i:
+			gx = cell.x
+			gy = cell.y
+		else:
+			gx = int(cell.x)
+			gy = int(cell.y)
+		var local: Vector2i = Vector2i(gx, gy) - _buffer_origin_grid
+		if local.x &lt; 0 or local.y &lt; 0:
+			continue
+		if local.x &gt;= w or local.y &gt;= w:
+			continue
+		_mask_bytes[local.y * w + local.x] = REVEALED_BYTE
+	_buffer_seeded_from_disc = true
 
 
 func _recompute_buffer_origin() -&gt; void:
@@ -4275,12 +4915,80 @@ func _sync_buffer_center_shader() -&gt; void:
 	_shader_mat.set_shader_parameter(&amp;&quot;world_buffer_center_px&quot;, buffer_center_px)
 
 
-func _sync_camera_shader_uniforms(camera_center: Vector2, zoom: float) -&gt; void:
+func _resolve_player_cell_from_scene() -&gt; Vector2i:
+	var player: Node2D = _find_player_node()
+	if player == null:
+		return Vector2i.ZERO
+	ViewProjection.register_camera_focus(player.position)
+	return ViewProjection.resolve_map_center_from_player(player)
+
+
+func _resolve_camera_focus(explicit: Vector2) -&gt; Vector2:
+	if explicit.is_finite() and ViewProjection.is_camera_registered():
+		return explicit
+	return ViewProjection.resolve_camera_focus_map_px(_find_player_node())
+
+
+func _on_view_projection_changed() -&gt; void:
+	if not _configured or _shader_mat == null:
+		return
+	var player: Node2D = _find_player_node()
+	var focus: Vector2 = ViewProjection.resolve_camera_focus_map_px(player)
+	var center: Vector2 = ViewProjection.get_screen_center_offset()
+	var safe_zoom: float = ViewProjection.zoom
+	if is_zero_approx(safe_zoom):
+		safe_zoom = 1.0
+	_sync_camera_shader_uniforms(center, focus, safe_zoom)
+
+
+func _verify_center_revealed(player_cell: Vector2i) -&gt; void:
+	if not _configured or _mask_bytes.is_empty():
+		return
+	var idx: int = _mask_index_for_cell(player_cell)
+	if idx &lt; 0:
+		return
+	if _mask_bytes[idx] != 0:
+		return
+	reveal_cells_at(player_cell, _initial_reveal_radius)
+	_commit_mask_to_gpu()
+
+
+func _mask_index_for_cell(player_cell: Vector2i) -&gt; int:
+	var local: Vector2i = player_cell - _buffer_origin_grid
+	if local.x &lt; 0 or local.y &lt; 0:
+		return -1
+	if local.x &gt;= _buffer_size_cells or local.y &gt;= _buffer_size_cells:
+		return -1
+	var idx: int = local.y * _buffer_size_cells + local.x
+	if idx &lt; 0 or idx &gt;= _mask_bytes.size():
+		return -1
+	return idx
+
+
+func _debug_log_mask_nonzero_count() -&gt; void:
+	var nonzero: int = 0
+	for i: int in _mask_bytes.size():
+		if _mask_bytes[i] != 0:
+			nonzero += 1
+	if nonzero == 0:
+		push_warning(&quot;[FogOverlay] fog mask has zero revealed cells after commit&quot;)
+	else:
+		print(&quot;[FogOverlay] fog mask nonzero cells=%d / %d&quot; % [nonzero, _mask_bytes.size()])
+
+
+func _sync_camera_shader_uniforms(viewport_center: Vector2, camera_focus: Vector2, zoom: float) -&gt; void:
 	if _shader_mat == null:
 		return
-	var safe_zoom: float = maxf(zoom, 0.0001)
-	_shader_mat.set_shader_parameter(&amp;&quot;camera_center_px&quot;, camera_center)
-	_shader_mat.set_shader_parameter(&amp;&quot;zoom&quot;, safe_zoom)
+	var safe_zoom: float = zoom if not is_zero_approx(zoom) else 1.0
+	if viewport_center != _cached_viewport_center:
+		_shader_mat.set_shader_parameter(&amp;&quot;viewport_center_px&quot;, viewport_center)
+		_cached_viewport_center = viewport_center
+	if camera_focus != _cached_camera_focus:
+		_shader_mat.set_shader_parameter(&amp;&quot;camera_focus_map_px&quot;, camera_focus)
+		_cached_camera_focus = camera_focus
+	if not is_equal_approx(safe_zoom, _cached_zoom):
+		_shader_mat.set_shader_parameter(&amp;&quot;zoom&quot;, safe_zoom)
+		_cached_zoom = safe_zoom
 
 
 func _bind_shader_uniforms() -&gt; void:
@@ -4294,23 +5002,85 @@ func _bind_shader_uniforms() -&gt; void:
 
 func _bootstrap_initial_reveal(start_cell: Vector2i) -&gt; void:
 	if not _is_first_draw or _visibility == null:
+		print(
+			&quot;[FogOverlay] bootstrap reveal skipped: is_first_draw=%s visibility=%s&quot;
+			% [_is_first_draw, _visibility]
+		)
 		return
-	var radius: int = maxi(int(Settings.initial_reveal_radius), 1)
+	var radius: int = maxi(_initial_reveal_radius, 1)
+	print(&quot;[FogOverlay] bootstrap reveal start_cell=%s radius=%d&quot; % [start_cell, radius])
 	reveal_cells_at(start_cell, radius)
-	_fog_texture.update(_fog_image)
+	_commit_mask_to_gpu()
 	_last_reveal_cell = start_cell
 	_is_first_draw = false
+	print(&quot;[FogOverlay] bootstrap reveal committed; last_reveal_cell=%s&quot; % _last_reveal_cell)
+	_verify_center_revealed(start_cell)
+
+
+func _bootstrap_initial_reveal_async(start_cell: Vector2i) -&gt; void:
+	if not _is_first_draw or _visibility == null:
+		_bootstrap_in_progress = false
+		return
+
+	var radius: int = maxi(_initial_reveal_radius, 1)
+	if _reveal_disc_stamp_into_buffer(start_cell, radius):
+		_commit_mask_to_gpu()
+	else:
+		if not _visibility.has_method(&quot;RevealDiscCollect&quot;):
+			_bootstrap_initial_reveal(start_cell)
+			_bootstrap_in_progress = false
+			return
+
+		var new_cells: Array = _visibility.RevealDiscCollect(start_cell.x, start_cell.y, radius)
+		var batch: int = maxi(_bootstrap_rows_per_frame * ASYNC_BOOTSTRAP_CELLS_PER_ROW_BATCH, 1)
+		var i: int = 0
+		while i &lt; new_cells.size():
+			var end_i: int = mini(i + batch, new_cells.size())
+			var slice: Array = new_cells.slice(i, end_i)
+			_stamp_cells_in_buffer(slice)
+			_commit_mask_to_gpu()
+			i = end_i
+			if i &lt; new_cells.size():
+				await get_tree().process_frame
+
+	_last_reveal_cell = start_cell
+	_is_first_draw = false
+	_bootstrap_in_progress = false
+	var focus: Vector2 = ViewProjection.resolve_camera_focus_map_px(_find_player_node())
+	_sync_camera_shader_uniforms(
+		ViewProjection.get_screen_center_offset(),
+		focus,
+		ViewProjection.zoom
+	)
+
+
+func _find_player_node() -&gt; Node2D:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	var players: Array[Node] = tree.get_nodes_in_group(&quot;player&quot;)
+	if players.is_empty():
+		return null
+	return players[0] as Node2D
+
+
+func _should_bootstrap_async() -&gt; bool:
+	if _bootstrap_rows_per_frame &lt;= 0:
+		return false
+	var radius: int = maxi(_initial_reveal_radius, 1)
+	return radius &gt;= ASYNC_BOOTSTRAP_MIN_RADIUS
 
 
 func _load_reveal_radii_from_settings() -&gt; void:
-	_initial_reveal_radius = maxi(
-		int(Settings.get_setting(PATH_INITIAL_REVEAL, DEFAULT_INITIAL_REVEAL_RADIUS)),
-		1
-	)
-	_player_reveal_radius = maxi(
-		int(Settings.get_setting(PATH_PLAYER_REVEAL, DEFAULT_PLAYER_REVEAL_RADIUS)),
-		1
-	)
+	_initial_reveal_radius = maxi(Settings.initial_reveal_radius, 1)
+	_player_reveal_radius = maxi(Settings.player_reveal_radius, 1)
+
+
+func _on_fog_settings_changed() -&gt; void:
+	_load_reveal_radii_from_settings()
+	if _visibility != null:
+		_visibility.InitialRevealRadius = _initial_reveal_radius
+		_visibility.MovementRevealRadius = _player_reveal_radius
 
 
 func _read_buffer_settings() -&gt; void:
@@ -4319,11 +5089,15 @@ func _read_buffer_settings() -&gt; void:
 		&amp;&quot;fog.recenter_margin_cells&quot;,
 		DEFAULT_RECENTER_MARGIN_CELLS
 	)
+	_bootstrap_rows_per_frame = _read_int_setting(
+		PATH_BOOTSTRAP_ROWS,
+		DEFAULT_BOOTSTRAP_ROWS_PER_FRAME
+	)
 
 
 func _read_int_setting(key: StringName, default_value: int) -&gt; int:
 	if Settings.has(key):
-		return maxi(int(Settings.get_float(key)), 1)
+		return maxi(int(Settings.get_float(key)), 0)
 	return default_value
 
 
@@ -4331,7 +5105,7 @@ func _warn_if_viewport_exceeds_buffer(viewport_size: Vector2, zoom: float) -&gt;
 	if viewport_size.x &lt; 1.0 or viewport_size.y &lt; 1.0:
 		return
 	var half_buffer: int = _buffer_size_cells &gt;&gt; 1
-	var cell_px_scaled: float = float(ViewMetricsRes.CELL_SIZE_PX) * maxf(zoom, 0.0001)
+	var cell_px_scaled: float = ViewTransformsScript.on_screen_cell_px(zoom)
 	var view_half_cells: int = int(
 		ceil(maxf(viewport_size.x, viewport_size.y) * 0.5 / cell_px_scaled)
 	)
@@ -4339,182 +5113,12 @@ func _warn_if_viewport_exceeds_buffer(viewport_size: Vector2, zoom: float) -&gt;
 		push_warning(
 			&quot;FogOverlay: viewport (~%d cells) exceeds buffer half (%d); increase fog.buffer_size_cells or zoom in&quot;
 			% [view_half_cells, half_buffer]
-		)</file><file path="src/Godot/Scripts/ViewProjection.gd">extends Node
-
-## Autoload facade: zoom/settings plus centered map-local ↔ canvas transforms.
-## map_scroll is the camera focus in map-local px (not the WorldCanvas/Tiles node position).
-
-signal view_changed
-
-## Camera focus in map-local px. When zero, world origin is at screen center.
-var map_scroll: Vector2 = Vector2.ZERO
-
-var _cached_screen_center: Vector2 = Vector2.ZERO
-var _viewport_provider: Node = null
-
-
-func register_viewport_provider(node: Node) -&gt; void:
-	_viewport_provider = node
-	invalidate_screen_center_cache()
-
-
-func _ready() -&gt; void:
-	if not Settings.view_changed.is_connected(_on_settings_view_changed):
-		Settings.view_changed.connect(_on_settings_view_changed)
-
-
-var zoom: float:
-	get:
-		return Settings.zoom
-	set(value):
-		Settings.zoom = value
-
-
-func invalidate_screen_center_cache() -&gt; void:
-	_cached_screen_center = Vector2.ZERO
-
-
-func get_view_dimensions() -&gt; Vector2:
-	var center: Vector2 = get_screen_center_offset()
-	if center.x &gt; 0.0 and center.y &gt; 0.0:
-		return center * 2.0
-	var main_loop := Engine.get_main_loop()
-	if main_loop is SceneTree and main_loop.root != null:
-		var vp: Viewport = main_loop.root.get_viewport()
-		if vp != null:
-			return vp.get_visible_rect().size
-	return Vector2(
-		float(ProjectSettings.get_setting(&quot;display/window/size/viewport_width&quot;, 1920)),
-		float(ProjectSettings.get_setting(&quot;display/window/size/viewport_height&quot;, 1080))
-	)
-
-
-func get_screen_center_offset() -&gt; Vector2:
-	if _cached_screen_center != Vector2.ZERO:
-		return _cached_screen_center
-	var center: Vector2 = _read_viewport_center()
-	if center.x &gt; 0.0 and center.y &gt; 0.0:
-		_cached_screen_center = center
-	return center
-
-
-func _read_viewport_center() -&gt; Vector2:
-	var vp: Viewport = null
-	if _viewport_provider != null and _viewport_provider.is_inside_tree():
-		vp = _viewport_provider.get_viewport()
-	if vp == null:
-		var main_loop := Engine.get_main_loop()
-		if main_loop is SceneTree and main_loop.root != null:
-			vp = main_loop.root.get_viewport()
-	if vp == null:
-		return Vector2.ZERO
-	var rect: Rect2 = vp.get_visible_rect()
-	if rect.size.x &lt; 1.0 or rect.size.y &lt; 1.0:
-		return Vector2.ZERO
-	# Visible rect origin is (0,0) under viewport stretch; center = half size.
-	return rect.size * 0.5
-
-
-func world_to_screen(world_pos: Vector2) -&gt; Vector2:
-	return (world_pos - map_scroll) * zoom + get_screen_center_offset()
-
-
-func screen_to_world(screen_pos: Vector2) -&gt; Vector2:
-	var z: float = zoom if not is_zero_approx(zoom) else 1.0
-	return ((screen_pos - get_screen_center_offset()) / z) + map_scroll
-
-
-func scroll_node_canvas_position() -&gt; Vector2:
-	return world_to_screen(Vector2.ZERO)
-
-
-## Map-local px -&gt; canvas px (scale then translate scroll origin).
-func forward_canvas_transform() -&gt; Transform2D:
-	var z: float = zoom if not is_zero_approx(zoom) else 1.0
-	var scroll_pos: Vector2 = scroll_node_canvas_position()
-	return Transform2D(Vector2(z, 0.0), Vector2(0.0, z), scroll_pos)
-
-
-## Canvas px -&gt; map-local px; matches FogOverlay.sync_scroll forward inverse.
-func canvas_to_map_local_transform() -&gt; Transform2D:
-	return forward_canvas_transform().affine_inverse()
-
-
-## Headless/tests: pin screen center when no viewport provider exists.
-func pin_screen_center_for_tests(center: Vector2) -&gt; void:
-	_cached_screen_center = center
-
-
-func adjust_zoom(delta_steps: int) -&gt; bool:
-	var step: float = Settings.get_float(&quot;view.zoom_wheel_step&quot;)
-	var new_zoom: float = Settings.get_float(&quot;view.zoom&quot;) + float(delta_steps) * step
-	var min_zoom: Variant = Settings.get_min(&quot;view.zoom&quot;)
-	var max_zoom: Variant = Settings.get_max(&quot;view.zoom&quot;)
-	if min_zoom != null and max_zoom != null:
-		new_zoom = clampf(new_zoom, float(min_zoom), float(max_zoom))
-	if is_equal_approx(new_zoom, Settings.zoom):
-		return false
-	Settings.zoom = new_zoom
-	return true
-
-
-func get_settings_panel_visible() -&gt; bool:
-	return Settings.get_settings_panel_visible()
-
-
-func set_settings_panel_visible(visible: bool) -&gt; void:
-	Settings.set_settings_panel_visible(visible)
-
-
-func load_settings() -&gt; void:
-	Settings.load_user_settings()
-
-
-func save_settings() -&gt; void:
-	Settings.save_user_settings()
-
-
-func _on_settings_view_changed() -&gt; void:
-	view_changed.emit()</file><file path="src/Godot/Shaders/FogOverlay.gdshader">shader_type canvas_item;
-render_mode blend_mix;
-
-uniform sampler2D fog_data_texture : filter_nearest, repeat_disable;
-uniform vec2 world_buffer_center_px;
-uniform float buffer_size_cells;
-uniform float cell_size_px = 64.0;
-uniform vec4 fog_color : source_color = vec4(0.0, 0.0, 0.0, 0.85);
-
-uniform vec2 camera_center_px;
-uniform float zoom = 1.0;
-
-varying vec2 world_px;
-
-void vertex() {
-	vec2 screen_offset_from_center_px = (UV - vec2(0.5)) * rect_size;
-	float safe_zoom = max(zoom, 0.0001);
-	world_px = camera_center_px + (screen_offset_from_center_px / safe_zoom);
-}
-
-void fragment() {
-	vec2 offset_from_center_px = world_px - world_buffer_center_px;
-	vec2 texture_sample_uv = (offset_from_center_px / (buffer_size_cells * cell_size_px)) + vec2(0.5);
-
-	float alpha_mask = 1.0;
-	if (
-		texture_sample_uv.x &gt;= 0.0 &amp;&amp; texture_sample_uv.x &lt;= 1.0
-		&amp;&amp; texture_sample_uv.y &gt;= 0.0 &amp;&amp; texture_sample_uv.y &lt;= 1.0
-	) {
-		alpha_mask = 1.0 - texture(fog_data_texture, texture_sample_uv).r;
-	} else {
-		alpha_mask = 1.0;
-	}
-
-	float smooth_edge = smoothstep(0.0, 1.0, alpha_mask);
-	COLOR = vec4(fog_color.rgb, smooth_edge * fog_color.a);
-}</file><file path="src/Godot/Scripts/ViewContext.gd">class_name ViewContext
+		)</file><file path="src/Godot/Scripts/ViewContext.gd">class_name ViewContext
 extends RefCounted
 
 ## Bundle of view/camera state passed to ViewTransforms conversion functions.
+## ctx.zoom is for viewport cell-count metrics only — never multiply placement positions
+## by ctx.zoom when map_scroll node transform also applies scale.
 
 ## WorldCanvas/Tiles scroll node (canvas transform). Not ViewProjection.map_scroll (camera focus).
 var map_scroll: Node2D
@@ -4620,6 +5224,9 @@ var _bootstrap_phase: BootstrapPhase = BootstrapPhase.NONE
 var _spawn_safe_zone_x: int = 0
 var _spawn_safe_zone_y: int = 0
 var _safe_zone_radius: int = 2
+var _load_radius: int = 2
+var _load_radius_buffer: int = 1
+var _load_radius_view_padding: int = 2
 
 var _noise: FastNoiseLite
 var _tile_set: TileSet
@@ -4634,7 +5241,7 @@ var _atlas_mud: Vector2i
 
 var _pending_coords: Array[Vector2i] = []
 var _pending_loads: Dictionary = {}
-var _active_jobs: Array = []
+var _active_jobs: Array[ChunkLoadJob] = []
 var _unload_queue: Array[Vector2i] = []
 var _keep_wanted: Dictionary = {}
 var _prefetch_wanted: Dictionary = {}
@@ -4691,32 +5298,27 @@ func _read_world_settings() -&gt; void:
 	_spawn_safe_zone_x = Settings.get_int(&quot;world.spawn_safe_zone_x&quot;)
 	_spawn_safe_zone_y = Settings.get_int(&quot;world.spawn_safe_zone_y&quot;)
 	_safe_zone_radius = Settings.get_int(&quot;world.safe_zone_radius&quot;)
+	_load_radius = Settings.get_int(&quot;world.load_radius&quot;)
+	_load_radius_buffer = Settings.get_int(&quot;world.load_radius_buffer&quot;)
+	if Settings.has(&quot;world.load_radius_view_padding&quot;):
+		_load_radius_view_padding = maxi(Settings.get_int(&quot;world.load_radius_view_padding&quot;), 0)
 	_cells_paint_per_frame = mini(_cells_paint_per_frame, _cells_per_frame)
 	_bootstrap_cells_paint_per_frame = mini(_bootstrap_cells_paint_per_frame, _bootstrap_cells_per_frame)
 
 
 func _compute_prefetch_radius() -&gt; int:
-	var base_radius: int = Settings.get_int(&quot;world.load_radius&quot;)
-	var buffer: int = Settings.get_int(&quot;world.load_radius_buffer&quot;)
-	var vp: Viewport = get_viewport()
-	if vp == null:
+	var base_radius: int = _load_radius
+	var buffer: int = _load_radius_buffer
+	if not ViewProjection.are_viewport_metrics_ready():
 		return base_radius + buffer
-	var zoom: float = ViewProjection.zoom
-	var cell_px: float = float(_tile_size) * maxf(zoom, 0.0001)
-	var vp_size: Vector2 = vp.get_visible_rect().size
-	var half_x: int = int(ceil(vp_size.x * 0.5 / cell_px))
-	var half_y: int = int(ceil(vp_size.y * 0.5 / cell_px))
-	var half: int = maxi(half_x, half_y) + buffer
-	var viewport_radius: int = _div_floor(half, _chunk_size) + 1
-	var view_padding: int = 2
-	if Settings.has(&quot;world.load_radius_view_padding&quot;):
-		view_padding = maxi(Settings.get_int(&quot;world.load_radius_view_padding&quot;), 0)
-	return maxi(base_radius + buffer, viewport_radius + view_padding)
+	var cell_radius: int = ViewProjection.get_visual_radius(buffer)
+	var viewport_radius: int = _div_floor(cell_radius, _chunk_size) + 1
+	return maxi(base_radius + buffer, viewport_radius + _load_radius_view_padding)
 
 
 func _build_chunk_offsets() -&gt; void:
 	_keep_offsets.clear()
-	var keep_radius: int = Settings.get_int(&quot;world.load_radius&quot;)
+	var keep_radius: int = _load_radius
 	for dy: int in range(-keep_radius, keep_radius + 1):
 		for dx: int in range(-keep_radius, keep_radius + 1):
 			_keep_offsets.append(Vector2i(dx, dy))
@@ -4806,7 +5408,7 @@ func get_tile_type_at_grid(grid_tile: Vector2i) -&gt; int:
 	var chunk_coord := grid_to_chunk_coord(grid_tile)
 	var local := grid_tile - chunk_coord * _chunk_size
 	if _chunks.has(chunk_coord):
-		var data = _chunks[chunk_coord]
+		var data: ChunkData = _chunks[chunk_coord]
 		return data.get_tile_index(local.y * _chunk_size + local.x)
 	return _terrain_at_grid_tile(grid_tile)
 
@@ -4921,7 +5523,7 @@ func _step_unload_budget() -&gt; void:
 
 
 func _is_chunk_pending(coord: Vector2i) -&gt; bool:
-	for job in _active_jobs:
+	for job: ChunkLoadJob in _active_jobs:
 		if job.coord == coord:
 			return true
 	return _pending_loads.has(coord)
@@ -4930,7 +5532,7 @@ func _is_chunk_pending(coord: Vector2i) -&gt; bool:
 func _cancel_loads_not_in_prefetch(prefetch_wanted: Dictionary) -&gt; void:
 	var i: int = _active_jobs.size() - 1
 	while i &gt;= 0:
-		var job = _active_jobs[i]
+		var job: ChunkLoadJob = _active_jobs[i]
 		if not prefetch_wanted.has(job.coord):
 			_cancel_job(job)
 			_active_jobs.remove_at(i)
@@ -5045,7 +5647,7 @@ func _try_start_jobs() -&gt; void:
 
 
 func _start_job(chunk_coord: Vector2i) -&gt; void:
-	var job = ChunkLoadJobScript.new()
+	var job: ChunkLoadJob = ChunkLoadJobScript.new()
 	job.coord = chunk_coord
 	job.origin = chunk_coord * _chunk_size
 	job.layer = _acquire_layer(chunk_coord)
@@ -5075,7 +5677,7 @@ func _step_active_jobs() -&gt; void:
 		if gen_budget &lt;= 0 and paint_budget &lt;= 0:
 			break
 
-		var job = _active_jobs[job_index]
+		var job: ChunkLoadJob = _active_jobs[job_index]
 		var step := _step_job(job, deadline, gen_budget, paint_budget)
 		gen_budget = step.gen_budget
 		paint_budget = step.paint_budget
@@ -5085,7 +5687,7 @@ func _step_active_jobs() -&gt; void:
 		job_index += 1
 
 
-func _step_job(job, deadline: int, gen_budget: int, paint_budget: int) -&gt; Dictionary:
+func _step_job(job: ChunkLoadJob, deadline: int, gen_budget: int, paint_budget: int) -&gt; Dictionary:
 	var result := {&quot;finished&quot;: false, &quot;gen_budget&quot;: gen_budget, &quot;paint_budget&quot;: paint_budget}
 	match job.phase:
 		ChunkLoadJobScript.Phase.WAIT_TREE:
@@ -5117,7 +5719,7 @@ func _step_job(job, deadline: int, gen_budget: int, paint_budget: int) -&gt; Dic
 			return result
 
 
-func _step_generate_job(job, deadline: int, cell_cap: int) -&gt; int:
+func _step_generate_job(job: ChunkLoadJob, deadline: int, cell_cap: int) -&gt; int:
 	var processed: int = 0
 
 	if job.fill_land:
@@ -5153,7 +5755,7 @@ func _step_generate_job(job, deadline: int, cell_cap: int) -&gt; int:
 	return processed
 
 
-func _step_paint_job(job, deadline: int, cell_cap: int) -&gt; int:
+func _step_paint_job(job: ChunkLoadJob, deadline: int, cell_cap: int) -&gt; int:
 	var processed: int = 0
 	var source_id: int = TerrainSandboxTileSetScript.SOURCE_ID
 
@@ -5176,13 +5778,13 @@ func _step_paint_job(job, deadline: int, cell_cap: int) -&gt; int:
 	return processed
 
 
-func _finish_job(job) -&gt; void:
+func _finish_job(job: ChunkLoadJob) -&gt; void:
 	_chunks[job.coord] = job.data
 	_layers[job.coord] = job.layer
 	job.phase = ChunkLoadJobScript.Phase.DONE
 
 
-func _cancel_job(job) -&gt; void:
+func _cancel_job(job: ChunkLoadJob) -&gt; void:
 	if job.layer != null:
 		_release_layer(job.layer)
 
@@ -5289,68 +5891,54 @@ static func _div_floor(value: int, divisor: int) -&gt; int:
 		return 0
 	if value &gt;= 0:
 		return int(floori(float(value) / float(divisor)))
-	return -int(ceili(-float(value) / float(divisor)))</file><file path=".cursor/rules/architecture.md">---
-description: Core vs Godot layer boundaries, dependency rules, and allowed APIs
-alwaysApply: true
----
+	return -int(ceili(-float(value) / float(divisor)))</file><file path="src/Godot/Shaders/FogOverlay.gdshader">shader_type canvas_item;
+render_mode blend_mix;
 
-# Architecture: Core vs Godot
+uniform sampler2D fog_data_texture : filter_nearest, repeat_disable;
+uniform vec2 viewport_center_px;
+uniform vec2 camera_focus_map_px;
+uniform float zoom = 1.0;
+uniform vec2 world_buffer_center_px;
+uniform float buffer_size_cells;
+uniform float cell_size_px = 64.0;
+uniform vec4 fog_color : source_color = vec4(0.0, 0.0, 0.0, 0.85);
 
-## Dependency direction
+vec2 fragcoord_to_map_local(vec2 fragcoord) {
+	float safe_zoom = max(zoom, 0.0001);
+	return (fragcoord - viewport_center_px) / safe_zoom + camera_focus_map_px;
+}
 
-- **One-way only:** `src/Godot/` may depend on `src/Core/`. `src/Core/` must never import or reference `res://src/Godot/`.
-- **Core is C#:** `src/Core/` (Models, Systems) built by [`src/SPG.Core.csproj`](../src/SPG.Core.csproj) — plain `net6.0` class library, no Godot references. GDScript must **not** `preload` Core paths.
-- **Interop bridge:** GDScript talks to Core only through `src/Godot/Interop/` C# wrappers and the **`CoreBridge`** autoload (`/root/CoreBridge`). Use **PascalCase** when calling C# from GDScript (e.g. `CoreBridge.CreatePartyModel()`, `character.MoveRelative()`).
-- **World streaming:** Infinite terrain is handled in GDScript by `ChunkManager` (`src/Godot/Scripts/World/`). Query tiles via `get_tile_type_at_global_pos()` / `get_tile_type_at_grid()` — not Core `GridModel`.
-- **GDScript performance:** For chunk streaming, procedural generation, fog, or other hot-path systems, follow [godot-performance.mdc](godot-performance.mdc). Plans and PRs must include a **Self-Correction Step** (traps + bypasses) before implementation.
-- Do **not** place `.gdignore` on `src/Core/` if Godot needs to see the folder for project layout; Core logic lives in `.cs` files compiled via `SPG.sln`.
+void fragment() {
+	vec2 world_px = fragcoord_to_map_local(FRAGCOORD.xy);
+	vec2 offset_from_center_px = world_px - world_buffer_center_px;
+	float data_window_size_px = buffer_size_cells * cell_size_px;
+	vec2 texture_sample_uv = (offset_from_center_px / data_window_size_px) + vec2(0.5);
 
-## Layer flow
+	float alpha_mask = 1.0;
+	if (
+		texture_sample_uv.x &gt;= 0.0 &amp;&amp; texture_sample_uv.x &lt;= 1.0
+		&amp;&amp; texture_sample_uv.y &gt;= 0.0 &amp;&amp; texture_sample_uv.y &lt;= 1.0
+	) {
+		alpha_mask = 1.0 - texture(fog_data_texture, texture_sample_uv).r;
+	}
 
-```mermaid
-flowchart TB
-  subgraph core [src/Core - C# DLL via SPG.Core.csproj]
-    Models[Models: PartyModel, CharacterModel, VisibilityModel]
-    Math[Math: GridMath]
-  end
-  subgraph interop [src/Godot/Interop - C# RefCounted wrappers]
-    CoreBridge[CoreBridge autoload]
-    Wrappers[PartyModelGd, CharacterModelGd, ...]
-  end
-  subgraph godot [src/Godot - GDScript]
-    Scenes[Godot/Scenes]
-    Scripts[Godot/Scripts]
-    Assets[Godot/Assets]
-  end
-  core --&gt; Wrappers
-  Wrappers --&gt; CoreBridge
-  Scripts --&gt; CoreBridge
-  Scripts --&gt; Wrappers
-  Scenes --&gt; Scripts
-  core -.-&gt;|&quot;no imports&quot;| godot
-```</file><file path="src/Godot/Scenes/FogOverlay.tscn">[gd_scene format=3 uid=&quot;uid://3fqp6ja8tdwe&quot;]
-
-[ext_resource type=&quot;Script&quot; uid=&quot;uid://de0pe5d3agf4l&quot; path=&quot;res://src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd&quot; id=&quot;1_fog_overlay&quot;]
-
-[node name=&quot;FogOverlay&quot; type=&quot;Node&quot;]
-script = ExtResource(&quot;1_fog_overlay&quot;)
-
-[node name=&quot;FogRect&quot; type=&quot;ColorRect&quot; parent=&quot;.&quot;]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(0, 0, 0, 0)</file><file path="src/Godot/Scripts/GridOverlay.gd">extends ColorRect
+	float smooth_edge = smoothstep(0.0, 1.0, alpha_mask);
+	COLOR = vec4(fog_color.rgb, smooth_edge * fog_color.a);
+}</file><file path="src/Godot/Scripts/GridOverlay.gd">class_name GridOverlay
+extends ColorRect
 
 ## GPU grid overlay derived from world/map-local coordinates.
 
 const ViewMetricsRes = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
+const ViewTransformsScript = preload(&quot;res://src/Godot/Scripts/ViewTransforms.gd&quot;)
 const GRID_SHADER: Shader = preload(&quot;res://src/Godot/Shaders/GridOverlay.gdshader&quot;)
 
 var _enabled: bool = false
 var _shader_mat: ShaderMaterial
+
+var _debug_grid_lines: bool = false
+var _line_width_px: float = 1.0
+var _line_color: Color = Color.WHITE
 
 var _cached_enabled_param: bool = false
 var _cached_visible_state: bool = false
@@ -5372,9 +5960,16 @@ func _ready() -&gt; void:
 	_shader_mat = ShaderMaterial.new()
 	_shader_mat.shader = GRID_SHADER
 	material = _shader_mat
+
+	if not Settings.setting_changed.is_connected(_on_setting_changed):
+		Settings.setting_changed.connect(_on_setting_changed)
+	if not ViewProjection.view_changed.is_connected(_on_view_projection_changed):
+		ViewProjection.view_changed.connect(_on_view_projection_changed)
+	_read_grid_settings()
 	_apply_static_uniforms()
 	_invalidate_projection_cache()
 	sync_uniforms(null, true)
+	_debug_force_initial_sync()
 
 
 func configure(enabled: bool) -&gt; void:
@@ -5386,27 +5981,18 @@ func set_map_scroll(_map_scroll: Node2D) -&gt; void:
 	_invalidate_projection_cache()
 
 
-## Kept for compatibility with existing callers; grid is fully world-relative now.
-func update_region(_center_x: int, _center_y: int, _visual_radius: int) -&gt; void:
-	pass
-
-
-func on_view_changed() -&gt; void:
-	sync_uniforms()
-
-
 func sync_canvas_transform(_map_scroll_node: Node2D = null) -&gt; void:
 	if _shader_mat == null:
 		return
-	var center: Vector2 = ViewProjection.get_screen_center_offset()
-	var focus: Vector2 = ViewProjection.map_scroll
+	var center: Vector2 = _resolve_projection_center()
+	var focus: Vector2 = _resolve_camera_focus()
 	var safe_zoom: float = ViewProjection.zoom
 	if is_zero_approx(safe_zoom):
 		safe_zoom = 1.0
 	_push_projection_uniforms(center, focus, safe_zoom)
 
 
-## Legacy entry point (used by unit tests).
+## Headless/test shim; delegates to sync_canvas_transform().
 func sync_scroll(_scroll_pos: Vector2, _zoom: float) -&gt; void:
 	sync_canvas_transform()
 
@@ -5445,23 +6031,171 @@ func _invalidate_projection_cache() -&gt; void:
 	_cached_zoom = -1.0
 
 
+func _resolve_projection_center() -&gt; Vector2:
+	return ViewProjection.get_screen_center_offset()
+
+
+func _resolve_camera_focus() -&gt; Vector2:
+	return ViewProjection.resolve_camera_focus_map_px(_find_player_node())
+
+
+func _find_player_node() -&gt; Node2D:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	var players: Array[Node] = tree.get_nodes_in_group(&quot;player&quot;)
+	if players.is_empty():
+		return null
+	return players[0] as Node2D
+
+
+func _on_view_projection_changed() -&gt; void:
+	_invalidate_projection_cache()
+	sync_canvas_transform()
+
+
+func _debug_force_initial_sync() -&gt; void:
+	if _shader_mat == null:
+		return
+	_invalidate_projection_cache()
+	var center: Vector2 = _resolve_projection_center()
+	var focus: Vector2 = _resolve_camera_focus()
+	var safe_zoom: float = ViewProjection.zoom
+	if is_zero_approx(safe_zoom):
+		safe_zoom = 1.0
+	_push_projection_uniforms(center, focus, safe_zoom)
+	sync_uniforms(null, true)
+	print(
+		&quot;[GridOverlay:DEBUG] forced sync center=%s focus=%s zoom=%s visible=%s&quot;
+		% [center, focus, safe_zoom, visible]
+	)
+
+
+func _read_grid_settings() -&gt; void:
+	_debug_grid_lines = Settings.get_bool(&quot;grid.debug_grid_lines&quot;)
+	_line_width_px = Settings.get_float(&quot;grid.line_width_px&quot;)
+	_line_color = Settings.get_color(&quot;grid.line_color&quot;)
+
+
+func _on_setting_changed(path: String) -&gt; void:
+	if not path.begins_with(&quot;grid.&quot;):
+		return
+	_read_grid_settings()
+	_apply_static_uniforms()
+	sync_uniforms(null, false)
+
+
 func _resolve_visible_state() -&gt; bool:
-	return _enabled and Settings.get_bool(&quot;grid.debug_grid_lines&quot;)
+	return _enabled and _debug_grid_lines
 
 
 func _apply_static_uniforms() -&gt; void:
 	if _shader_mat == null:
 		return
 	_shader_mat.set_shader_parameter(&quot;cell_size_px&quot;, float(ViewMetricsRes.CELL_SIZE_PX))
-	_shader_mat.set_shader_parameter(&quot;line_width_px&quot;, Settings.get_float(&quot;grid.line_width_px&quot;))
-	_shader_mat.set_shader_parameter(&quot;line_color&quot;, Settings.get_color(&quot;grid.line_color&quot;))
+	_shader_mat.set_shader_parameter(&quot;line_width_px&quot;, _line_width_px)
+	_shader_mat.set_shader_parameter(&quot;line_color&quot;, _line_color)
 
 
 func _notification(what: int) -&gt; void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
-		ViewProjection.invalidate_screen_center_cache()
+		ViewProjection.notify_viewport_resized()
 		_invalidate_projection_cache()
-		sync_uniforms()</file><file path="src/Godot/Scripts/ObliqueBridge.gd">class_name ObliqueBridge
+		sync_uniforms()</file><file path=".cursor/rules/architecture.md">---
+description: Core vs Godot layer boundaries, dependency rules, and allowed APIs
+alwaysApply: true
+---
+
+# Architecture: Core vs Godot
+
+## Dependency direction
+
+- **One-way only:** `src/Godot/` may depend on `src/Core/`. `src/Core/` must never import or reference `res://src/Godot/`.
+- **Core is C#:** `src/Core/` (Models, Systems) built by [`src/SPG.Core.csproj`](../src/SPG.Core.csproj) — plain `net6.0` class library, no Godot references. GDScript must **not** `preload` Core paths.
+- **Interop bridge:** GDScript talks to Core only through `src/Godot/Interop/` C# wrappers and the **`CoreBridge`** autoload (`/root/CoreBridge`). Use **PascalCase** when calling C# from GDScript (e.g. `CoreBridge.CreatePartyModel()`, `character.MoveRelative()`).
+- **World streaming:** Infinite terrain is handled in GDScript by `ChunkManager` (`src/Godot/Scripts/World/`). Query tiles via `get_tile_type_at_global_pos()` / `get_tile_type_at_grid()` — not Core `GridModel`.
+- **GDScript performance:** For chunk streaming, procedural generation, fog, or other hot-path systems, follow [godot-performance.mdc](godot-performance.mdc). Plans and PRs must include a **Self-Correction Step** (traps + bypasses) before implementation.
+- Do **not** place `.gdignore` on `src/Core/` if Godot needs to see the folder for project layout; Core logic lives in `.cs` files compiled via `SPG.sln`.
+
+## Layer flow
+
+```mermaid
+flowchart TB
+  subgraph core [src/Core - C# DLL via SPG.Core.csproj]
+    Models[Models: PartyModel, CharacterModel, VisibilityModel]
+    Math[Math: GridMath]
+  end
+  subgraph interop [src/Godot/Interop - C# RefCounted wrappers]
+    CoreBridge[CoreBridge autoload]
+    Wrappers[PartyModelGd, CharacterModelGd, ...]
+  end
+  subgraph godot [src/Godot - GDScript]
+    Scenes[Godot/Scenes]
+    Scripts[Godot/Scripts]
+    Assets[Godot/Assets]
+  end
+  core --&gt; Wrappers
+  Wrappers --&gt; CoreBridge
+  Scripts --&gt; CoreBridge
+  Scripts --&gt; Wrappers
+  Scenes --&gt; Scripts
+  core -.-&gt;|&quot;no imports&quot;| godot
+```
+
+## Rendering &amp; Layer Hierarchy Constraints
+
+To preserve visual consistency, performance, and coordinate mapping stability, the scene tree layout must strictly respect the following bottom-to-top rendering layer stack:
+
+1. **Ground/Map Layer (TileMaps)** — Base terrain, grass, obstacles, and world layout (`WorldCanvas/Tiles/ChunkManager` and tile content).
+2. **Entity Layer (Node2D)** — Player characters, enemies, units, and interactive world objects (siblings under `WorldCanvas/Tiles`, e.g. `Player`).
+3. **Fog of War Layer (CanvasItem/Shader)** — Screen-space fullscreen quad on a `CanvasLayer` (`FogOverlay` → `FogRect` + `FogOverlay.gdshader`). Shader projects canvas px to map-local via `ViewProjection` uniforms; buffer data stays map-local px.
+4. **Heads-Up Display / HUD Layer (CanvasLayer)** — Screen-space user interfaces, health bars, menus, and control widgets (`GridOverlay`, `SettingsUi`, `GameEntitiesLayer` for entity chrome that must stay screen-aligned).
+
+Fog buffer uniforms (`world_buffer_center_px`, `cell_size_px`) use map-local pixels aligned with `ViewProjection.map_scroll`. The fog quad is screen-space; it does not live under `_map_scroll`.
+
+### Architectural Rules for the Fog of War System
+
+- **No Invisible State Traps:** The Fog of War system must never use fallback logic that sets alpha transparency to `0.0` for out-of-bounds calculations. Any coordinate outside our active tracking window must default strictly to an opaque `alpha_mask = 1.0` (solid unrevealed black fog).
+- **Screen-Space Presentation:** Fog renders on a fullscreen `CanvasLayer` (`layer = 4`). The shader reconstructs map-local `world_px` from `FRAGCOORD`, `viewport_center_px`, `camera_focus_map_px`, and `zoom` (same projection as `GridOverlay.gdshader`).
+- **Reveal Mask Convention:** R8 fog data uses white = revealed, black = fogged; shader output uses `1.0 - texture(...).r` so revealed areas become transparent and unrevealed areas stay opaque.
+- **Implementation note:** In GDScript use `ViewMetrics.CELL_SIZE_PX` instead of a literal `64.0`. Buffer center is `grid * CELL_SIZE_PX` in map-local px; no manual zoom on placement coordinates.
+
+### FOG OF WAR MATHEMATICAL CONTRACT
+
+- The `FogOverlay` root is a `CanvasLayer` with a fullscreen `FogRect` child (anchors full rect; no per-frame GDScript sizing).
+- The shader reconstructs map-local coordinates per fragment:
+  `vec2 world_px = (FRAGCOORD - viewport_center_px) / zoom + camera_focus_map_px;`
+- Sample the sliding buffer relative to `world_buffer_center_px` and `buffer_size_cells * cell_size_px`.
+- The out-of-bounds fallback inside the fragment shader must remain strictly `alpha_mask = 1.0`.
+
+### SYSTEM ARCHITECTURE DIRECTIVE: Fog of War System
+
+1. **Scene Tree Hierarchy:** `FogOverlay` is a sibling of `GridOverlay` under `MainSandbox` root — screen-space, above world content (`layer = 4`).
+2. **Transform Constancy:** `FogRect` never moves; camera scroll/zoom are shader uniforms updated from `MainSandbox._sync_fog_view_transform`. Buffer recenters on grid thresholds only.
+3. **Shader Coordinate Mapping:** Map-local px from screen projection; buffer UV from offset against `world_buffer_center_px`.
+4. **Boundary Failure Guard:** The out-of-bounds fallback code block inside the shader must return an alpha mask value of `1.0` (opaque black fog) under all conditions. It must never fall back to `0.0`.
+
+### FOG &amp; VIEW CONVERSIONS (Frame-Zero)
+
+1. **Never Assume Frame-Zero Core Data is Ready:** On the very first frame, the active player node may not yet have updated the global `ViewProjection` singleton with its true position. Querying `ViewProjection.map_scroll` at startup can return `(0,0)` even when the player scene node already has a valid map-local position.
+2. **Dynamic Fallback Target:** When resolving fog or overlay camera focus, use `ViewProjection.resolve_camera_focus_map_px(fallback_player)` — player node position first, then `map_scroll`, then Settings spawn (`world.spawn_safe_zone_x/y`). `(0,0)` is a **valid** coordinate; never use `!= Vector2.ZERO` as a readiness test.
+3. **Input Wakes Stale Caches:** WASD movement must mark the view dirty (force sync) so `ViewProjection` and `FogOverlay` recenter on the next flush. Sub-cell motion must not rely solely on grid-cell boundary signals.</file><file path="src/Godot/Scenes/FogOverlay.tscn">[gd_scene load_steps=2 format=3 uid=&quot;uid://3fqp6ja8tdwe&quot;]
+
+[ext_resource type=&quot;Script&quot; uid=&quot;uid://de0pe5d3agf4l&quot; path=&quot;res://src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd&quot; id=&quot;1_fog_overlay&quot;]
+
+[node name=&quot;FogOverlay&quot; type=&quot;CanvasLayer&quot;]
+follow_viewport_enabled = true
+layer = 4
+script = ExtResource(&quot;1_fog_overlay&quot;)
+
+[node name=&quot;FogRect&quot; type=&quot;ColorRect&quot; parent=&quot;.&quot;]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)</file><file path="src/Godot/Scripts/ObliqueBridge.gd">class_name ObliqueBridge
 extends RefCounted
 
 ## Facade for view-layer metrics. Coordinate math delegates to ViewTransforms.
@@ -5492,7 +6226,7 @@ static func grid_to_meters(x: int, y: int) -&gt; Vector2:
 	return ViewTransformsRes.grid_to_world_m(float(x), float(y))
 
 
-static func data_to_screen(x: float, y: float) -&gt; Vector2:
+static func data_to_map_local_px(x: float, y: float) -&gt; Vector2:
 	return ViewTransformsRes.grid_to_map_local_px(x, y)
 
 
@@ -5501,24 +6235,51 @@ static func global_screen_to_grid(screen_pos: Vector2, _map_scroll: Node2D = nul
 	return ViewTransformsRes.map_local_px_to_grid(map_px)
 
 
-static func grid_to_screen(x: int, y: int, z: int = 0) -&gt; Vector2:
+static func grid_to_map_local_px(x: int, y: int, z: int = 0) -&gt; Vector2:
 	var base: Vector2 = ViewTransformsRes.grid_to_map_local_px(float(x), float(y))
 	if z != 0:
 		base.y -= ViewTransformsRes.meters_to_pixels(float(z))
 	return base
 
 
-static func grid_to_screen_centered(
-	x: int,
-	y: int,
-	viewport_center: Vector2,
-	z: int = 0
-) -&gt; Vector2:
-	return viewport_center + grid_to_screen(x, y, z)
-
-
 static func speed_meters_per_second_to_pixels(meters_per_second: float) -&gt; float:
-	return meters_to_pixels(meters_per_second)</file><file path="project.godot">; Engine configuration file.
+	return meters_to_pixels(meters_per_second)</file><file path="src/Godot/Scenes/MainSandbox.tscn">[gd_scene format=3 uid=&quot;uid://bm7a58e68r7vt&quot;]
+
+[ext_resource type=&quot;Script&quot; uid=&quot;uid://eu7juqc3bgem&quot; path=&quot;res://src/Godot/Scripts/MainSandbox.gd&quot; id=&quot;1_main_sandbox&quot;]
+[ext_resource type=&quot;PackedScene&quot; uid=&quot;uid://cp16cnfv02sc5&quot; path=&quot;res://src/Godot/Scenes/GridOverlay.tscn&quot; id=&quot;2_grid_overlay&quot;]
+[ext_resource type=&quot;PackedScene&quot; uid=&quot;uid://c20o3py0qktx5&quot; path=&quot;res://src/Godot/Scenes/SettingsPanel.tscn&quot; id=&quot;4_settings_panel&quot;]
+[ext_resource type=&quot;PackedScene&quot; path=&quot;res://src/Godot/Scenes/World/ChunkManager.tscn&quot; id=&quot;5_chunk_manager&quot;]
+[ext_resource type=&quot;PackedScene&quot; path=&quot;res://src/Godot/Scenes/Player.tscn&quot; id=&quot;6_player&quot;]
+[ext_resource type=&quot;Script&quot; uid=&quot;uid://dmawn4jarjyxy&quot; path=&quot;res://src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd&quot; id=&quot;7_fog_exploration&quot;]
+[ext_resource type=&quot;PackedScene&quot; uid=&quot;uid://3fqp6ja8tdwe&quot; path=&quot;res://src/Godot/Scenes/FogOverlay.tscn&quot; id=&quot;8_fog_overlay&quot;]
+
+[node name=&quot;MainSandbox&quot; type=&quot;Node2D&quot; unique_id=876572398]
+script = ExtResource(&quot;1_main_sandbox&quot;)
+
+[node name=&quot;WorldCanvas&quot; type=&quot;CanvasLayer&quot; parent=&quot;.&quot; unique_id=1103161756]
+layer = 0
+follow_viewport_enabled = true
+
+[node name=&quot;Tiles&quot; type=&quot;Node2D&quot; parent=&quot;WorldCanvas&quot; unique_id=720362407]
+
+[node name=&quot;ChunkManager&quot; parent=&quot;WorldCanvas/Tiles&quot; unique_id=1303602726 instance=ExtResource(&quot;5_chunk_manager&quot;)]
+
+[node name=&quot;Player&quot; parent=&quot;WorldCanvas/Tiles&quot; unique_id=604040316 instance=ExtResource(&quot;6_player&quot;)]
+unique_name_in_owner = true
+
+[node name=&quot;FogExploration&quot; type=&quot;Node&quot; parent=&quot;.&quot; unique_id=1777612534]
+script = ExtResource(&quot;7_fog_exploration&quot;)
+
+[node name=&quot;GridOverlay&quot; parent=&quot;.&quot; unique_id=316111383 instance=ExtResource(&quot;2_grid_overlay&quot;)]
+
+[node name=&quot;FogOverlay&quot; parent=&quot;.&quot; unique_id=1869907483 instance=ExtResource(&quot;8_fog_overlay&quot;)]
+
+[node name=&quot;GameEntitiesLayer&quot; type=&quot;CanvasLayer&quot; parent=&quot;.&quot; unique_id=129791858]
+layer = 16
+
+[node name=&quot;Characters&quot; type=&quot;Node2D&quot; parent=&quot;GameEntitiesLayer&quot; unique_id=118185644]
+
+[node name=&quot;SettingsUi&quot; parent=&quot;.&quot; unique_id=16521539 instance=ExtResource(&quot;4_settings_panel&quot;)]</file><file path="project.godot">; Engine configuration file.
 ; It&apos;s best edited using the editor UI and not directly,
 ; since the parameters that go here are not all obvious.
 ;
@@ -5563,65 +6324,25 @@ project/solution_name=&quot;SPG&quot;
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
-environment/defaults/default_clear_color=Color(0, 0, 0, 1)</file><file path="src/Godot/Scenes/MainSandbox.tscn">[gd_scene format=3 uid=&quot;uid://bm7a58e68r7vt&quot;]
-
-[ext_resource type=&quot;Script&quot; uid=&quot;uid://eu7juqc3bgem&quot; path=&quot;res://src/Godot/Scripts/MainSandbox.gd&quot; id=&quot;1_main_sandbox&quot;]
-[ext_resource type=&quot;PackedScene&quot; uid=&quot;uid://cp16cnfv02sc5&quot; path=&quot;res://src/Godot/Scenes/GridOverlay.tscn&quot; id=&quot;2_grid_overlay&quot;]
-[ext_resource type=&quot;PackedScene&quot; uid=&quot;uid://c20o3py0qktx5&quot; path=&quot;res://src/Godot/Scenes/SettingsPanel.tscn&quot; id=&quot;4_settings_panel&quot;]
-[ext_resource type=&quot;PackedScene&quot; path=&quot;res://src/Godot/Scenes/World/ChunkManager.tscn&quot; id=&quot;5_chunk_manager&quot;]
-[ext_resource type=&quot;PackedScene&quot; path=&quot;res://src/Godot/Scenes/Player.tscn&quot; id=&quot;6_player&quot;]
-[ext_resource type=&quot;Script&quot; uid=&quot;uid://dmawn4jarjyxy&quot; path=&quot;res://src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd&quot; id=&quot;7_fog_exploration&quot;]
-[ext_resource type=&quot;PackedScene&quot; uid=&quot;uid://3fqp6ja8tdwe&quot; path=&quot;res://src/Godot/Scenes/FogOverlay.tscn&quot; id=&quot;8_fog_overlay&quot;]
-
-[node name=&quot;MainSandbox&quot; type=&quot;Node2D&quot; unique_id=876572398]
-script = ExtResource(&quot;1_main_sandbox&quot;)
-
-[node name=&quot;WorldCanvas&quot; type=&quot;CanvasLayer&quot; parent=&quot;.&quot; unique_id=1103161756]
-layer = 0
-follow_viewport_enabled = true
-
-[node name=&quot;Tiles&quot; type=&quot;Node2D&quot; parent=&quot;WorldCanvas&quot; unique_id=720362407]
-
-[node name=&quot;ChunkManager&quot; parent=&quot;WorldCanvas/Tiles&quot; unique_id=1303602726 instance=ExtResource(&quot;5_chunk_manager&quot;)]
-
-[node name=&quot;Player&quot; parent=&quot;WorldCanvas/Tiles&quot; unique_id=604040316 instance=ExtResource(&quot;6_player&quot;)]
-unique_name_in_owner = true
-
-[node name=&quot;FogExploration&quot; type=&quot;Node&quot; parent=&quot;.&quot; unique_id=1777612534]
-script = ExtResource(&quot;7_fog_exploration&quot;)
-
-[node name=&quot;GridOverlay&quot; parent=&quot;.&quot; unique_id=316111383 instance=ExtResource(&quot;2_grid_overlay&quot;)]
-
-[node name=&quot;FogLayer&quot; type=&quot;CanvasLayer&quot; parent=&quot;.&quot; unique_id=148383735]
-layer = 10
-follow_viewport_enabled = true
-
-[node name=&quot;FogOverlay&quot; parent=&quot;FogLayer&quot; unique_id=1869907483 instance=ExtResource(&quot;8_fog_overlay&quot;)]
-
-[node name=&quot;GameEntitiesLayer&quot; type=&quot;CanvasLayer&quot; parent=&quot;.&quot; unique_id=129791858]
-layer = 16
-
-[node name=&quot;Characters&quot; type=&quot;Node2D&quot; parent=&quot;GameEntitiesLayer&quot; unique_id=118185644]
-
-[node name=&quot;SettingsUi&quot; parent=&quot;.&quot; unique_id=16521539 instance=ExtResource(&quot;4_settings_panel&quot;)]</file><file path="src/Godot/Scripts/MainSandbox.gd">extends Node2D
+environment/defaults/default_clear_color=Color(0, 0, 0, 1)</file><file path="src/Godot/Scripts/MainSandbox.gd">extends Node2D
 
 const ViewTransformsScript = preload(&quot;res://src/Godot/Scripts/ViewTransforms.gd&quot;)
 const ViewMetricsRes = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
 const PlayerControllerScript = preload(&quot;res://src/Godot/Scripts/PlayerController.gd&quot;)
 const FogExplorationMapScript = preload(&quot;res://src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd&quot;)
-const FogOverlayScript = preload(&quot;res://src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd&quot;)
 
 @onready var _world_canvas: CanvasLayer = $WorldCanvas
 @onready var _map_scroll: Node2D = $WorldCanvas/Tiles
 @onready var _chunk_manager: Node2D = $WorldCanvas/Tiles/ChunkManager
 @onready var _fog: FogExplorationMapScript = $FogExploration
-@onready var _fog_overlay: FogOverlayScript = $FogLayer/FogOverlay
-@onready var _grid_overlay: ColorRect = $GridOverlay/GridRect
+@onready var _fog_overlay: FogOverlay = $FogOverlay
+@onready var _grid_overlay: GridOverlay = $GridOverlay/GridRect
 @onready var _settings_ui: CanvasLayer = $SettingsUi
 @onready var _player: PlayerControllerScript = %Player
 
-var _party
-var _viewport_center: Vector2 = Vector2.ZERO
+var _party: PartyModelGd
+var _debug_grid_enabled: bool = false
+var _visual_radius_buffer: int = 2
 
 var _last_tracked_x: int = 0
 var _last_tracked_y: int = 0
@@ -5629,27 +6350,39 @@ var _last_map_canvas_xf: Transform2D = Transform2D.IDENTITY
 var _last_overlay_zoom: float = -1.0
 
 var _snap_scroll_to_pixel: bool = false
-var _cached_visual_radius: int = 0
-var _cached_radius_zoom: float = -1.0
-var _cached_radius_vp_size: Vector2 = Vector2.ZERO
 
 const ZOOM_REBUILD_DELAY_SEC: float = 0.05
 
 var _zoom_rebuild_timer: SceneTreeTimer
 var _zoom_rebuild_scheduled_zoom: float = -1.0
 
+var _view_dirty: bool = false
+var _view_force_sync: bool = false
+var _debug_flush_log_remaining: int = 3
+var _debug_process_ticks: int = 0
+var _debug_skip_flush_logs: int = 8
+
 
 func _ready() -&gt; void:
+	if not ViewProjection.projection_changed.is_connected(_on_projection_changed):
+		ViewProjection.projection_changed.connect(_on_projection_changed)
+	_view_dirty = true
+	_view_force_sync = true
+	_flush_view_if_dirty()
+
+	set_process(true)
 	y_sort_enabled = false
 	_map_scroll.y_sort_enabled = false
 	_snap_scroll_to_pixel = ProjectSettings.get_setting(&quot;rendering/2d/snap/snap_2d_transforms_to_pixel&quot;)
 	if not ViewProjection.view_changed.is_connected(_on_view_changed):
 		ViewProjection.view_changed.connect(_on_view_changed)
 
-	var core = get_node(&quot;/root/CoreBridge&quot;)
+	_read_view_settings()
+
+	var core: Node = get_node(&quot;/root/CoreBridge&quot;)
 	_party = core.CreatePartyModel()
 
-	var player = core.CreateCharacter(&quot;player&quot;, &quot;Player&quot;, 0, 0)
+	var player: CharacterModelGd = core.CreateCharacter(&quot;player&quot;, &quot;Player&quot;, 0, 0)
 	_party.AddCharacter(player)
 
 	_last_tracked_x = player.X
@@ -5659,57 +6392,76 @@ func _ready() -&gt; void:
 		return
 
 	ViewProjection.register_viewport_provider(self)
-	_refresh_viewport_metrics()
+	ViewProjection.try_seed_viewport_metrics(get_viewport())
 
-	_grid_overlay.configure(Settings.get_bool(&quot;grid.debug_grid_lines&quot;))
+	_grid_overlay.configure(_debug_grid_enabled)
 	_grid_overlay.set_map_scroll(_map_scroll)
 
-	_settings_ui.setup(_party, _map_scroll, _player)
-	if not _settings_ui.settings_changed.is_connected(_on_settings_changed):
-		_settings_ui.settings_changed.connect(_on_settings_changed)
+	_settings_ui.setup(_party, _player)
 
 	if not _player.grid_cell_changed.is_connected(_on_player_grid_cell_changed):
 		_player.grid_cell_changed.connect(_on_player_grid_cell_changed)
+	if not _player.map_position_changed.is_connected(_on_player_map_position_changed):
+		_player.map_position_changed.connect(_on_player_map_position_changed)
 
 	_apply_view_zoom()
 	_player.position = ViewTransformsScript.grid_to_map_local_px(float(player.X), float(player.Y))
+	ViewProjection.register_camera(_player)
+	_force_initial_view_layout()
 	if not _ensure_viewport_metrics_ready():
+		_debug_log_view_metrics(&quot;_ready_deferred&quot;)
 		call_deferred(&quot;_finish_ready_after_viewport&quot;)
 		return
 	_finish_ready_viewport_dependent()
+	_debug_log_view_metrics(&quot;_ready&quot;)
+	_debug_force_frame1_render()
 	call_deferred(&quot;_bootstrap_after_frame&quot;)
+
+
+func _read_view_settings() -&gt; void:
+	_debug_grid_enabled = Settings.get_bool(&quot;grid.debug_grid_lines&quot;)
+	_visual_radius_buffer = maxi(int(Settings.get_float(&quot;grid.visual_radius_buffer&quot;)), 0)
 
 
 func _finish_ready_after_viewport() -&gt; void:
 	if not _ensure_viewport_metrics_ready():
 		call_deferred(&quot;_finish_ready_after_viewport&quot;)
 		return
+	_force_initial_view_layout()
 	_finish_ready_viewport_dependent()
+	_debug_force_frame1_render()
 	call_deferred(&quot;_bootstrap_after_frame&quot;)
 
 
 func _finish_ready_viewport_dependent() -&gt; void:
-	_apply_map_scroll_for_player()
+	_sync_view_scroll_and_overlays(true)
 	_setup_fog()
 	_sync_spawn_tracking_from_player()
-	_sync_view_scroll_and_overlays(true)
-	_grid_overlay.sync_uniforms()
+	_force_initial_view_layout()
+	_debug_log_view_metrics(&quot;finish_ready&quot;)
+	_debug_force_frame1_render()
 
 
-func _physics_process(_delta: float) -&gt; void:
-	if _party == null or _party.GetSelectedCharacter() == null:
-		return
-	if _player != null:
-		_chunk_manager.sync_center_from_player_map_px(_player.position)
-	_sync_view_scroll_and_overlays(false)
+func _process(_delta: float) -&gt; void:
+	if not ViewProjection.is_camera_registered():
+		_resolve_authoritative_map_center()
+
+	_debug_process_ticks += 1
+	if not _view_dirty and _debug_skip_flush_logs &gt; 0:
+		print(
+			&quot;[MainSandbox:process] tick=%d SKIP flush (_view_dirty=false) player=%s&quot;
+			% [_debug_process_ticks, _player]
+		)
+		_debug_skip_flush_logs -= 1
+	_flush_view_if_dirty()
 
 
 func _notification(what: int) -&gt; void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
 		ViewContext.invalidate_cache()
-		ViewProjection.invalidate_screen_center_cache()
-		_refresh_viewport_metrics()
-		_reposition_all()
+		ViewProjection.notify_viewport_resized()
+		_sync_spawn_tracking_from_player()
+		_mark_view_dirty(true)
 		_run_deferred_view_rebuild()
 
 
@@ -5727,17 +6479,19 @@ func _should_snap_scroll_to_pixel() -&gt; bool:
 
 
 func _on_view_changed() -&gt; void:
-	_apply_view_zoom()
-	_grid_overlay.on_view_changed()
-	_sync_view_scroll_and_overlays(true)
+	_mark_view_dirty(true)
 	_schedule_zoom_deferred_rebuild()
+
+
+func _on_projection_changed() -&gt; void:
+	_mark_view_dirty(false)
 
 
 func _on_player_grid_cell_changed(cell: Vector2i) -&gt; void:
 	if cell.x == _last_tracked_x and cell.y == _last_tracked_y:
 		return
 
-	var character = _party.GetSelectedCharacter() if _party != null else null
+	var character: CharacterModelGd = _party.GetSelectedCharacter() if _party != null else null
 	if character != null:
 		character.MoveTo(cell.x, cell.y)
 
@@ -5748,6 +6502,12 @@ func _on_player_grid_cell_changed(cell: Vector2i) -&gt; void:
 		_fog.on_player_cell_changed(cell)
 
 
+func _on_player_map_position_changed(map_px: Vector2) -&gt; void:
+	if _chunk_manager != null:
+		_chunk_manager.sync_center_from_player_map_px(map_px)
+	_mark_view_dirty(true)
+
+
 func _bootstrap_after_frame() -&gt; void:
 	await get_tree().process_frame
 	if _player == null:
@@ -5756,21 +6516,55 @@ func _bootstrap_after_frame() -&gt; void:
 		call_deferred(&quot;_bootstrap_after_frame&quot;)
 		return
 	_reposition_all()
-
-
-func _on_settings_changed() -&gt; void:
-	pass
+	_bootstrap_fog_exploration()
 
 
 func _setup_fog() -&gt; void:
-	if _fog == null or _fog_overlay == null or _player == null:
+	if _fog == null or _fog_overlay == null or _player == null or not is_instance_valid(_player):
+		print(&quot;[MainSandbox:fog] _setup_fog skipped: fog=%s overlay=%s player=%s&quot; % [_fog, _fog_overlay, _player])
 		return
 	_fog.setup(_player, _fog_overlay)
-	_chunk_manager.sync_center_from_player_map_px(_player.position)
-	var spawn_grid: Vector2i = _chunk_manager.world_px_to_grid_tile(_player.position)
+	if _chunk_manager != null:
+		_chunk_manager.sync_center_from_player_map_px(_player.position)
+	var spawn_grid: Vector2i = _resolve_authoritative_map_center()
 	_fog.bootstrap_exploration(spawn_grid)
+	_fog.on_player_cell_changed(spawn_grid)
 	_fog_overlay.set_enabled_visible(_fog.enabled)
-	_chunk_manager.force_immediate_startup_pass(spawn_grid)
+	_sync_fog_view_transform()
+
+
+func _bootstrap_fog_exploration() -&gt; void:
+	if _fog == null or _fog_overlay == null or _player == null or not is_instance_valid(_player):
+		return
+	_sync_view_scroll_and_overlays(true)
+	if _chunk_manager != null:
+		_chunk_manager.sync_center_from_player_map_px(_player.position)
+	var spawn_grid: Vector2i = _resolve_authoritative_map_center()
+	if not _fog_overlay.is_configured():
+		print(
+			&quot;[MainSandbox:fog] spawn map_px=%s spawn_grid=%s fog_enabled=%s map_scroll=%s registered=%s&quot;
+			% [
+				_player.position,
+				spawn_grid,
+				_fog.enabled,
+				ViewProjection.map_scroll,
+				ViewProjection.is_camera_registered()
+			]
+		)
+		_fog.bootstrap_exploration(spawn_grid)
+		_fog.on_player_cell_changed(spawn_grid)
+		print(
+			&quot;[MainSandbox:fog] bootstrap_exploration called; viewport_ready=%s&quot;
+			% ViewProjection.are_viewport_metrics_ready()
+		)
+	_fog_overlay.set_enabled_visible(_fog.enabled)
+	_sync_fog_view_transform()
+	call_deferred(&quot;_startup_chunk_pass&quot;, spawn_grid)
+
+
+func _startup_chunk_pass(center_grid_tile: Vector2i) -&gt; void:
+	if _chunk_manager != null:
+		_chunk_manager.force_immediate_startup_pass(center_grid_tile)
 
 
 func _sync_spawn_tracking_from_player() -&gt; void:
@@ -5802,7 +6596,6 @@ func _on_zoom_deferred_rebuild() -&gt; void:
 func _run_deferred_view_rebuild() -&gt; void:
 	if _chunk_manager != null:
 		_chunk_manager.force_viewport_chunk_refresh()
-	_refresh_overlays()
 
 
 ## Keeps map scroll and overlay transforms in sync without fog orchestration.
@@ -5813,7 +6606,6 @@ func _sync_view_scroll_and_overlays(force: bool = false) -&gt; void:
 	var prev_canvas_xf: Transform2D = _last_map_canvas_xf
 	var prev_zoom: float = _last_overlay_zoom
 
-	ViewProjection.map_scroll = _player.position
 	_apply_view_zoom()
 	var target_offset: Vector2 = ViewProjection.scroll_node_canvas_position()
 	if _should_snap_scroll_to_pixel():
@@ -5829,7 +6621,6 @@ func _sync_view_scroll_and_overlays(force: bool = false) -&gt; void:
 
 	if scroll_changed or zoom_changed:
 		_grid_overlay.sync_canvas_transform(_map_scroll)
-		_refresh_overlays()
 		if scroll_changed or zoom_changed:
 			_sync_fog_view_transform()
 		if scroll_changed:
@@ -5839,51 +6630,81 @@ func _sync_view_scroll_and_overlays(force: bool = false) -&gt; void:
 	_last_overlay_zoom = zoom
 
 
-func _viewport_grid_center() -&gt; Vector2i:
-	var center_grid: Vector2 = ViewTransformsScript.map_local_px_to_grid(ViewProjection.map_scroll)
-	return Vector2i(floori(center_grid.x), floori(center_grid.y))
-
-
-func _refresh_overlays() -&gt; void:
-	var center: Vector2i = _viewport_grid_center()
-	_grid_overlay.update_region(center.x, center.y, _visual_spawn_radius())
-
-
 func _sync_fog_view_transform() -&gt; void:
-	if _fog_overlay == null or _player == null or not _fog_overlay.has_method(&quot;sync_view_transform&quot;):
+	if _fog_overlay == null or _player == null or not is_instance_valid(_player):
 		return
-	var viewport: Viewport = get_viewport()
-	if viewport == null:
-		return
-	var player_cell: Vector2i = _chunk_manager.world_px_to_grid_tile(_player.position)
-	_fog_overlay.sync_view_transform(
-		viewport.get_visible_rect().size,
-		ViewProjection.zoom,
-		player_cell,
-		ViewProjection.map_scroll
-	)
+	var center_grid: Vector2i = _resolve_authoritative_map_center()
+	var focus_px: Vector2 = _player.position
+	if ViewProjection.is_camera_registered():
+		focus_px = ViewProjection.map_scroll
+	var current_zoom: float = ViewProjection.zoom if ViewProjection.zoom &gt; 0.0 else 1.0
+	_fog_overlay.sync_view_transform(center_grid, focus_px, current_zoom)
 
 
-func _refresh_viewport_metrics() -&gt; void:
-	_viewport_center = ViewProjection.get_screen_center_offset()
+func _resolve_authoritative_map_center() -&gt; Vector2i:
+	var map_center: Vector2i = ViewProjection.get_camera_center_map()
+	if not ViewProjection.is_camera_registered():
+		var players: Array[Node] = get_tree().get_nodes_in_group(&quot;player&quot;)
+		if not players.is_empty():
+			var player_node := players[0] as Node2D
+			if player_node != null:
+				ViewProjection.update_camera_position(player_node.position, true)
+				map_center = ViewProjection.resolve_map_center_from_player(player_node)
+				_mark_view_dirty(true)
+				return map_center
+	if _player != null and is_instance_valid(_player):
+		ViewProjection.update_camera_position(_player.position)
+		return ViewProjection.map_local_px_to_grid_cell(_player.position)
+	return map_center
 
 
 ## Returns false when visible rect is not ready (zero size); scroll must not run until true.
 func _ensure_viewport_metrics_ready() -&gt; bool:
-	var viewport: Viewport = get_viewport()
-	if viewport == null:
-		return false
-	var vp_size: Vector2 = viewport.get_visible_rect().size
-	if vp_size.x &lt; 1.0 or vp_size.y &lt; 1.0:
-		return false
-	_refresh_viewport_metrics()
-	if _viewport_center.x &lt; 1.0 or _viewport_center.y &lt; 1.0:
-		return false
-	return true
+	if ViewProjection.are_viewport_metrics_ready():
+		return true
+	return ViewProjection.try_seed_viewport_metrics(get_viewport())
+
+
+func _force_initial_view_layout() -&gt; void:
+	_mark_view_dirty(true)
+	_flush_view_if_dirty()
+	if _chunk_manager != null:
+		_chunk_manager.force_viewport_chunk_refresh()
+
+
+func _debug_force_frame1_render() -&gt; void:
+	set_process(true)
+	_view_dirty = true
+	_view_force_sync = true
+	ViewProjection.try_seed_viewport_metrics(get_viewport())
+	_sync_view_scroll_and_overlays(true)
+	_flush_view_if_dirty()
+	if _grid_overlay != null:
+		_grid_overlay.sync_uniforms(null, true)
+	if _chunk_manager != null:
+		_chunk_manager.force_viewport_chunk_refresh()
+	_debug_log_view_metrics(&quot;force_frame1&quot;)
+
+
+func _get_visual_radius() -&gt; int:
+	var radius: int = ViewProjection.get_visual_radius(_visual_radius_buffer)
+	if radius &lt;= 0:
+		radius = ViewProjection.VISUAL_RADIUS_HARD_FALLBACK
+	return radius
+
+
+func _debug_log_view_metrics(tag: String) -&gt; void:
+	var vp_size: Vector2 = ViewProjection.get_viewport_size()
+	var cell_px: int = ViewMetricsRes.CELL_SIZE_PX
+	var radius: int = _get_visual_radius()
+	print(
+		&quot;[MainSandbox:%s] viewport_size=%s cell_size_px=%d visual_radius=%d map_scroll=%s zoom=%s player_pos=%s&quot;
+		% [tag, vp_size, cell_px, radius, ViewProjection.map_scroll, ViewProjection.zoom, _player.position if _player != null else Vector2.ZERO]
+	)
 
 
 func _apply_map_scroll_for_player() -&gt; void:
-	_sync_view_scroll_and_overlays(false)
+	_mark_view_dirty(false)
 
 
 func _verify_projection_canvas_parity() -&gt; void:
@@ -5898,50 +6719,40 @@ func _verify_projection_canvas_parity() -&gt; void:
 		)
 
 
-func _recompute_visual_radius_cache() -&gt; void:
-	var zoom: float = ViewProjection.zoom
-	var vp_size: Vector2 = Vector2.ZERO
-	var viewport: Viewport = get_viewport()
-	if viewport != null:
-		vp_size = viewport.get_visible_rect().size
-	_cached_radius_zoom = zoom
-	_cached_radius_vp_size = vp_size
-	var cell_px: float = float(ViewMetricsRes.CELL_SIZE_PX) * maxf(zoom, 0.0001)
-	var buffer_cells: int = Settings.get_int(&quot;grid.visual_radius_buffer&quot;)
-	if cell_px &lt;= 0.0:
-		_cached_visual_radius = buffer_cells
-		return
-	var half_x: int = int(ceil(vp_size.x * 0.5 / cell_px)) + buffer_cells
-	var half_y: int = int(ceil(vp_size.y * 0.5 / cell_px)) + buffer_cells
-	_cached_visual_radius = maxi(half_x, half_y)
-
-
-func _visual_spawn_radius() -&gt; int:
-	var zoom: float = ViewProjection.zoom
-	var vp_size: Vector2 = Vector2.ZERO
-	var viewport: Viewport = get_viewport()
-	if viewport != null:
-		vp_size = viewport.get_visible_rect().size
-	if not is_equal_approx(zoom, _cached_radius_zoom) or vp_size != _cached_radius_vp_size:
-		_cached_radius_zoom = zoom
-		_cached_radius_vp_size = vp_size
-		var cell_px: float = float(ViewMetricsRes.CELL_SIZE_PX) * maxf(zoom, 0.0001)
-		var buffer_cells: int = Settings.get_int(&quot;grid.visual_radius_buffer&quot;)
-		if cell_px &lt;= 0.0:
-			_cached_visual_radius = buffer_cells
-		else:
-			var half_x: int = int(ceil(vp_size.x * 0.5 / cell_px)) + buffer_cells
-			var half_y: int = int(ceil(vp_size.y * 0.5 / cell_px)) + buffer_cells
-			_cached_visual_radius = maxi(half_x, half_y)
-	return _cached_visual_radius
-
-
 func _reposition_all() -&gt; void:
 	_sync_spawn_tracking_from_player()
-	_sync_view_scroll_and_overlays(true)
+	_mark_view_dirty(true)
+
+
+func _mark_view_dirty(force: bool = false) -&gt; void:
+	_view_dirty = true
+	if force:
+		_view_force_sync = true
+
+
+func _flush_view_if_dirty() -&gt; void:
+	if not _view_dirty:
+		return
+	var force: bool = _view_force_sync
+	print(&quot;[MainSandbox:flush] force=%s&quot; % force)
+	_view_dirty = false
+	_view_force_sync = false
+	_sync_view_scroll_and_overlays(force)
+	if force and _grid_overlay != null:
+		_grid_overlay.sync_uniforms(null, true)
+	if _fog_overlay != null and _player != null:
+		_sync_fog_view_transform()
+	if force or _debug_flush_log_remaining &gt; 0:
+		_debug_log_view_metrics(&quot;flush&quot;)
+		if not force and _debug_flush_log_remaining &gt; 0:
+			_debug_flush_log_remaining -= 1
 
 
 func _unhandled_input(event: InputEvent) -&gt; void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.keycode:
+			KEY_W, KEY_A, KEY_S, KEY_D:
+				_mark_view_dirty(true)
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			ViewProjection.adjust_zoom(1)

@@ -141,13 +141,22 @@ static func visible_world_m_rect(ctx: ViewContext) -> Rect2:
 	return Rect2(top_left, bottom_right - top_left)
 
 
-static func visible_grid_radius_cells(ctx: ViewContext, buffer_cells: int = 0) -> int:
-	var cell_px: float = float(ViewMetrics.CELL_SIZE_PX) * _safe_zoom(ctx)
+## On-screen cell size in canvas px (map-local cell * zoom). Viewport metrics only — not for placement.
+static func on_screen_cell_px(zoom: float) -> float:
+	return float(ViewMetrics.CELL_SIZE_PX) * maxf(zoom, 0.0001)
+
+
+static func visible_grid_radius_from_viewport(vp_size: Vector2, zoom: float, buffer_cells: int = 0) -> int:
+	var cell_px: float = on_screen_cell_px(zoom)
 	if cell_px <= 0.0:
 		return buffer_cells
-	var half_x: int = int(ceil(ctx.viewport_size.x * 0.5 / cell_px)) + buffer_cells
-	var half_y: int = int(ceil(ctx.viewport_size.y * 0.5 / cell_px)) + buffer_cells
+	var half_x: int = int(ceil(vp_size.x * 0.5 / cell_px)) + buffer_cells
+	var half_y: int = int(ceil(vp_size.y * 0.5 / cell_px)) + buffer_cells
 	return maxi(half_x, half_y)
+
+
+static func visible_grid_radius_cells(ctx: ViewContext, buffer_cells: int = 0) -> int:
+	return visible_grid_radius_from_viewport(ctx.viewport_size, _safe_zoom(ctx), buffer_cells)
 
 
 static func visible_grid_bounds(

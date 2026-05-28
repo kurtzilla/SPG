@@ -2,6 +2,8 @@ class_name ViewContext
 extends RefCounted
 
 ## Bundle of view/camera state passed to ViewTransforms conversion functions.
+## ctx.zoom is for viewport cell-count metrics only — never multiply placement positions
+## by ctx.zoom when map_scroll node transform also applies scale.
 
 ## WorldCanvas/Tiles scroll node (canvas transform). Not ViewProjection.map_scroll (camera focus).
 var map_scroll: Node2D

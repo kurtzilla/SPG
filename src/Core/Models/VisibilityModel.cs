@@ -67,6 +67,8 @@ public sealed class VisibilityModel
 	private int _initialRevealRadius = DefaultInitialRevealRadius;
 	private int _movementRevealRadius = DefaultMovementRevealRadius;
 
+	public int RevealedCount => _revealed.Count;
+
 	public bool IsRevealed(int x, int y) => _revealed.Contains(MakeKey(x, y));
 
 	public CellVisibility GetVisibility(int x, int y) =>
@@ -144,13 +146,80 @@ public sealed class VisibilityModel
 	}
 
 	/// <summary>
+	/// Reveals an ellipse and stamps 255 into <paramref name="outMask"/> for cells inside the window.
+	/// Avoids allocating a newly-revealed cell list for presentation updates.
+	/// </summary>
+	public int RevealDiscStampInto(
+		int originX,
+		int originY,
+		int width,
+		int height,
+		int centerX,
+		int centerY,
+		int radius,
+		Span<byte> outMask)
+	{
+		int area = width * height;
+		if (outMask.Length < area)
+		{
+			throw new ArgumentException("Mask buffer is too small.", nameof(outMask));
+		}
+
+		int clampedRadius = ClampRadius(radius);
+		int minX = centerX - clampedRadius;
+		int maxX = centerX + clampedRadius;
+		int minY = centerY - clampedRadius;
+		int maxY = centerY + clampedRadius;
+		int maxOriginX = originX + width - 1;
+		int maxOriginY = originY + height - 1;
+		int count = 0;
+
+		for (int gx = minX; gx <= maxX; gx++)
+		{
+			for (int gy = minY; gy <= maxY; gy++)
+			{
+				if (!IsInsideRevealEllipse(gx, gy, centerX, centerY, clampedRadius))
+				{
+					continue;
+				}
+
+				if (RevealCell(gx, gy, null))
+				{
+					count++;
+				}
+
+				if (gx < originX || gx > maxOriginX || gy < originY || gy > maxOriginY)
+				{
+					continue;
+				}
+
+				int localX = gx - originX;
+				int localY = gy - originY;
+				outMask[localY * width + localX] = 255;
+			}
+		}
+
+		return count;
+	}
+
+	/// <summary>
 	/// Fills a row-major R8 mask: 255 = revealed, 0 = hidden.
+	/// Uses sparse iteration when revealed cells are a small fraction of the buffer.
 	/// </summary>
 	public void FillRevealedMask(int originX, int originY, int width, int height, Span<byte> outMask)
 	{
 		if (outMask.Length < width * height)
 		{
 			throw new ArgumentException("Mask buffer is too small.", nameof(outMask));
+		}
+
+		int area = width * height;
+		outMask.Slice(0, area).Clear();
+
+		if (_revealed.Count < area / 4)
+		{
+			FillRevealedMaskSparse(originX, originY, width, height, outMask);
+			return;
 		}
 
 		int index = 0;
@@ -160,6 +229,25 @@ public sealed class VisibilityModel
 			{
 				outMask[index++] = IsRevealed(gx, gy) ? (byte)255 : (byte)0;
 			}
+		}
+	}
+
+	private void FillRevealedMaskSparse(int originX, int originY, int width, int height, Span<byte> outMask)
+	{
+		int maxX = originX + width - 1;
+		int maxY = originY + height - 1;
+
+		foreach (long key in _revealed)
+		{
+			DecodeKey(key, out int gx, out int gy);
+			if (gx < originX || gx > maxX || gy < originY || gy > maxY)
+			{
+				continue;
+			}
+
+			int localX = gx - originX;
+			int localY = gy - originY;
+			outMask[localY * width + localX] = 255;
 		}
 	}
 
@@ -234,4 +322,10 @@ public sealed class VisibilityModel
 		Math.Clamp(radius, RadiusMin, RadiusMax);
 
 	private static long MakeKey(int x, int y) => ((long)x << 32) | (uint)y;
+
+	internal static void DecodeKey(long key, out int x, out int y)
+	{
+		x = (int)(key >> 32);
+		y = (int)(key & 0xFFFFFFFF);
+	}
 }

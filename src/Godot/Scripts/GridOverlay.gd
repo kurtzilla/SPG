@@ -1,12 +1,18 @@
+class_name GridOverlay
 extends ColorRect
 
 ## GPU grid overlay derived from world/map-local coordinates.
 
 const ViewMetricsRes = preload("res://src/Godot/Scripts/ViewMetrics.gd")
+const ViewTransformsScript = preload("res://src/Godot/Scripts/ViewTransforms.gd")
 const GRID_SHADER: Shader = preload("res://src/Godot/Shaders/GridOverlay.gdshader")
 
 var _enabled: bool = false
 var _shader_mat: ShaderMaterial
+
+var _debug_grid_lines: bool = false
+var _line_width_px: float = 1.0
+var _line_color: Color = Color.WHITE
 
 var _cached_enabled_param: bool = false
 var _cached_visible_state: bool = false
@@ -28,9 +34,16 @@ func _ready() -> void:
 	_shader_mat = ShaderMaterial.new()
 	_shader_mat.shader = GRID_SHADER
 	material = _shader_mat
+
+	if not Settings.setting_changed.is_connected(_on_setting_changed):
+		Settings.setting_changed.connect(_on_setting_changed)
+	if not ViewProjection.view_changed.is_connected(_on_view_projection_changed):
+		ViewProjection.view_changed.connect(_on_view_projection_changed)
+	_read_grid_settings()
 	_apply_static_uniforms()
 	_invalidate_projection_cache()
 	sync_uniforms(null, true)
+	_debug_force_initial_sync()
 
 
 func configure(enabled: bool) -> void:
@@ -42,27 +55,18 @@ func set_map_scroll(_map_scroll: Node2D) -> void:
 	_invalidate_projection_cache()
 
 
-## Kept for compatibility with existing callers; grid is fully world-relative now.
-func update_region(_center_x: int, _center_y: int, _visual_radius: int) -> void:
-	pass
-
-
-func on_view_changed() -> void:
-	sync_uniforms()
-
-
 func sync_canvas_transform(_map_scroll_node: Node2D = null) -> void:
 	if _shader_mat == null:
 		return
-	var center: Vector2 = ViewProjection.get_screen_center_offset()
-	var focus: Vector2 = ViewProjection.map_scroll
+	var center: Vector2 = _resolve_projection_center()
+	var focus: Vector2 = _resolve_camera_focus()
 	var safe_zoom: float = ViewProjection.zoom
 	if is_zero_approx(safe_zoom):
 		safe_zoom = 1.0
 	_push_projection_uniforms(center, focus, safe_zoom)
 
 
-## Legacy entry point (used by unit tests).
+## Headless/test shim; delegates to sync_canvas_transform().
 func sync_scroll(_scroll_pos: Vector2, _zoom: float) -> void:
 	sync_canvas_transform()
 
@@ -101,20 +105,74 @@ func _invalidate_projection_cache() -> void:
 	_cached_zoom = -1.0
 
 
+func _resolve_projection_center() -> Vector2:
+	return ViewProjection.get_screen_center_offset()
+
+
+func _resolve_camera_focus() -> Vector2:
+	return ViewProjection.resolve_camera_focus_map_px(_find_player_node())
+
+
+func _find_player_node() -> Node2D:
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return null
+	var players: Array[Node] = tree.get_nodes_in_group("player")
+	if players.is_empty():
+		return null
+	return players[0] as Node2D
+
+
+func _on_view_projection_changed() -> void:
+	_invalidate_projection_cache()
+	sync_canvas_transform()
+
+
+func _debug_force_initial_sync() -> void:
+	if _shader_mat == null:
+		return
+	_invalidate_projection_cache()
+	var center: Vector2 = _resolve_projection_center()
+	var focus: Vector2 = _resolve_camera_focus()
+	var safe_zoom: float = ViewProjection.zoom
+	if is_zero_approx(safe_zoom):
+		safe_zoom = 1.0
+	_push_projection_uniforms(center, focus, safe_zoom)
+	sync_uniforms(null, true)
+	print(
+		"[GridOverlay:DEBUG] forced sync center=%s focus=%s zoom=%s visible=%s"
+		% [center, focus, safe_zoom, visible]
+	)
+
+
+func _read_grid_settings() -> void:
+	_debug_grid_lines = Settings.get_bool("grid.debug_grid_lines")
+	_line_width_px = Settings.get_float("grid.line_width_px")
+	_line_color = Settings.get_color("grid.line_color")
+
+
+func _on_setting_changed(path: String) -> void:
+	if not path.begins_with("grid."):
+		return
+	_read_grid_settings()
+	_apply_static_uniforms()
+	sync_uniforms(null, false)
+
+
 func _resolve_visible_state() -> bool:
-	return _enabled and Settings.get_bool("grid.debug_grid_lines")
+	return _enabled and _debug_grid_lines
 
 
 func _apply_static_uniforms() -> void:
 	if _shader_mat == null:
 		return
 	_shader_mat.set_shader_parameter("cell_size_px", float(ViewMetricsRes.CELL_SIZE_PX))
-	_shader_mat.set_shader_parameter("line_width_px", Settings.get_float("grid.line_width_px"))
-	_shader_mat.set_shader_parameter("line_color", Settings.get_color("grid.line_color"))
+	_shader_mat.set_shader_parameter("line_width_px", _line_width_px)
+	_shader_mat.set_shader_parameter("line_color", _line_color)
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
-		ViewProjection.invalidate_screen_center_cache()
+		ViewProjection.notify_viewport_resized()
 		_invalidate_projection_cache()
 		sync_uniforms()
