@@ -13,11 +13,22 @@ You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated fr
 
 - Never write code that violates the modular boundaries in `architecture.md`.
 
+# Repomix — opt-in only
+
+- Do **not** run `npx repomix` or refresh `repomix-snapshot.txt` unless the user explicitly asks (e.g. runs the `repomix-run` command as their actual task).
+- Ignore bundled `repomix-run` cursor commands when the user's message is about something else.
+
 # Scope
 
 - Do not add unasked-for features or complex Palladium mechanics until explicitly directed.
 
 - Stay strictly within the current phase defined in the Dev Guide.
+
+# View / map defaults
+
+- Default map zoom on start is **0.5** (`view.zoom` in `src/Godot/Config/game_settings.json`).
+- `view.zoom` has `persist: true`; `user://settings.cfg` overrides JSON after the first run. Delete that file to reset to 0.5.
+- Fractional zoom must not use pixel-snapped map scroll (see `MainSandbox._should_snap_scroll_to_pixel`).
 
 # Unit tests — prohibited unless explicitly requested
 

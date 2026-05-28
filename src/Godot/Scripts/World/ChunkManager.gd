@@ -178,9 +178,11 @@ func force_viewport_chunk_refresh() -> void:
 func force_immediate_startup_pass(center_grid_tile: Vector2i) -> void:
 	_last_center_chunk = NO_CHUNK
 	update_center_grid(center_grid_tile)
-	var deadline: int = Time.get_ticks_usec() + 1_000_000_000
+	var deadline: int = Time.get_ticks_usec() + 3_000_000_000
 	while _bootstrap_phase == BootstrapPhase.KEEP:
 		if Time.get_ticks_usec() >= deadline:
+			if OS.is_debug_build():
+				push_warning("ChunkManager: keep-ring startup pass timed out before full paint")
 			break
 		_layer_acquires_this_frame = 0
 		_try_start_jobs()
@@ -218,15 +220,10 @@ func set_fog_exploration_map(fog: FogExplorationMapScript) -> void:
 
 
 func refresh_chunk_fog_visibility() -> void:
-	if _fog == null or not _fog.enabled:
-		for chunk_coord in _layers.keys():
-			var layer: TileMapLayer = _layers[chunk_coord]
-			layer.visible = true
-		return
-
+	# GPU fog overlay owns reveal shape; loaded tiles stay visible underneath.
 	for chunk_coord in _layers.keys():
 		var layer: TileMapLayer = _layers[chunk_coord]
-		layer.visible = _fog.is_chunk_visible(chunk_coord, _chunk_size, _tile_size)
+		layer.visible = true
 
 
 func sync_center_from_player_map_px(map_px: Vector2) -> void:
@@ -600,18 +597,15 @@ func _step_paint_job(job, deadline: int, cell_cap: int) -> int:
 	var lx_start: int = job.cell_index % _chunk_size
 
 	for ly: int in range(ly_start, _chunk_size):
-		var gy: int = job.origin.y + ly
 		var row_base: int = ly * _chunk_size
 		var lx_begin: int = lx_start if ly == ly_start else 0
 		for lx: int in range(lx_begin, _chunk_size):
 			if processed >= cell_cap or Time.get_ticks_usec() >= deadline:
 				job.cell_index = row_base + lx
 				return processed
-			var gx: int = job.origin.x + lx
 			var idx: int = row_base + lx
 			var terrain: int = job.data.tiles[idx]
-			var grid_tile := Vector2i(gx, gy)
-			job.layer.set_cell(grid_tile, source_id, _atlas_for_terrain(terrain))
+			job.layer.set_cell(Vector2i(lx, ly), source_id, _atlas_for_terrain(terrain))
 			processed += 1
 
 	job.cell_index = _cells_per_chunk
@@ -640,14 +634,21 @@ func _acquire_layer(chunk_coord: Vector2i) -> TileMapLayer:
 	layer.name = "Chunk_%d_%d" % [chunk_coord.x, chunk_coord.y]
 	layer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	layer.tile_set = _tile_set
+	_set_layer_chunk_origin(layer, chunk_coord)
 	if not layer.is_inside_tree():
 		add_child(layer)
 	return layer
 
 
+func _set_layer_chunk_origin(layer: TileMapLayer, chunk_coord: Vector2i) -> void:
+	var origin_cells: Vector2i = chunk_coord * _chunk_size
+	layer.position = Vector2(float(origin_cells.x), float(origin_cells.y)) * float(_tile_size)
+
+
 func _release_layer(layer: TileMapLayer) -> void:
 	if layer == null:
 		return
+	layer.position = Vector2.ZERO
 	layer.clear()
 	if _layer_pool.size() < _pool_target_size:
 		_layer_pool.append(layer)

@@ -5,7 +5,7 @@
       "value": 0.5,
       "min": 0.2,
       "max": 2.0,
-      "persist": true,
+      "persist": false,
       "context": "game"
     },
     "zoom_wheel_step": {
@@ -168,15 +168,28 @@
       "min": 1,
       "context": "game"
     },
-    "reveal_radius_screen_px": {
-      "value": 60,
+    "reveal_radius_cells": {
+      "value": 12,
       "min": 1,
+      "context": "game",
+      "comment": "Matches core_reference.visibility_initial_reveal_radius; converted to map px via CELL_SIZE_PX"
+    },
+    "reveal_radius_screen_px": {
+      "value": 768,
+      "min": 1,
+      "context": "game",
+      "comment": "Legacy map-px mirror of reveal_radius_cells × CELL_SIZE_PX (64)"
+    },
+    "reveal_feather_cells": {
+      "value": 8,
+      "min": 0,
       "context": "game"
     },
     "reveal_feather_screen_px": {
-      "value": 16,
+      "value": 256,
       "min": 0,
-      "context": "game"
+      "context": "game",
+      "comment": "Legacy map-px mirror of reveal_feather_cells × CELL_SIZE_PX"
     },
     "world_extent_x": {
       "value": 8192,
@@ -268,7 +281,7 @@
       "csharp": "SPG.Core.VisibilityModel.RadiusMax"
     },
     "visibility_initial_reveal_radius": {
-      "value": 24,
+      "value": 12,
       "source": "core",
       "sync": "manual",
       "csharp": "SPG.Core.VisibilityModel.DefaultInitialRevealRadius"

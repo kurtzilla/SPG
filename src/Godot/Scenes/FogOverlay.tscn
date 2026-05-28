@@ -3,7 +3,6 @@
 [ext_resource type="Script" uid="uid://de0pe5d3agf4l" path="res://src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd" id="1_fog_overlay"]
 
 [node name="FogLayer" type="CanvasLayer" unique_id=628302375]
-layer = 0
 follow_viewport_enabled = true
 
 [node name="FogRect" type="ColorRect" parent="." unique_id=108676876]

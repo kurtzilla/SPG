@@ -163,76 +163,7 @@ alwaysApply: true
 
 - Always use Godot 4 type casting and structures (e.g., Vector2i for grid tiles, floori() or clampi() for integer math transformations).
 - Never use deprecated Godot 3 functions (like set_process_input or old math methods).
-- Ensure all custom node UI updates (\_draw loops or control positions) map through coordinate transforms rather than assuming the screen origin is fixed at world (0,0).</file><file path=".repomixignore"># Add patterns to ignore here, one per line
-# Example:
-# *.log
-# tmp/</file><file path="repomix-instructions.md"># AI Context &amp; Instructions
-
-You are my expert senior software architect. Attached below is a complete text snapshot of my codebase.
-
-Please review the file layouts, patterns, and logic structure.
-**CRITICAL:** Do not write any code or draft any fixes yet. Simply reply with: &quot;Codebase memorized. Ready to plan our changes.&quot;</file><file path="repomix.config.json">{
-  &quot;$schema&quot;: &quot;https://repomix.com/schemas/latest/schema.json&quot;,
-  &quot;input&quot;: {
-    &quot;maxFileSize&quot;: 52428800
-  },
-  &quot;output&quot;: {
-    &quot;filePath&quot;: &quot;repomix-snapshot.txt&quot;,
-    &quot;style&quot;: &quot;xml&quot;,
-    &quot;instructionFilePath&quot;: &quot;repomix-instructions.md&quot;,
-    &quot;parsableStyle&quot;: true,
-    &quot;fileSummary&quot;: true,
-    &quot;directoryStructure&quot;: true,
-    &quot;files&quot;: true,
-    &quot;removeComments&quot;: false,
-    &quot;removeEmptyLines&quot;: false,
-    &quot;compress&quot;: false,
-    &quot;topFilesLength&quot;: 5,
-    &quot;showLineNumbers&quot;: false,
-    &quot;truncateBase64&quot;: false,
-    &quot;copyToClipboard&quot;: false,
-    &quot;includeFullDirectoryStructure&quot;: false,
-    &quot;tokenCountTree&quot;: false,
-    &quot;git&quot;: {
-      &quot;sortByChanges&quot;: true,
-      &quot;sortByChangesMaxCommits&quot;: 100,
-      &quot;includeDiffs&quot;: false,
-      &quot;includeLogs&quot;: false,
-      &quot;includeLogsCount&quot;: 50
-    }
-  },
-  &quot;include&quot;: [],
-  &quot;ignore&quot;: {
-    &quot;useGitignore&quot;: true,
-    &quot;useDotIgnore&quot;: true,
-    &quot;useDefaultPatterns&quot;: true,
-    &quot;customPatterns&quot;: [
-      &quot;*.log&quot;,
-      &quot;dist/**/*&quot;,
-      &quot;build/**/*&quot;
-    ]
-  },
-  &quot;security&quot;: {
-    &quot;enableSecurityCheck&quot;: true
-  },
-  &quot;tokenCount&quot;: {
-    &quot;encoding&quot;: &quot;o200k_base&quot;
-  }
-}</file><file path=".cursor/rules/godot-performance.mdc">---
-description: Rules for writing high-performance 2D Godot 4 scripts
-globs: &quot;/*.gd&quot;
-alwaysApply: true
----
-
-You are an expert game developer specializing in high-performance Godot 4 (GDScript).
-Always prioritize GPU-bound or built-in server solutions over heavy CPU loops.
-
-CRITICAL WORKFLOW CONSTRAINT:
-Before writing any complex system (like chunk management, procedural generation, or data structures), you must always output a &quot;Self-Correction Step&quot;.
-
-- Explicitly state any potential performance traps or inefficiencies in your initial thought process.
-- Explain how you are bypassing them (e.g., using Dictionaries instead of Arrays, avoiding per-frame node instantiations).
-- Only provide code that has passed your own internal performance audit.</file><file path=".cursor/rules/no-unit-tests.md">---
+- Ensure all custom node UI updates (\_draw loops or control positions) map through coordinate transforms rather than assuming the screen origin is fixed at world (0,0).</file><file path=".cursor/rules/no-unit-tests.md">---
 description: Do not create or modify unit tests unless the user explicitly requests tests
 alwaysApply: true
 ---
@@ -256,7 +187,10 @@ SPG has **no unit test suite**. Do not add one opportunistically.
 
 ## When the user explicitly asks for tests
 
-Only then: create or change test projects and test code, scoped to what they asked for.</file><file path=".gdvmrc">4.6.3-stable-csharp</file><file path=".tools/ensure_godot_editor.bat">@echo off
+Only then: create or change test projects and test code, scoped to what they asked for.</file><file path=".gdvmrc">4.6.3-stable-csharp</file><file path=".repomixignore"># Add patterns to ignore here, one per line
+# Example:
+# *.log
+# tmp/</file><file path=".tools/ensure_godot_editor.bat">@echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
 rem =============================================================================
@@ -386,7 +320,59 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.</file><file path="SPG.sln">Microsoft Visual Studio Solution File, Format Version 12.00
+SOFTWARE.</file><file path="repomix-instructions.md"># AI Context &amp; Instructions
+
+You are my expert senior software architect. Attached below is a complete text snapshot of my codebase.
+
+Please review the file layouts, patterns, and logic structure.
+**CRITICAL:** Do not write any code or draft any fixes yet. Simply reply with: &quot;Codebase memorized. Ready to plan our changes.&quot;</file><file path="repomix.config.json">{
+  &quot;$schema&quot;: &quot;https://repomix.com/schemas/latest/schema.json&quot;,
+  &quot;input&quot;: {
+    &quot;maxFileSize&quot;: 52428800
+  },
+  &quot;output&quot;: {
+    &quot;filePath&quot;: &quot;repomix-snapshot.txt&quot;,
+    &quot;style&quot;: &quot;xml&quot;,
+    &quot;instructionFilePath&quot;: &quot;repomix-instructions.md&quot;,
+    &quot;parsableStyle&quot;: true,
+    &quot;fileSummary&quot;: true,
+    &quot;directoryStructure&quot;: true,
+    &quot;files&quot;: true,
+    &quot;removeComments&quot;: false,
+    &quot;removeEmptyLines&quot;: false,
+    &quot;compress&quot;: false,
+    &quot;topFilesLength&quot;: 5,
+    &quot;showLineNumbers&quot;: false,
+    &quot;truncateBase64&quot;: false,
+    &quot;copyToClipboard&quot;: false,
+    &quot;includeFullDirectoryStructure&quot;: false,
+    &quot;tokenCountTree&quot;: false,
+    &quot;git&quot;: {
+      &quot;sortByChanges&quot;: true,
+      &quot;sortByChangesMaxCommits&quot;: 100,
+      &quot;includeDiffs&quot;: false,
+      &quot;includeLogs&quot;: false,
+      &quot;includeLogsCount&quot;: 50
+    }
+  },
+  &quot;include&quot;: [],
+  &quot;ignore&quot;: {
+    &quot;useGitignore&quot;: true,
+    &quot;useDotIgnore&quot;: true,
+    &quot;useDefaultPatterns&quot;: true,
+    &quot;customPatterns&quot;: [
+      &quot;*.log&quot;,
+      &quot;dist/**/*&quot;,
+      &quot;build/**/*&quot;
+    ]
+  },
+  &quot;security&quot;: {
+    &quot;enableSecurityCheck&quot;: true
+  },
+  &quot;tokenCount&quot;: {
+    &quot;encoding&quot;: &quot;o200k_base&quot;
+  }
+}</file><file path="SPG.sln">Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -1162,497 +1148,7 @@ static func to_section_name(ctx: Context) -&gt; String:
 		Context.PLAYER:
 			return &quot;player&quot;
 		_:
-			return &quot;game&quot;</file><file path="src/Godot/Scripts/SettingsContext.gd.uid">uid://cn0jai533kk4m</file><file path="src/Godot/Scripts/SettingsPanel.gd.uid">uid://xps63hp34thj</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd">extends Node
-
-## Fixed 128×128 exploration mask (white = explored, black = hidden).
-## Player must be map-local under WorldCanvas/Tiles (same space as MainSandbox scroll).
-## world_cap mapping: map_px -&gt; texel via world_origin_map_px + world_extent_map_px (toroidal).
-## GPU mask uses fract(uv_raw - mask_sub_texel_offset); CPU uses posmod texel / _wrap_uv01.
-## World radius = fog.reveal_radius_screen_px (map px); screen threshold = radius × zoom.
-
-signal exploration_texture_uploaded
-
-const BUFFER_SIZE: int = 128
-const UNSTAMPED: Vector2i = Vector2i(-99999, -99999)
-
-const EXPLORED_COLOR: Color = Color.WHITE
-const HIDDEN_COLOR: Color = Color.BLACK
-
-@export_group(&quot;Fog of war&quot;)
-@export var enabled: bool = true
-@export var world_origin_map_px: Vector2 = Vector2.ZERO
-@export var world_extent_map_px: Vector2 = Vector2(8192.0, 8192.0)
-
-var _reveal_radius_screen_px: float = 60.0
-var _reveal_feather_screen_px: float = 16.0
-
-var _image: Image
-var _texture: ImageTexture
-var _player: Node2D
-var _shader_material: ShaderMaterial
-var _last_stamp_texel: Vector2i = UNSTAMPED
-var _last_stamp_radius_texels: int = -1
-var _texture_dirty: bool = false
-var _upload_accum: float = 0.0
-var _texture_update_hz: float = 10.0
-var _player_map_px: Vector2 = Vector2.ZERO
-var _mask_sub_texel_offset: Vector2 = Vector2.ZERO
-var _reveal_radius_world_px: float = 60.0
-var _reveal_feather_world_px: float = 16.0
-
-var _cached_sub_texel: Vector2 = Vector2(-99999.0, -99999.0)
-var _cached_reveal_radius_px: float = -1.0
-var _cached_reveal_feather_px: float = -1.0
-
-
-func _ready() -&gt; void:
-	_read_fog_settings()
-	_image = Image.create(BUFFER_SIZE, BUFFER_SIZE, false, Image.FORMAT_RGBA8)
-	_image.fill(HIDDEN_COLOR)
-	_texture = ImageTexture.create_from_image(_image)
-	if not ViewProjection.view_changed.is_connected(_on_view_changed):
-		ViewProjection.view_changed.connect(_on_view_changed)
-
-
-func _read_fog_settings() -&gt; void:
-	if Settings.has(&quot;fog.enabled&quot;):
-		enabled = Settings.get_bool(&quot;fog.enabled&quot;)
-	if Settings.has(&quot;fog.texture_update_hz&quot;):
-		_texture_update_hz = maxf(Settings.get_float(&quot;fog.texture_update_hz&quot;), 1.0)
-	if Settings.has(&quot;fog.reveal_radius_screen_px&quot;):
-		_reveal_radius_screen_px = maxf(Settings.get_float(&quot;fog.reveal_radius_screen_px&quot;), 1.0)
-	if Settings.has(&quot;fog.reveal_feather_screen_px&quot;):
-		_reveal_feather_screen_px = maxf(Settings.get_float(&quot;fog.reveal_feather_screen_px&quot;), 0.0)
-	if Settings.has(&quot;fog.world_extent_x&quot;) and Settings.has(&quot;fog.world_extent_y&quot;):
-		world_extent_map_px = Vector2(
-			maxf(Settings.get_float(&quot;fog.world_extent_x&quot;), 1.0),
-			maxf(Settings.get_float(&quot;fog.world_extent_y&quot;), 1.0)
-		)
-
-
-func get_reveal_radius_map_px() -&gt; float:
-	return _reveal_radius_screen_px
-
-
-func get_reveal_feather_map_px() -&gt; float:
-	return _reveal_feather_screen_px
-
-
-func configure_world_anchor(anchor_map_px: Vector2) -&gt; void:
-	world_origin_map_px = anchor_map_px
-	if _shader_material != null:
-		_apply_static_shader_uniforms(_shader_material)
-
-
-func setup(player: Node2D) -&gt; void:
-	_player = player
-	_last_stamp_texel = UNSTAMPED
-	_last_stamp_radius_texels = -1
-	_texture_dirty = false
-	_upload_accum = 0.0
-	if _player != null:
-		_player_map_px = _player.position
-		_update_runtime_derived()
-	call_deferred(&quot;_bootstrap_exploration_at_player&quot;)
-
-
-func bind_shader_material(material: ShaderMaterial) -&gt; void:
-	_shader_material = material
-	if material != null:
-		_apply_static_shader_uniforms(material)
-		sync_shader_uniform(material)
-
-
-func get_texture() -&gt; ImageTexture:
-	return _texture
-
-
-func get_player_map_px() -&gt; Vector2:
-	return _player_map_px
-
-
-func sync_shader_uniform(material: ShaderMaterial, param_name: StringName = &amp;&quot;explored_mask&quot;) -&gt; void:
-	if material != null and _texture != null:
-		material.set_shader_parameter(param_name, _texture)
-
-
-func push_runtime_uniforms(material: ShaderMaterial) -&gt; void:
-	if material == null or not enabled:
-		return
-
-	_update_runtime_derived()
-
-	if _mask_sub_texel_offset != _cached_sub_texel:
-		material.set_shader_parameter(&amp;&quot;mask_sub_texel_offset&quot;, _mask_sub_texel_offset)
-		_cached_sub_texel = _mask_sub_texel_offset
-
-
-func chunk_map_rect(chunk_coord: Vector2i, chunk_size_cells: int, cell_px: int) -&gt; Rect2:
-	var size_px: float = float(chunk_size_cells * cell_px)
-	var origin := Vector2(float(chunk_coord.x * chunk_size_cells * cell_px), float(chunk_coord.y * chunk_size_cells * cell_px))
-	return Rect2(origin, Vector2(size_px, size_px))
-
-
-func is_chunk_visible(chunk_coord: Vector2i, chunk_size_cells: int, cell_px: int) -&gt; bool:
-	if not enabled:
-		return true
-
-	var rect: Rect2 = chunk_map_rect(chunk_coord, chunk_size_cells, cell_px)
-	if _rect_intersects_live_disc(rect):
-		return true
-	return _rect_has_explored_texel(rect)
-
-
-func _physics_process(_delta: float) -&gt; void:
-	if not enabled or _player == null:
-		return
-
-	# position is map-local under WorldCanvas/Tiles (same space as scroll / shader map_local)
-	_player_map_px = _player.position
-	_update_runtime_derived()
-	_try_stamp_exploration()
-
-
-func _process(delta: float) -&gt; void:
-	if _shader_material != null:
-		push_runtime_uniforms(_shader_material)
-
-	if not enabled or not _texture_dirty:
-		return
-
-	_upload_accum += delta
-	var upload_interval: float = 1.0 / _texture_update_hz
-	if _upload_accum &lt; upload_interval:
-		return
-
-	_upload_accum -= upload_interval
-	_texture.update(_image)
-	_texture_dirty = false
-	exploration_texture_uploaded.emit()
-
-
-func _on_view_changed() -&gt; void:
-	_last_stamp_radius_texels = -1
-	_cached_reveal_radius_px = -1.0
-	_cached_reveal_feather_px = -1.0
-	if _shader_material != null:
-		push_runtime_uniforms(_shader_material)
-
-
-func _update_runtime_derived() -&gt; void:
-	_reveal_radius_world_px = get_reveal_radius_map_px()
-	_reveal_feather_world_px = get_reveal_feather_map_px()
-
-	var uv: Vector2 = _map_px_to_uv_raw(_player_map_px)
-	_mask_sub_texel_offset = Vector2(
-		uv.x - floor(uv.x * float(BUFFER_SIZE)) / float(BUFFER_SIZE),
-		uv.y - floor(uv.y * float(BUFFER_SIZE)) / float(BUFFER_SIZE)
-	)
-
-
-func _bootstrap_exploration_at_player() -&gt; void:
-	if not enabled or _player == null:
-		return
-	_player_map_px = _player.position
-	_update_runtime_derived()
-	_last_stamp_texel = UNSTAMPED
-	_last_stamp_radius_texels = -1
-	_try_stamp_exploration()
-
-
-func _try_stamp_exploration() -&gt; void:
-	var texel: Vector2i = _map_px_to_texel(_player_map_px)
-	var radius_texels: int = _reveal_radius_texels()
-	if texel == _last_stamp_texel and radius_texels == _last_stamp_radius_texels:
-		return
-
-	_stamp_disc_texels(texel, radius_texels)
-	_last_stamp_texel = texel
-	_last_stamp_radius_texels = radius_texels
-	_texture_dirty = true
-
-
-func _apply_static_shader_uniforms(material: ShaderMaterial) -&gt; void:
-	material.set_shader_parameter(&amp;&quot;world_origin_map_px&quot;, world_origin_map_px)
-	material.set_shader_parameter(&amp;&quot;world_extent_map_px&quot;, world_extent_map_px)
-	material.set_shader_parameter(&amp;&quot;fog_enabled&quot;, enabled)
-
-
-func _rect_intersects_live_disc(rect: Rect2) -&gt; bool:
-	var radius: float = _reveal_radius_world_px + _reveal_feather_world_px
-	var r_sq: float = radius * radius
-	var center: Vector2 = _player_map_px
-
-	var corners: Array[Vector2] = [
-		rect.position,
-		rect.position + Vector2(rect.size.x, 0.0),
-		rect.position + rect.size,
-		rect.position + Vector2(0.0, rect.size.y),
-	]
-	for corner: Vector2 in corners:
-		if center.distance_squared_to(corner) &lt;= r_sq:
-			return true
-
-	var closest_x: float = clampf(center.x, rect.position.x, rect.position.x + rect.size.x)
-	var closest_y: float = clampf(center.y, rect.position.y, rect.position.y + rect.size.y)
-	var closest := Vector2(closest_x, closest_y)
-	return center.distance_squared_to(closest) &lt;= r_sq
-
-
-func _rect_has_explored_texel(rect: Rect2) -&gt; bool:
-	var uv_min: Vector2 = _map_px_to_uv_raw(rect.position)
-	var uv_max: Vector2 = _map_px_to_uv_raw(rect.position + rect.size)
-
-	var tx0: int = int(floor(uv_min.x * float(BUFFER_SIZE)))
-	var ty0: int = int(floor(uv_min.y * float(BUFFER_SIZE)))
-	var tx1: int = int(floor(uv_max.x * float(BUFFER_SIZE)))
-	var ty1: int = int(floor(uv_max.y * float(BUFFER_SIZE)))
-
-	return _texel_range_has_explored(tx0, ty0, tx1, ty1)
-
-
-func _texel_range_has_explored(tx0: int, ty0: int, tx1: int, ty1: int) -&gt; bool:
-	var x_segments: Array[Vector2i] = []
-	if tx0 &lt;= tx1:
-		x_segments.append(Vector2i(tx0, tx1))
-	else:
-		x_segments.append(Vector2i(tx0, BUFFER_SIZE - 1))
-		x_segments.append(Vector2i(0, tx1))
-
-	var y_segments: Array[Vector2i] = []
-	if ty0 &lt;= ty1:
-		y_segments.append(Vector2i(ty0, ty1))
-	else:
-		y_segments.append(Vector2i(ty0, BUFFER_SIZE - 1))
-		y_segments.append(Vector2i(0, ty1))
-
-	for y_seg: Vector2i in y_segments:
-		for x_seg: Vector2i in x_segments:
-			for y: int in range(y_seg.x, y_seg.y + 1):
-				for x: int in range(x_seg.x, x_seg.y + 1):
-					if _explored_texel_at_unwrapped(x, y):
-						return true
-	return false
-
-
-func _explored_texel_at_unwrapped(tx: int, ty: int) -&gt; bool:
-	return _image.get_pixel(posmod(tx, BUFFER_SIZE), posmod(ty, BUFFER_SIZE)).r &gt; 0.5
-
-
-func _map_px_to_uv_raw(map_px: Vector2) -&gt; Vector2:
-	var extent_x: float = maxf(world_extent_map_px.x, 1.0)
-	var extent_y: float = maxf(world_extent_map_px.y, 1.0)
-	var rel: Vector2 = map_px - world_origin_map_px
-	return Vector2(rel.x / extent_x, rel.y / extent_y)
-
-
-func _wrap_uv01(uv: Vector2) -&gt; Vector2:
-	return Vector2(uv.x - floor(uv.x), uv.y - floor(uv.y))
-
-
-func _texel_from_map_px(map_px: Vector2) -&gt; Vector2i:
-	var uv: Vector2 = _map_px_to_uv_raw(map_px)
-	var tx: int = int(floor(uv.x * float(BUFFER_SIZE)))
-	var ty: int = int(floor(uv.y * float(BUFFER_SIZE)))
-	return Vector2i(posmod(tx, BUFFER_SIZE), posmod(ty, BUFFER_SIZE))
-
-
-func _map_px_to_texel(map_px: Vector2) -&gt; Vector2i:
-	return _texel_from_map_px(map_px)
-
-
-func _reveal_radius_texels() -&gt; int:
-	var radius_map_px: float = _reveal_radius_world_px
-	var texel_w_px: float = maxf(world_extent_map_px.x, 1.0) / float(BUFFER_SIZE)
-	var texel_h_px: float = maxf(world_extent_map_px.y, 1.0) / float(BUFFER_SIZE)
-	var texel_px: float = (texel_w_px + texel_h_px) * 0.5
-	return maxi(1, int(ceil(radius_map_px / texel_px)))
-
-
-func _stamp_disc_texels(center: Vector2i, radius: int) -&gt; void:
-	var r_sq: int = radius * radius
-	for dy: int in range(-radius, radius + 1):
-		for dx: int in range(-radius, radius + 1):
-			if dx * dx + dy * dy &gt; r_sq:
-				continue
-			_image.set_pixel(
-				posmod(center.x + dx, BUFFER_SIZE),
-				posmod(center.y + dy, BUFFER_SIZE),
-				EXPLORED_COLOR
-			)</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd.uid">uid://dmawn4jarjyxy</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd">extends ColorRect
-
-## GPU fog overlay. Lives on a CanvasLayer; scroll/zoom synced from MainSandbox.
-
-const FOG_SHADER: Shader = preload(&quot;res://src/Godot/Shaders/FogOverlay.gdshader&quot;)
-const ViewMetricsScript = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
-
-@export var debug_coords: bool = false
-
-var _map_scroll: Node2D
-var _player: Node2D
-var _shader_mat: ShaderMaterial
-var _cached_canvas_to_map: Transform2D = Transform2D.IDENTITY
-var _cached_zoom: float = -1.0
-var _cached_player_sim_position: Vector2 = Vector2(-99999.0, -99999.0)
-var _cached_reveal_radius_map_px: float = -1.0
-var _cached_reveal_feather_map_px: float = -1.0
-var _cached_fog_enabled: bool = false
-var _cached_debug_coords: bool = false
-
-
-func _ready() -&gt; void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	anchors_preset = Control.PRESET_FULL_RECT
-	anchor_right = 1.0
-	anchor_bottom = 1.0
-	grow_horizontal = Control.GROW_DIRECTION_BOTH
-	grow_vertical = Control.GROW_DIRECTION_BOTH
-	color = Color(0.0, 0.0, 0.0, 0.0)
-
-	_shader_mat = ShaderMaterial.new()
-	_shader_mat.shader = FOG_SHADER
-	material = _shader_mat
-	_push_debug_coords()
-
-
-func get_shader_material() -&gt; ShaderMaterial:
-	return _shader_mat
-
-
-func set_map_scroll(map_scroll: Node2D) -&gt; void:
-	_map_scroll = map_scroll
-	_cached_canvas_to_map = Transform2D.IDENTITY
-	_cached_zoom = -1.0
-	force_resync_scroll()
-
-
-func set_player(player: Node2D) -&gt; void:
-	_player = player
-	_cached_player_sim_position = Vector2(-99999.0, -99999.0)
-	_sync_player_map_px()
-	force_resync_scroll()
-
-
-func update_fog_vision_metrics(radius_cells: float, feather_cells: float) -&gt; void:
-	if _shader_mat == null:
-		return
-	var radius_map_px: float = radius_cells * float(ViewMetricsScript.CELL_SIZE_PX)
-	var feather_map_px: float = feather_cells * float(ViewMetricsScript.CELL_SIZE_PX)
-	if not is_equal_approx(radius_map_px, _cached_reveal_radius_map_px):
-		_shader_mat.set_shader_parameter(&amp;&quot;reveal_radius_map_px&quot;, radius_map_px)
-		_cached_reveal_radius_map_px = radius_map_px
-	if not is_equal_approx(feather_map_px, _cached_reveal_feather_map_px):
-		_shader_mat.set_shader_parameter(&amp;&quot;reveal_feather_map_px&quot;, feather_map_px)
-		_cached_reveal_feather_map_px = feather_map_px
-
-
-func configure(fog_enabled: bool, fog_color: Color) -&gt; void:
-	if _shader_mat == null:
-		return
-	_shader_mat.set_shader_parameter(&amp;&quot;fog_enabled&quot;, fog_enabled)
-	_shader_mat.set_shader_parameter(&amp;&quot;fog_color&quot;, fog_color)
-	_cached_fog_enabled = fog_enabled
-	_push_debug_coords()
-
-
-func apply_static_uniforms(
-	world_origin: Vector2,
-	world_extent: Vector2,
-	explored_mask: Texture2D
-) -&gt; void:
-	if _shader_mat == null:
-		return
-	_shader_mat.set_shader_parameter(&amp;&quot;world_origin_map_px&quot;, world_origin)
-	_shader_mat.set_shader_parameter(&amp;&quot;world_extent_map_px&quot;, world_extent)
-	if explored_mask != null:
-		_shader_mat.set_shader_parameter(&amp;&quot;explored_mask&quot;, explored_mask)
-
-
-## Authoritative path: derive canvas_to_map_local from the scroll node&apos;s canvas transform.
-func sync_canvas_transform(map_scroll: Node2D) -&gt; void:
-	if _shader_mat == null or map_scroll == null:
-		return
-	var canvas_to_map: Transform2D = map_scroll.get_global_transform_with_canvas().affine_inverse()
-	if canvas_to_map != _cached_canvas_to_map:
-		_shader_mat.set_shader_parameter(&amp;&quot;canvas_to_map_local&quot;, canvas_to_map)
-		_cached_canvas_to_map = canvas_to_map
-	var safe_zoom: float = map_scroll.scale.x
-	if is_zero_approx(safe_zoom):
-		safe_zoom = 1.0
-	if not is_equal_approx(safe_zoom, _cached_zoom):
-		_shader_mat.set_shader_parameter(&amp;&quot;zoom&quot;, safe_zoom)
-		_cached_zoom = safe_zoom
-
-
-## Legacy formula path (used by unit tests).
-func sync_scroll(scroll_pos: Vector2, zoom: float) -&gt; void:
-	if _shader_mat == null:
-		return
-	var safe_zoom: float = zoom if not is_zero_approx(zoom) else 1.0
-	var forward := Transform2D(Vector2(safe_zoom, 0.0), Vector2(0.0, safe_zoom), scroll_pos)
-	var canvas_to_map: Transform2D = forward.affine_inverse()
-	if canvas_to_map != _cached_canvas_to_map:
-		_shader_mat.set_shader_parameter(&amp;&quot;canvas_to_map_local&quot;, canvas_to_map)
-		_cached_canvas_to_map = canvas_to_map
-	if not is_equal_approx(safe_zoom, _cached_zoom):
-		_shader_mat.set_shader_parameter(&amp;&quot;zoom&quot;, safe_zoom)
-		_cached_zoom = safe_zoom
-
-
-func force_resync_scroll() -&gt; void:
-	_cached_canvas_to_map = Transform2D.IDENTITY
-	_cached_zoom = -1.0
-	sync_canvas_transform(_map_scroll)
-
-
-func on_view_changed() -&gt; void:
-	_cached_player_sim_position = Vector2(-99999.0, -99999.0)
-	_cached_canvas_to_map = Transform2D.IDENTITY
-	_cached_zoom = -1.0
-	force_resync_scroll()
-	_sync_player_map_px()
-
-
-func _process(_delta: float) -&gt; void:
-	_sync_player_map_px()
-
-
-func sync_runtime(fog_map) -&gt; void:
-	if _shader_mat == null or fog_map == null:
-		return
-	if not fog_map.has_method(&amp;&quot;push_runtime_uniforms&quot;):
-		return
-	if fog_map.enabled != _cached_fog_enabled:
-		_shader_mat.set_shader_parameter(&amp;&quot;fog_enabled&quot;, fog_map.enabled)
-		_cached_fog_enabled = fog_map.enabled
-	fog_map.push_runtime_uniforms(_shader_mat)
-	_push_debug_coords()
-
-
-func _sync_player_map_px() -&gt; void:
-	if _shader_mat == null or _player == null:
-		return
-	var sim_pos: Vector2 = _player.position
-	if sim_pos == _cached_player_sim_position:
-		return
-	_shader_mat.set_shader_parameter(&amp;&quot;player_sim_position&quot;, sim_pos)
-	_cached_player_sim_position = sim_pos
-
-
-func _push_debug_coords() -&gt; void:
-	if _shader_mat == null or debug_coords == _cached_debug_coords:
-		return
-	_shader_mat.set_shader_parameter(&amp;&quot;debug_coords&quot;, debug_coords)
-	_cached_debug_coords = debug_coords
-
-
-func _notification(what: int) -&gt; void:
-	if what == NOTIFICATION_WM_SIZE_CHANGED:
-		_cached_player_sim_position = Vector2(-99999.0, -99999.0)
-		_cached_canvas_to_map = Transform2D.IDENTITY
-		_cached_zoom = -1.0
-		force_resync_scroll()
-		_sync_player_map_px()</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd.uid">uid://de0pe5d3agf4l</file><file path="src/Godot/Scripts/TerrainSandboxTileSet.gd.uid">uid://ci2487hxkfw0j</file><file path="src/Godot/Scripts/TerrainTileTextures.gd">class_name TerrainTileTextures
+			return &quot;game&quot;</file><file path="src/Godot/Scripts/SettingsContext.gd.uid">uid://cn0jai533kk4m</file><file path="src/Godot/Scripts/SettingsPanel.gd.uid">uid://xps63hp34thj</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd.uid">uid://dmawn4jarjyxy</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd.uid">uid://de0pe5d3agf4l</file><file path="src/Godot/Scripts/TerrainSandboxTileSet.gd.uid">uid://ci2487hxkfw0j</file><file path="src/Godot/Scripts/TerrainTileTextures.gd">class_name TerrainTileTextures
 extends RefCounted
 
 ## Solid terrain tiles, transition overlays, and noise masks for grid rendering.
@@ -1758,113 +1254,21 @@ var fill_land: bool = false</file><file path="src/Godot/Scripts/World/ChunkLoadJ
 
 const LAND: int = 0
 const WATER: int = 1
-const MUD: int = 2</file><file path="src/Godot/Scripts/World/TerrainType.gd.uid">uid://e35taajap82x</file><file path="src/Godot/Shaders/FogOverlay.gdshader">shader_type canvas_item;
+const MUD: int = 2</file><file path="src/Godot/Scripts/World/TerrainType.gd.uid">uid://e35taajap82x</file><file path="src/Godot/Shaders/FogOverlay.gdshader.uid">uid://c4iu7p14yrpbi</file><file path="src/Godot/Shaders/GridOverlay.gdshader.uid">uid://7su4xrms61rx</file><file path=".cursor/rules/godot-performance.mdc">---
+description: Rules for writing high-performance 2D Godot 4 scripts
+globs: &quot;/*.gd&quot;
+alwaysApply: true
+---
 
-uniform bool fog_enabled = true;
-uniform bool debug_coords = false;
-uniform sampler2D explored_mask : filter_nearest, repeat_disable;
-uniform mat3 canvas_to_map_local;
-uniform vec2 player_sim_position;
-uniform float zoom = 1.0;
+You are an expert game developer specializing in high-performance Godot 4 (GDScript).
+Always prioritize GPU-bound or built-in server solutions over heavy CPU loops.
 
-// Aligned uniform names matching the updated FogOverlay.gd script
-uniform float reveal_radius_map_px;
-uniform float reveal_feather_map_px;
+CRITICAL WORKFLOW CONSTRAINT:
+Before writing any complex system (like chunk management, procedural generation, or data structures), you must always output a &quot;Self-Correction Step&quot;.
 
-uniform vec2 mask_sub_texel_offset;
-uniform vec2 world_origin_map_px;
-uniform vec2 world_extent_map_px;
-uniform vec4 fog_color : source_color = vec4(0.0, 0.0, 0.0, 0.85);
-
-void fragment() {
-	COLOR = vec4(0.0);
-
-	if (fog_enabled) {
-		vec2 map_local = (canvas_to_map_local * vec3(FRAGCOORD.xy, 1.0)).xy;
-
-		if (debug_coords) {
-			COLOR = vec4(UV, 0.0, 1.0);
-		} else {
-			vec2 uv_raw = (map_local - world_origin_map_px) / world_extent_map_px;
-			vec2 uv = fract(uv_raw - mask_sub_texel_offset);
-			float explored = texture(explored_mask, uv).r;
-
-			// Pure map-space distance calculation
-			float dist = distance(map_local, player_sim_position);
-			float effective_radius = reveal_radius_map_px;
-			float effective_feather = reveal_feather_map_px;
-
-			float live_circle = 1.0 - smoothstep(effective_radius - effective_feather, effective_radius, dist);
-			float visibility = max(live_circle, explored);
-
-			COLOR = vec4(fog_color.rgb, fog_color.a * (1.0 - visibility));
-		}
-	}
-}</file><file path="src/Godot/Shaders/FogOverlay.gdshader.uid">uid://c4iu7p14yrpbi</file><file path="src/Godot/Shaders/GridOverlay.gdshader">// Screen-space debug grid aligned to the scrolling tile map.
-// Canvas pixels -&gt; map-local via canvas_to_map_local (matches ViewTransforms).
-shader_type canvas_item;
-render_mode blend_mix;
-
-uniform bool enabled = true;
-uniform mat3 canvas_to_map_local;
-uniform float cell_size_px = 64.0;
-uniform vec2 grid_center = vec2(0.0);
-uniform float grid_radius = 32.0;
-uniform float line_width_px = 1.0;
-uniform vec4 line_color : source_color = vec4(0.2, 0.22, 0.18, 0.6);
-
-void fragment() {
-	COLOR = vec4(0.0);
-	if (enabled) {
-		vec2 map_local = (canvas_to_map_local * vec3(FRAGCOORD.xy, 1.0)).xy;
-		vec2 grid_f = map_local / cell_size_px;
-
-		float min_gx = grid_center.x - grid_radius;
-		float max_gx = grid_center.x + grid_radius + 1.0;
-		float min_gy = grid_center.y - grid_radius;
-		float max_gy = grid_center.y + grid_radius + 1.0;
-
-		bool in_bounds = grid_f.x &gt;= min_gx - 0.001 &amp;&amp; grid_f.x &lt;= max_gx + 0.001
-				&amp;&amp; grid_f.y &gt;= min_gy - 0.001 &amp;&amp; grid_f.y &lt;= max_gy + 0.001;
-
-		if (in_bounds) {
-			vec2 map_per_canvas_x = (canvas_to_map_local * vec3(1.0, 0.0, 0.0)).xy;
-			float half_w = line_width_px * 0.5 * length(map_per_canvas_x) / cell_size_px;
-			float fx = fract(grid_f.x);
-			float fy = fract(grid_f.y);
-			float on_line = 0.0;
-			if (fx &lt; half_w || fx &gt; 1.0 - half_w) {
-				on_line = 1.0;
-			}
-			if (fy &lt; half_w || fy &gt; 1.0 - half_w) {
-				on_line = 1.0;
-			}
-			COLOR = vec4(line_color.rgb, line_color.a * on_line);
-		}
-	}
-}</file><file path="src/Godot/Shaders/GridOverlay.gdshader.uid">uid://7su4xrms61rx</file><file path=".gitignore"># Godot 4+ specific ignores
-.godot/
-.nomedia
-.repomix-snapshot.txt
-
-# Godot-specific ignores
-.import/
-export.cfg
-export_credentials.cfg
-*.tmp
-
-# Imported translations (automatically generated from CSV files)
-*.translation
-
-# Mono-specific ignores
-.mono/
-data_*/
-mono_crash.*.json
-
-# .NET build output
-bin/
-obj/
-artifacts/</file><file path="src/Core/Math/GridMath.cs">namespace SPG.Core;
+- Explicitly state any potential performance traps or inefficiencies in your initial thought process.
+- Explain how you are bypassing them (e.g., using Dictionaries instead of Arrays, avoiding per-frame node instantiations).
+- Only provide code that has passed your own internal performance audit.</file><file path="src/Core/Math/GridMath.cs">namespace SPG.Core;
 
 /// &lt;summary&gt;
 /// Grid-index utilities in Core space. 1 cell = 1 meter.
@@ -2157,7 +1561,7 @@ public sealed class VisibilityModel
       &quot;value&quot;: 0.5,
       &quot;min&quot;: 0.2,
       &quot;max&quot;: 2.0,
-      &quot;persist&quot;: true,
+      &quot;persist&quot;: false,
       &quot;context&quot;: &quot;game&quot;
     },
     &quot;zoom_wheel_step&quot;: {
@@ -2320,15 +1724,28 @@ public sealed class VisibilityModel
       &quot;min&quot;: 1,
       &quot;context&quot;: &quot;game&quot;
     },
-    &quot;reveal_radius_screen_px&quot;: {
-      &quot;value&quot;: 60,
+    &quot;reveal_radius_cells&quot;: {
+      &quot;value&quot;: 12,
       &quot;min&quot;: 1,
+      &quot;context&quot;: &quot;game&quot;,
+      &quot;comment&quot;: &quot;Matches core_reference.visibility_initial_reveal_radius; converted to map px via CELL_SIZE_PX&quot;
+    },
+    &quot;reveal_radius_screen_px&quot;: {
+      &quot;value&quot;: 768,
+      &quot;min&quot;: 1,
+      &quot;context&quot;: &quot;game&quot;,
+      &quot;comment&quot;: &quot;Legacy map-px mirror of reveal_radius_cells × CELL_SIZE_PX (64)&quot;
+    },
+    &quot;reveal_feather_cells&quot;: {
+      &quot;value&quot;: 8,
+      &quot;min&quot;: 0,
       &quot;context&quot;: &quot;game&quot;
     },
     &quot;reveal_feather_screen_px&quot;: {
-      &quot;value&quot;: 16,
+      &quot;value&quot;: 256,
       &quot;min&quot;: 0,
-      &quot;context&quot;: &quot;game&quot;
+      &quot;context&quot;: &quot;game&quot;,
+      &quot;comment&quot;: &quot;Legacy map-px mirror of reveal_feather_cells × CELL_SIZE_PX&quot;
     },
     &quot;world_extent_x&quot;: {
       &quot;value&quot;: 8192,
@@ -2420,7 +1837,7 @@ public sealed class VisibilityModel
       &quot;csharp&quot;: &quot;SPG.Core.VisibilityModel.RadiusMax&quot;
     },
     &quot;visibility_initial_reveal_radius&quot;: {
-      &quot;value&quot;: 24,
+      &quot;value&quot;: 12,
       &quot;source&quot;: &quot;core&quot;,
       &quot;sync&quot;: &quot;manual&quot;,
       &quot;csharp&quot;: &quot;SPG.Core.VisibilityModel.DefaultInitialRevealRadius&quot;
@@ -2505,7 +1922,7 @@ public partial class VisibilityModelGd : RefCounted
 
 [node name=&quot;GridLayer&quot; type=&quot;CanvasLayer&quot;]
 follow_viewport_enabled = true
-layer = 1
+layer = 0
 
 [node name=&quot;GridRect&quot; type=&quot;ColorRect&quot; parent=&quot;.&quot;]
 anchors_preset = 15
@@ -3220,7 +2637,420 @@ func _on_view_changed() -&gt; void:
 func _on_show_panel_pressed() -&gt; void:
 	_apply_panel_visibility(not _main_body.visible)
 	call_deferred(&quot;_update_hud_layout&quot;)
-	_emit_settings_changed()</file><file path="src/Godot/Scripts/TerrainSandboxTileSet.gd">class_name TerrainSandboxTileSet
+	_emit_settings_changed()</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd">extends Node
+
+## Fixed 128×128 exploration mask (white = explored, black = hidden).
+## Player must be map-local under WorldCanvas/Tiles (same space as MainSandbox scroll).
+## world_cap mapping: map_px -&gt; texel via world_origin_map_px + world_extent_map_px (toroidal).
+## GPU/CPU explored UV: world-absolute via world_origin_map_px (toroidal fract). Live circle stays player-centered.
+## World radius = fog.reveal_radius_screen_px (map px); screen threshold = radius × zoom.
+
+signal exploration_texture_uploaded
+signal exploration_stamped
+
+const BUFFER_SIZE: int = 128
+const UNSTAMPED_PLAYER_PX: Vector2 = Vector2(-99999.0, -99999.0)
+const STAMP_MOVE_THRESHOLD_SQ: float = 0.25
+
+const EXPLORED_COLOR: Color = Color.WHITE
+const HIDDEN_COLOR: Color = Color.BLACK
+
+@export_group(&quot;Fog of war&quot;)
+@export var enabled: bool = true
+@export var world_origin_map_px: Vector2 = Vector2.ZERO
+@export var world_extent_map_px: Vector2 = Vector2(8192.0, 8192.0)
+
+var _reveal_radius_screen_px: float = 768.0
+var _reveal_feather_screen_px: float = 256.0
+
+var _image: Image
+var _texture: ImageTexture
+var _player: Node2D
+var _shader_material: ShaderMaterial
+var _last_stamp_player_map_px: Vector2 = UNSTAMPED_PLAYER_PX
+var _last_stamp_radius_texels: int = -1
+var _texture_dirty: bool = false
+var _texture_update_hz: float = 10.0
+var _player_map_px: Vector2 = Vector2.ZERO
+var _mask_sub_texel_offset: Vector2 = Vector2.ZERO
+var _reveal_radius_world_px: float = 768.0
+var _reveal_feather_world_px: float = 256.0
+
+var _cached_sub_texel: Vector2 = Vector2(-99999.0, -99999.0)
+var _explored_chunks: Dictionary = {}
+var _chunk_size_cells: int = 32
+
+
+func _ready() -&gt; void:
+	_read_fog_settings()
+	_chunk_size_cells = Settings.get_int(&quot;world.chunk_size&quot;)
+	_image = Image.create(BUFFER_SIZE, BUFFER_SIZE, false, Image.FORMAT_RGBA8)
+	_image.fill(HIDDEN_COLOR)
+	_texture = ImageTexture.create_from_image(_image)
+
+
+func _read_fog_settings() -&gt; void:
+	if Settings.has(&quot;fog.enabled&quot;):
+		enabled = Settings.get_bool(&quot;fog.enabled&quot;)
+	if Settings.has(&quot;fog.texture_update_hz&quot;):
+		_texture_update_hz = maxf(Settings.get_float(&quot;fog.texture_update_hz&quot;), 1.0)
+	var cell_px: float = float(ViewMetrics.CELL_SIZE_PX)
+	if Settings.has(&quot;fog.reveal_radius_cells&quot;):
+		_reveal_radius_screen_px = maxf(Settings.get_float(&quot;fog.reveal_radius_cells&quot;), 1.0) * cell_px
+	elif Settings.has(&quot;fog.reveal_radius_screen_px&quot;):
+		_reveal_radius_screen_px = maxf(Settings.get_float(&quot;fog.reveal_radius_screen_px&quot;), 1.0)
+	if Settings.has(&quot;fog.reveal_feather_cells&quot;):
+		_reveal_feather_screen_px = maxf(Settings.get_float(&quot;fog.reveal_feather_cells&quot;), 0.0) * cell_px
+	elif Settings.has(&quot;fog.reveal_feather_screen_px&quot;):
+		_reveal_feather_screen_px = maxf(Settings.get_float(&quot;fog.reveal_feather_screen_px&quot;), 0.0)
+	if Settings.has(&quot;fog.world_extent_x&quot;) and Settings.has(&quot;fog.world_extent_y&quot;):
+		world_extent_map_px = Vector2(
+			maxf(Settings.get_float(&quot;fog.world_extent_x&quot;), 1.0),
+			maxf(Settings.get_float(&quot;fog.world_extent_y&quot;), 1.0)
+		)
+
+
+func get_reveal_radius_map_px() -&gt; float:
+	return _reveal_radius_screen_px
+
+
+func get_reveal_feather_map_px() -&gt; float:
+	return _reveal_feather_screen_px
+
+
+func configure_world_anchor(anchor_map_px: Vector2) -&gt; void:
+	world_origin_map_px = anchor_map_px
+	if _shader_material != null:
+		_apply_static_shader_uniforms(_shader_material)
+
+
+func setup(player: Node2D) -&gt; void:
+	_player = player
+	_explored_chunks.clear()
+	_image.fill(HIDDEN_COLOR)
+	_last_stamp_player_map_px = UNSTAMPED_PLAYER_PX
+	_last_stamp_radius_texels = -1
+	_texture_dirty = true
+	if _player != null:
+		_player_map_px = _player.position
+		_update_runtime_derived()
+	call_deferred(&quot;_bootstrap_exploration_at_player&quot;)
+
+
+func bind_shader_material(material: ShaderMaterial) -&gt; void:
+	_shader_material = material
+	if material != null:
+		_apply_static_shader_uniforms(material)
+		sync_shader_uniform(material)
+
+
+func get_texture() -&gt; ImageTexture:
+	return _texture
+
+
+func get_player_map_px() -&gt; Vector2:
+	return _player_map_px
+
+
+func sync_shader_uniform(material: ShaderMaterial, param_name: StringName = &amp;&quot;explored_mask&quot;) -&gt; void:
+	if material != null and _texture != null:
+		material.set_shader_parameter(param_name, _texture)
+
+
+func push_runtime_uniforms(material: ShaderMaterial) -&gt; void:
+	if material == null or not enabled:
+		return
+
+	_update_runtime_derived()
+
+	if _mask_sub_texel_offset != _cached_sub_texel:
+		material.set_shader_parameter(&amp;&quot;mask_sub_texel_offset&quot;, _mask_sub_texel_offset)
+		_cached_sub_texel = _mask_sub_texel_offset
+
+
+func chunk_map_rect(chunk_coord: Vector2i, chunk_size_cells: int, cell_px: int) -&gt; Rect2:
+	var size_px: float = float(chunk_size_cells * cell_px)
+	var origin := Vector2(float(chunk_coord.x * chunk_size_cells * cell_px), float(chunk_coord.y * chunk_size_cells * cell_px))
+	return Rect2(origin, Vector2(size_px, size_px))
+
+
+func is_chunk_visible(chunk_coord: Vector2i, chunk_size_cells: int, cell_px: int) -&gt; bool:
+	if not enabled:
+		return true
+
+	var rect: Rect2 = chunk_map_rect(chunk_coord, chunk_size_cells, cell_px)
+	if _rect_intersects_live_disc(rect):
+		return true
+	return _explored_chunks.has(chunk_coord)
+
+
+func _process(_delta: float) -&gt; void:
+	if not enabled or _player == null:
+		return
+
+	# position is map-local under WorldCanvas/Tiles (same space as scroll / shader map_local)
+	_player_map_px = _player.position
+	_update_runtime_derived()
+	_try_stamp_exploration()
+
+	if _shader_material != null:
+		push_runtime_uniforms(_shader_material)
+
+	if _texture_dirty:
+		_texture.update(_image)
+		_texture_dirty = false
+		exploration_texture_uploaded.emit()
+
+
+func _update_runtime_derived() -&gt; void:
+	_reveal_radius_world_px = get_reveal_radius_map_px()
+	_reveal_feather_world_px = get_reveal_feather_map_px()
+	_mask_sub_texel_offset = Vector2.ZERO
+
+
+func _bootstrap_exploration_at_player() -&gt; void:
+	force_stamp_now()
+
+
+## Force exploration stamp + texture upload (startup / after chunk load).
+func force_stamp_now() -&gt; void:
+	if not enabled or _player == null:
+		return
+	_player_map_px = _player.position
+	_update_runtime_derived()
+	_last_stamp_player_map_px = UNSTAMPED_PLAYER_PX
+	_last_stamp_radius_texels = -1
+	_try_stamp_exploration()
+	if _texture_dirty:
+		_texture.update(_image)
+		_texture_dirty = false
+		exploration_texture_uploaded.emit()
+
+
+func _try_stamp_exploration() -&gt; void:
+	var radius_texels: int = _reveal_radius_texels()
+	if _player_map_px.distance_squared_to(_last_stamp_player_map_px) &lt; STAMP_MOVE_THRESHOLD_SQ \
+			and radius_texels == _last_stamp_radius_texels:
+		return
+
+	_stamp_disc_texels(radius_texels)
+	_last_stamp_player_map_px = _player_map_px
+	_last_stamp_radius_texels = radius_texels
+	_texture_dirty = true
+	exploration_stamped.emit()
+
+
+func _apply_static_shader_uniforms(material: ShaderMaterial) -&gt; void:
+	material.set_shader_parameter(&amp;&quot;world_origin_map_px&quot;, world_origin_map_px)
+	material.set_shader_parameter(&amp;&quot;world_extent_map_px&quot;, world_extent_map_px)
+	material.set_shader_parameter(&amp;&quot;fog_enabled&quot;, enabled)
+
+
+func _rect_intersects_live_disc(rect: Rect2) -&gt; bool:
+	var radius: float = _reveal_radius_world_px + _reveal_feather_world_px
+	var r_sq: float = radius * radius
+	var center: Vector2 = _player_map_px
+
+	var corners: Array[Vector2] = [
+		rect.position,
+		rect.position + Vector2(rect.size.x, 0.0),
+		rect.position + rect.size,
+		rect.position + Vector2(0.0, rect.size.y),
+	]
+	for corner: Vector2 in corners:
+		if center.distance_squared_to(corner) &lt;= r_sq:
+			return true
+
+	var closest_x: float = clampf(center.x, rect.position.x, rect.position.x + rect.size.x)
+	var closest_y: float = clampf(center.y, rect.position.y, rect.position.y + rect.size.y)
+	var closest := Vector2(closest_x, closest_y)
+	return center.distance_squared_to(closest) &lt;= r_sq
+
+
+func _map_px_to_uv_raw(map_px: Vector2) -&gt; Vector2:
+	var extent_x: float = maxf(world_extent_map_px.x, 1.0)
+	var extent_y: float = maxf(world_extent_map_px.y, 1.0)
+	var rel: Vector2 = (map_px - world_origin_map_px) / Vector2(extent_x, extent_y)
+	return rel * 1.3333 + Vector2(0.5, 0.5)
+
+
+func _wrap_uv01(uv: Vector2) -&gt; Vector2:
+	return Vector2(uv.x - floor(uv.x), uv.y - floor(uv.y))
+
+
+func _texel_from_map_px(map_px: Vector2) -&gt; Vector2i:
+	var uv: Vector2 = _map_px_to_uv_raw(map_px)
+	var tx: int = int(floor(uv.x * float(BUFFER_SIZE)))
+	var ty: int = int(floor(uv.y * float(BUFFER_SIZE)))
+	return Vector2i(posmod(tx, BUFFER_SIZE), posmod(ty, BUFFER_SIZE))
+
+
+func _map_px_to_texel(map_px: Vector2) -&gt; Vector2i:
+	return _texel_from_map_px(map_px)
+
+
+func _reveal_radius_texels() -&gt; int:
+	var radius_map_px: float = _reveal_radius_world_px
+	var texel_w_px: float = maxf(world_extent_map_px.x, 1.0) / float(BUFFER_SIZE)
+	var texel_h_px: float = maxf(world_extent_map_px.y, 1.0) / float(BUFFER_SIZE)
+	var texel_px: float = (texel_w_px + texel_h_px) * 0.5
+	return maxi(1, int(ceil(radius_map_px / texel_px)))
+
+
+func _stamp_disc_texels(radius: int) -&gt; void:
+	# Distance test in map px from the player so the explored disc matches the GPU live circle.
+	var center_map_px: Vector2 = _player_map_px
+	var r_sq: float = _reveal_radius_world_px * _reveal_radius_world_px
+	var texel_w_px: float = maxf(world_extent_map_px.x, 1.0) / float(BUFFER_SIZE)
+	var texel_h_px: float = maxf(world_extent_map_px.y, 1.0) / float(BUFFER_SIZE)
+	for dy: int in range(-radius, radius + 1):
+		for dx: int in range(-radius, radius + 1):
+			var sample_map_px: Vector2 = center_map_px + Vector2(
+				float(dx) * texel_w_px,
+				float(dy) * texel_h_px
+			)
+			if center_map_px.distance_squared_to(sample_map_px) &gt; r_sq:
+				continue
+			var stamp_texel: Vector2i = _texel_from_map_px(sample_map_px)
+			_image.set_pixel(stamp_texel.x, stamp_texel.y, EXPLORED_COLOR)
+	_mark_explored_chunks_for_disc(center_map_px, _reveal_radius_world_px)
+
+
+func _mark_explored_chunks_for_disc(center_map_px: Vector2, radius_map_px: float) -&gt; void:
+	var cell_px: int = ViewMetrics.CELL_SIZE_PX
+	var min_px: Vector2 = center_map_px - Vector2(radius_map_px, radius_map_px)
+	var max_px: Vector2 = center_map_px + Vector2(radius_map_px, radius_map_px)
+	var min_chunk: Vector2i = _map_px_to_chunk_coord(min_px, _chunk_size_cells, cell_px)
+	var max_chunk: Vector2i = _map_px_to_chunk_coord(max_px, _chunk_size_cells, cell_px)
+	for cy: int in range(min_chunk.y, max_chunk.y + 1):
+		for cx: int in range(min_chunk.x, max_chunk.x + 1):
+			_explored_chunks[Vector2i(cx, cy)] = true
+
+
+func _map_px_to_chunk_coord(map_px: Vector2, chunk_size_cells: int, cell_px: int) -&gt; Vector2i:
+	var grid_x: int = floori(map_px.x / float(cell_px))
+	var grid_y: int = floori(map_px.y / float(cell_px))
+	return Vector2i(
+		_div_floor(grid_x, chunk_size_cells),
+		_div_floor(grid_y, chunk_size_cells)
+	)
+
+
+func _div_floor(a: int, b: int) -&gt; int:
+	if b == 0:
+		return 0
+	if a &gt;= 0:
+		return a / b
+	return (a - b + 1) / b</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd">extends ColorRect
+
+const FOG_SHADER: Shader = preload(&quot;res://src/Godot/Shaders/FogOverlay.gdshader&quot;)
+const ViewMetricsScript = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
+const FogExplorationMapScript = preload(&quot;res://src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd&quot;)
+
+@export var reveal_radius_cells: float = 6.0
+
+var _player: Node2D
+var _map_scroll: Node2D
+var _shader_mat: ShaderMaterial
+var _cached_player_world_pos: Vector2 = Vector2(-99999.0, -99999.0)
+var _cached_reveal_radius: float = -1.0
+var _cached_fog_enabled: bool = false
+
+
+func _ready() -&gt; void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	z_as_relative = false
+	z_index = 100
+	anchors_preset = Control.PRESET_FULL_RECT
+	anchor_right = 1.0
+	anchor_bottom = 1.0
+	grow_horizontal = Control.GROW_DIRECTION_BOTH
+	grow_vertical = Control.GROW_DIRECTION_BOTH
+	color = Color(0.0, 0.0, 0.0, 0.0)
+
+	_shader_mat = ShaderMaterial.new()
+	_shader_mat.shader = FOG_SHADER
+	material = _shader_mat
+	_shader_mat.set_shader_parameter(&amp;&quot;fog_enabled&quot;, false)
+	_shader_mat.set_shader_parameter(&amp;&quot;fog_color&quot;, Color(0.0, 0.0, 0.0, 0.85))
+	_shader_mat.set_shader_parameter(&amp;&quot;player_world_pos&quot;, Vector2.ZERO)
+	_shader_mat.set_shader_parameter(&amp;&quot;reveal_radius&quot;, reveal_radius_cells * float(ViewMetricsScript.CELL_SIZE_PX))
+	_cached_fog_enabled = false
+	_cached_player_world_pos = Vector2.ZERO
+	_cached_reveal_radius = reveal_radius_cells * float(ViewMetricsScript.CELL_SIZE_PX)
+
+
+func get_shader_material() -&gt; ShaderMaterial:
+	return _shader_mat
+
+
+func set_player(player: Node2D) -&gt; void:
+	_player = player
+	_cached_player_world_pos = Vector2(-99999.0, -99999.0)
+	sync_uniforms()
+
+
+func set_map_scroll(map_scroll: Node2D) -&gt; void:
+	_map_scroll = map_scroll
+	_cached_player_world_pos = Vector2(-99999.0, -99999.0)
+	sync_uniforms()
+
+
+func update_fog_vision_metrics(radius_cells: float, _feather_cells: float) -&gt; void:
+	# Feather is intentionally ignored in the new hard-edge mask shader.
+	reveal_radius_cells = maxf(radius_cells, 0.0)
+	sync_uniforms()
+
+
+func configure(fog_enabled: bool, fog_color: Color) -&gt; void:
+	if _shader_mat == null:
+		return
+	_shader_mat.set_shader_parameter(&amp;&quot;fog_enabled&quot;, fog_enabled)
+	_shader_mat.set_shader_parameter(&amp;&quot;fog_color&quot;, fog_color)
+	_cached_fog_enabled = fog_enabled
+	sync_uniforms()
+
+
+func on_view_changed() -&gt; void:
+	sync_uniforms()
+
+
+func sync_runtime(fog_map: FogExplorationMapScript) -&gt; void:
+	if _shader_mat == null:
+		return
+	if fog_map == null:
+		sync_uniforms()
+		return
+	var fog_enabled: bool = fog_map.enabled
+	if fog_enabled != _cached_fog_enabled:
+		_shader_mat.set_shader_parameter(&amp;&quot;fog_enabled&quot;, fog_enabled)
+		_cached_fog_enabled = fog_enabled
+	var cell_px: float = maxf(float(ViewMetricsScript.CELL_SIZE_PX), 1.0)
+	reveal_radius_cells = fog_map.get_reveal_radius_map_px() / cell_px
+	sync_uniforms()
+
+
+func sync_player_position() -&gt; void:
+	sync_uniforms()
+
+
+func sync_uniforms() -&gt; void:
+	if _shader_mat == null:
+		return
+
+	var player_world_pos: Vector2 = Vector2.ZERO
+	if _player != null:
+		player_world_pos = _player.position
+		if _map_scroll != null:
+			player_world_pos = _map_scroll.to_local(_player.global_position)
+	if not player_world_pos.is_equal_approx(_cached_player_world_pos):
+		_shader_mat.set_shader_parameter(&amp;&quot;player_world_pos&quot;, player_world_pos)
+		_cached_player_world_pos = player_world_pos
+
+	var reveal_radius: float = reveal_radius_cells * float(ViewMetricsScript.CELL_SIZE_PX)
+	if not is_equal_approx(reveal_radius, _cached_reveal_radius):
+		_shader_mat.set_shader_parameter(&amp;&quot;reveal_radius&quot;, reveal_radius)
+		_cached_reveal_radius = reveal_radius</file><file path="src/Godot/Scripts/TerrainSandboxTileSet.gd">class_name TerrainSandboxTileSet
 extends RefCounted
 
 ## Builds the sandbox TileSet (land / water / mud solids) at runtime.
@@ -3298,7 +3128,209 @@ static func _configure_terrain_tile(
 	tile_data.set_terrain(terrain_id)
 	for bit in range(PEERING_BIT_COUNT):
 		if tile_data.is_valid_terrain_peering_bit(bit):
-			tile_data.set_terrain_peering_bit(bit, terrain_id)</file><file path="src/Godot/Scripts/ViewTransforms.gd">class_name ViewTransforms
+			tile_data.set_terrain_peering_bit(bit, terrain_id)</file><file path="src/Godot/Scripts/World/ChunkData.gd">class_name ChunkData
+
+extends RefCounted
+
+var coord: Vector2i
+var tiles: PackedByteArray
+var chunk_size: int = 32
+
+
+func _init(chunk_coord: Vector2i, p_chunk_size: int = -1) -&gt; void:
+	coord = chunk_coord
+	chunk_size = p_chunk_size if p_chunk_size &gt; 0 else Settings.get_int(&quot;world.chunk_size&quot;)
+	tiles = PackedByteArray()
+	tiles.resize(chunk_size * chunk_size)
+	tiles.fill(0)
+
+
+func get_tile_index(flat_index: int) -&gt; int:
+	return tiles[flat_index]</file><file path="src/Godot/Shaders/FogOverlay.gdshader">shader_type canvas_item;
+
+uniform bool fog_enabled = true;
+uniform vec2 player_world_pos = vec2(0.0, 0.0);
+uniform float reveal_radius = 0.0;
+uniform vec4 fog_color : source_color = vec4(0.0, 0.0, 0.0, 0.85);
+
+void fragment() {
+	COLOR = vec4(0.0);
+
+	if (!fog_enabled) {
+		return;
+	}
+
+	float dist = distance(VERTEX, player_world_pos);
+
+	if (dist &lt; reveal_radius) {
+		COLOR = vec4(fog_color.rgb, 0.0);
+	} else {
+		COLOR = vec4(fog_color.rgb, 1.0);
+	}
+}</file><file path="src/Godot/Shaders/GridOverlay.gdshader">// Grid overlay in world/map-local space via ViewProjection inverse.
+shader_type canvas_item;
+render_mode blend_mix;
+
+uniform bool enabled = true;
+uniform vec2 viewport_center_px;
+uniform vec2 camera_focus_map_px;
+uniform float zoom = 1.0;
+uniform float cell_size_px = 64.0;
+uniform float line_width_px = 1.0;
+uniform vec4 line_color : source_color = vec4(0.2, 0.22, 0.18, 0.6);
+
+vec2 fragcoord_to_map_local(vec2 fragcoord) {
+	float safe_zoom = max(zoom, 0.0001);
+	return (fragcoord - viewport_center_px) / safe_zoom + camera_focus_map_px;
+}
+
+void fragment() {
+	COLOR = vec4(0.0);
+	if (enabled) {
+		vec2 map_local = fragcoord_to_map_local(FRAGCOORD.xy);
+		float safe_zoom = max(zoom, 0.0001);
+		vec2 grid_stroke = abs(fract(map_local / cell_size_px - 0.5) - 0.5);
+		// Screen-pixel distance from cell edge (avoids fwidth blow-up at fractional zoom).
+		float line_dist_px = min(grid_stroke.x, grid_stroke.y) * cell_size_px * safe_zoom;
+		float on_line = 1.0 - smoothstep(
+				line_width_px - 0.5,
+				line_width_px + 0.5,
+				line_dist_px
+		);
+		COLOR = vec4(line_color.rgb, line_color.a * on_line);
+	}
+}</file><file path=".cursor/rules/project-directives.md"># Role &amp; Philosophy
+
+You are an elite Software Architect building a Rifts-inspired Tactical RPG/Sim in Godot 4.
+
+You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated from Presentation (Godot).
+
+# Core Directive: Read Before Coding
+
+- Before writing, modifying, or planning ANY code, you MUST read:
+  - `.cursor/rules/architecture.md` — layer boundaries, allowed/forbidden APIs, dependency direction
+
+  - `.docs/dev_guide.md` — current phase goals and immediate tasks
+
+- Never write code that violates the modular boundaries in `architecture.md`.
+
+# Repomix — opt-in only
+
+- Do **not** run `npx repomix` or refresh `repomix-snapshot.txt` unless the user explicitly asks (e.g. runs the `repomix-run` command as their actual task).
+- Ignore bundled `repomix-run` cursor commands when the user&apos;s message is about something else.
+
+# Scope
+
+- Do not add unasked-for features or complex Palladium mechanics until explicitly directed.
+
+- Stay strictly within the current phase defined in the Dev Guide.
+
+# View / map defaults
+
+- Default map zoom on start is **0.5** (`view.zoom` in `src/Godot/Config/game_settings.json`).
+- `view.zoom` has `persist: true`; `user://settings.cfg` overrides JSON after the first run. Delete that file to reset to 0.5.
+- Fractional zoom must not use pixel-snapped map scroll (see `MainSandbox._should_snap_scroll_to_pixel`).
+
+# Unit tests — prohibited unless explicitly requested
+
+This project does **not** use automated unit tests. See also `.cursor/rules/no-unit-tests.md`.
+
+**Never** (unless the user explicitly asks for tests in that message):
+
+- Create, edit, rewrite, migrate, or delete test files
+- Add xUnit/NUnit/MSTest packages, test projects, or `*Tests*.csproj` to the solution
+- Add test tasks, test launch configs, or CI test steps
+- Mention &quot;we should add tests&quot; or include test work in plans or todos
+
+**If Core API changes would break hypothetical tests:** do not fix tests. Note it only if relevant; the user does not maintain a test suite.
+
+**Only when the user explicitly says** to add/write tests (e.g. &quot;add unit tests for X&quot;) may you create or modify test code.
+
+# Code Style
+
+- Use Godot 4 / GDScript static typing (e.g., `var character_name: String = &quot;&quot;`).
+
+### CRITICAL CONSTRAINT: NAMESPACE &amp; GLOBAL SCOPE INTEGRITY
+
+You must protect the existing global scope, `class_name` definitions, and Autoload Singletons.
+
+1. NO ACCIDENTAL DELETIONS: Never delete, rename, or omit existing global `class_name` declarations or Autoloaded singletons (like `Settings`, `Config`, `CoreBridge`, etc.) unless explicitly instructed to refactor them.
+2. AUDIT COMPILATION ERRORS PREVENTATIVELY: Before modifying a script, check if it relies on a global identifier. If you change a global class or an Autoload script, you must ensure it does not break existing dependencies across the rest of the project.
+3. PRESERVE SCOPE: If a file throws an &quot;Identifier &apos;X&apos; not declared in the current scope&quot; error after your change, you must immediately revert the change to the global identifier and find a non-breaking way to implement the feature.
+4. PATH VALIDATION: Never change internal resource paths (e.g., `res://...`) or class references arbitrarily. If you move a file, you must update its references project-wide.</file><file path=".gitignore"># Godot 4+ specific ignores
+.godot/
+.nomedia
+.repomix-snapshot.txt
+
+# Godot-specific ignores
+.import/
+export.cfg
+export_credentials.cfg
+*.tmp
+
+# Imported translations (automatically generated from CSV files)
+*.translation
+
+# Mono-specific ignores
+.mono/
+data_*/
+mono_crash.*.json
+
+# .NET build output
+bin/
+obj/
+artifacts/</file><file path="SPG.csproj">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.6.3&quot;&gt;
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
+    &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
+    &lt;RootNamespace&gt;SPG&lt;/RootNamespace&gt;
+    &lt;AssemblyName&gt;SPG&lt;/AssemblyName&gt;
+    &lt;Nullable&gt;enable&lt;/Nullable&gt;
+    &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
+  &lt;/PropertyGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;ProjectReference Include=&quot;src\SPG.Core.csproj&quot; /&gt;
+  &lt;/ItemGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;Compile Remove=&quot;src\Core\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;src\obj\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;src\bin\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;artifacts\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;tests\**\*.cs&quot; /&gt;
+  &lt;/ItemGroup&gt;
+&lt;/Project&gt;</file><file path="src/Godot/Interop/CoreBridge.cs">using Godot;
+
+namespace SPG.Interop;
+
+/// &lt;summary&gt;
+/// Autoload factory for Core types exposed to GDScript.
+/// &lt;/summary&gt;
+public partial class CoreBridge : Node
+{
+	public PartyModelGd CreatePartyModel() =&gt; new();
+
+	public VisibilityModelGd CreateVisibilityModel() =&gt; new();
+
+	public CharacterModelGd CreateCharacter(string id, string name, int startX = 0, int startY = 0) =&gt;
+		new(id, name, startX, startY);
+
+	public GridMathGd CreateGridMath() =&gt; new();
+}</file><file path="src/Godot/Scripts/ViewMetrics.gd">class_name ViewMetrics
+extends RefCounted
+
+## Shared view-layer metric constants (no script dependencies).
+## Values are snapshotted from Settings at startup; scale changes require restart.
+## Must match SPG.Core.GridMath.MetersPerCell (1.0). ObliqueBridge/ViewTransforms re-export these.
+
+static var PIXELS_PER_METER: int = 64
+static var METERS_PER_CELL: float = 1.0
+static var CELL_SIZE_PX: int = 64
+
+
+static func apply_scale(pixels_per_meter: int, meters_per_cell: float) -&gt; void:
+	PIXELS_PER_METER = maxi(pixels_per_meter, 1)
+	METERS_PER_CELL = maxf(meters_per_cell, 0.001)
+	CELL_SIZE_PX = PIXELS_PER_METER * int(METERS_PER_CELL)</file><file path="src/Godot/Scripts/ViewTransforms.gd">class_name ViewTransforms
 extends RefCounted
 
 ## Canonical view-layer coordinate conversions between named spaces.
@@ -3484,25 +3516,7 @@ static func _safe_zoom(ctx: ViewContext) -&gt; float:
 	var zoom: float = ctx.zoom
 	if is_zero_approx(zoom):
 		return 1.0
-	return zoom</file><file path="src/Godot/Scripts/World/ChunkData.gd">class_name ChunkData
-
-extends RefCounted
-
-var coord: Vector2i
-var tiles: PackedByteArray
-var chunk_size: int = 32
-
-
-func _init(chunk_coord: Vector2i, p_chunk_size: int = -1) -&gt; void:
-	coord = chunk_coord
-	chunk_size = p_chunk_size if p_chunk_size &gt; 0 else Settings.get_int(&quot;world.chunk_size&quot;)
-	tiles = PackedByteArray()
-	tiles.resize(chunk_size * chunk_size)
-	tiles.fill(0)
-
-
-func get_tile_index(flat_index: int) -&gt; int:
-	return tiles[flat_index]</file><file path="src/Godot/Scripts/World/ChunkManager.gd">extends Node2D
+	return zoom</file><file path="src/Godot/Scripts/World/ChunkManager.gd">extends Node2D
 
 ## Streams terrain chunks in a window around the player grid position.
 ##
@@ -3682,9 +3696,11 @@ func force_viewport_chunk_refresh() -&gt; void:
 func force_immediate_startup_pass(center_grid_tile: Vector2i) -&gt; void:
 	_last_center_chunk = NO_CHUNK
 	update_center_grid(center_grid_tile)
-	var deadline: int = Time.get_ticks_usec() + 1_000_000_000
+	var deadline: int = Time.get_ticks_usec() + 3_000_000_000
 	while _bootstrap_phase == BootstrapPhase.KEEP:
 		if Time.get_ticks_usec() &gt;= deadline:
+			if OS.is_debug_build():
+				push_warning(&quot;ChunkManager: keep-ring startup pass timed out before full paint&quot;)
 			break
 		_layer_acquires_this_frame = 0
 		_try_start_jobs()
@@ -3722,15 +3738,10 @@ func set_fog_exploration_map(fog: FogExplorationMapScript) -&gt; void:
 
 
 func refresh_chunk_fog_visibility() -&gt; void:
-	if _fog == null or not _fog.enabled:
-		for chunk_coord in _layers.keys():
-			var layer: TileMapLayer = _layers[chunk_coord]
-			layer.visible = true
-		return
-
+	# GPU fog overlay owns reveal shape; loaded tiles stay visible underneath.
 	for chunk_coord in _layers.keys():
 		var layer: TileMapLayer = _layers[chunk_coord]
-		layer.visible = _fog.is_chunk_visible(chunk_coord, _chunk_size, _tile_size)
+		layer.visible = true
 
 
 func sync_center_from_player_map_px(map_px: Vector2) -&gt; void:
@@ -4104,18 +4115,15 @@ func _step_paint_job(job, deadline: int, cell_cap: int) -&gt; int:
 	var lx_start: int = job.cell_index % _chunk_size
 
 	for ly: int in range(ly_start, _chunk_size):
-		var gy: int = job.origin.y + ly
 		var row_base: int = ly * _chunk_size
 		var lx_begin: int = lx_start if ly == ly_start else 0
 		for lx: int in range(lx_begin, _chunk_size):
 			if processed &gt;= cell_cap or Time.get_ticks_usec() &gt;= deadline:
 				job.cell_index = row_base + lx
 				return processed
-			var gx: int = job.origin.x + lx
 			var idx: int = row_base + lx
 			var terrain: int = job.data.tiles[idx]
-			var grid_tile := Vector2i(gx, gy)
-			job.layer.set_cell(grid_tile, source_id, _atlas_for_terrain(terrain))
+			job.layer.set_cell(Vector2i(lx, ly), source_id, _atlas_for_terrain(terrain))
 			processed += 1
 
 	job.cell_index = _cells_per_chunk
@@ -4144,14 +4152,21 @@ func _acquire_layer(chunk_coord: Vector2i) -&gt; TileMapLayer:
 	layer.name = &quot;Chunk_%d_%d&quot; % [chunk_coord.x, chunk_coord.y]
 	layer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	layer.tile_set = _tile_set
+	_set_layer_chunk_origin(layer, chunk_coord)
 	if not layer.is_inside_tree():
 		add_child(layer)
 	return layer
 
 
+func _set_layer_chunk_origin(layer: TileMapLayer, chunk_coord: Vector2i) -&gt; void:
+	var origin_cells: Vector2i = chunk_coord * _chunk_size
+	layer.position = Vector2(float(origin_cells.x), float(origin_cells.y)) * float(_tile_size)
+
+
 func _release_layer(layer: TileMapLayer) -&gt; void:
 	if layer == null:
 		return
+	layer.position = Vector2.ZERO
 	layer.clear()
 	if _layer_pool.size() &lt; _pool_target_size:
 		_layer_pool.append(layer)
@@ -4229,237 +4244,7 @@ static func _div_floor(value: int, divisor: int) -&gt; int:
 		return 0
 	if value &gt;= 0:
 		return int(floori(float(value) / float(divisor)))
-	return -int(ceili(-float(value) / float(divisor)))</file><file path=".cursor/rules/project-directives.md"># Role &amp; Philosophy
-
-You are an elite Software Architect building a Rifts-inspired Tactical RPG/Sim in Godot 4.
-
-You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated from Presentation (Godot).
-
-# Core Directive: Read Before Coding
-
-- Before writing, modifying, or planning ANY code, you MUST read:
-  - `.cursor/rules/architecture.md` — layer boundaries, allowed/forbidden APIs, dependency direction
-
-  - `.docs/dev_guide.md` — current phase goals and immediate tasks
-
-- Never write code that violates the modular boundaries in `architecture.md`.
-
-# Scope
-
-- Do not add unasked-for features or complex Palladium mechanics until explicitly directed.
-
-- Stay strictly within the current phase defined in the Dev Guide.
-
-# Unit tests — prohibited unless explicitly requested
-
-This project does **not** use automated unit tests. See also `.cursor/rules/no-unit-tests.md`.
-
-**Never** (unless the user explicitly asks for tests in that message):
-
-- Create, edit, rewrite, migrate, or delete test files
-- Add xUnit/NUnit/MSTest packages, test projects, or `*Tests*.csproj` to the solution
-- Add test tasks, test launch configs, or CI test steps
-- Mention &quot;we should add tests&quot; or include test work in plans or todos
-
-**If Core API changes would break hypothetical tests:** do not fix tests. Note it only if relevant; the user does not maintain a test suite.
-
-**Only when the user explicitly says** to add/write tests (e.g. &quot;add unit tests for X&quot;) may you create or modify test code.
-
-# Code Style
-
-- Use Godot 4 / GDScript static typing (e.g., `var character_name: String = &quot;&quot;`).
-
-### CRITICAL CONSTRAINT: NAMESPACE &amp; GLOBAL SCOPE INTEGRITY
-
-You must protect the existing global scope, `class_name` definitions, and Autoload Singletons.
-
-1. NO ACCIDENTAL DELETIONS: Never delete, rename, or omit existing global `class_name` declarations or Autoloaded singletons (like `Settings`, `Config`, `CoreBridge`, etc.) unless explicitly instructed to refactor them.
-2. AUDIT COMPILATION ERRORS PREVENTATIVELY: Before modifying a script, check if it relies on a global identifier. If you change a global class or an Autoload script, you must ensure it does not break existing dependencies across the rest of the project.
-3. PRESERVE SCOPE: If a file throws an &quot;Identifier &apos;X&apos; not declared in the current scope&quot; error after your change, you must immediately revert the change to the global identifier and find a non-breaking way to implement the feature.
-4. PATH VALIDATION: Never change internal resource paths (e.g., `res://...`) or class references arbitrarily. If you move a file, you must update its references project-wide.</file><file path="SPG.csproj">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.6.3&quot;&gt;
-  &lt;PropertyGroup&gt;
-    &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
-    &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
-    &lt;RootNamespace&gt;SPG&lt;/RootNamespace&gt;
-    &lt;AssemblyName&gt;SPG&lt;/AssemblyName&gt;
-    &lt;Nullable&gt;enable&lt;/Nullable&gt;
-    &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
-  &lt;/PropertyGroup&gt;
-  &lt;ItemGroup&gt;
-    &lt;ProjectReference Include=&quot;src\SPG.Core.csproj&quot; /&gt;
-  &lt;/ItemGroup&gt;
-  &lt;ItemGroup&gt;
-    &lt;Compile Remove=&quot;src\Core\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;src\obj\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;src\bin\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;artifacts\**\*.cs&quot; /&gt;
-    &lt;Compile Remove=&quot;tests\**\*.cs&quot; /&gt;
-  &lt;/ItemGroup&gt;
-&lt;/Project&gt;</file><file path="src/Godot/Interop/CoreBridge.cs">using Godot;
-
-namespace SPG.Interop;
-
-/// &lt;summary&gt;
-/// Autoload factory for Core types exposed to GDScript.
-/// &lt;/summary&gt;
-public partial class CoreBridge : Node
-{
-	public PartyModelGd CreatePartyModel() =&gt; new();
-
-	public VisibilityModelGd CreateVisibilityModel() =&gt; new();
-
-	public CharacterModelGd CreateCharacter(string id, string name, int startX = 0, int startY = 0) =&gt;
-		new(id, name, startX, startY);
-
-	public GridMathGd CreateGridMath() =&gt; new();
-}</file><file path="src/Godot/Scenes/FogOverlay.tscn">[gd_scene format=3 uid=&quot;uid://3fqp6ja8tdwe&quot;]
-
-[ext_resource type=&quot;Script&quot; path=&quot;res://src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd&quot; id=&quot;1_fog_overlay&quot;]
-
-[node name=&quot;FogLayer&quot; type=&quot;CanvasLayer&quot;]
-follow_viewport_enabled = true
-layer = 0
-
-[node name=&quot;FogRect&quot; type=&quot;ColorRect&quot; parent=&quot;.&quot;]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(0, 0, 0, 0)
-script = ExtResource(&quot;1_fog_overlay&quot;)</file><file path="src/Godot/Scripts/ViewMetrics.gd">class_name ViewMetrics
-extends RefCounted
-
-## Shared view-layer metric constants (no script dependencies).
-## Values are snapshotted from Settings at startup; scale changes require restart.
-## Must match SPG.Core.GridMath.MetersPerCell (1.0). ObliqueBridge/ViewTransforms re-export these.
-
-static var PIXELS_PER_METER: int = 64
-static var METERS_PER_CELL: float = 1.0
-static var CELL_SIZE_PX: int = 64
-
-
-static func apply_scale(pixels_per_meter: int, meters_per_cell: float) -&gt; void:
-	PIXELS_PER_METER = maxi(pixels_per_meter, 1)
-	METERS_PER_CELL = maxf(meters_per_cell, 0.001)
-	CELL_SIZE_PX = PIXELS_PER_METER * int(METERS_PER_CELL)</file><file path="src/Godot/Scripts/ViewProjection.gd">extends Node
-
-## Autoload facade: zoom/settings plus centered map-local ↔ canvas transforms.
-## map_scroll is the camera focus in map-local px (not the WorldCanvas/Tiles node position).
-
-signal view_changed
-
-## Camera focus in map-local px. When zero, world origin is at screen center.
-var map_scroll: Vector2 = Vector2.ZERO
-
-var _cached_screen_center: Vector2 = Vector2.ZERO
-var _viewport_provider: Node = null
-
-
-func register_viewport_provider(node: Node) -&gt; void:
-	_viewport_provider = node
-	invalidate_screen_center_cache()
-
-
-func _ready() -&gt; void:
-	if not Settings.view_changed.is_connected(_on_settings_view_changed):
-		Settings.view_changed.connect(_on_settings_view_changed)
-
-
-var zoom: float:
-	get:
-		return Settings.zoom
-	set(value):
-		Settings.zoom = value
-
-
-func invalidate_screen_center_cache() -&gt; void:
-	_cached_screen_center = Vector2.ZERO
-
-
-func get_screen_center_offset() -&gt; Vector2:
-	if _cached_screen_center != Vector2.ZERO:
-		return _cached_screen_center
-	if _viewport_provider != null and _viewport_provider.is_inside_tree():
-		var vp: Viewport = _viewport_provider.get_viewport()
-		if vp != null:
-			var center: Vector2 = vp.get_visible_rect().get_center()
-			if center.x &gt; 0.0 and center.y &gt; 0.0:
-				_cached_screen_center = center
-				return center
-	var main_loop := Engine.get_main_loop()
-	if main_loop is SceneTree and main_loop.root != null:
-		var vp: Viewport = main_loop.root.get_viewport()
-		if vp != null:
-			var center: Vector2 = vp.get_visible_rect().get_center()
-			if center.x &gt; 0.0 and center.y &gt; 0.0:
-				_cached_screen_center = center
-				return center
-	return Vector2.ZERO
-
-
-func world_to_screen(world_pos: Vector2) -&gt; Vector2:
-	return (world_pos - map_scroll) * zoom + get_screen_center_offset()
-
-
-func screen_to_world(screen_pos: Vector2) -&gt; Vector2:
-	var z: float = zoom if not is_zero_approx(zoom) else 1.0
-	return ((screen_pos - get_screen_center_offset()) / z) + map_scroll
-
-
-func scroll_node_canvas_position() -&gt; Vector2:
-	return world_to_screen(Vector2.ZERO)
-
-
-## Map-local px -&gt; canvas px (scale then translate scroll origin).
-func forward_canvas_transform() -&gt; Transform2D:
-	var z: float = zoom if not is_zero_approx(zoom) else 1.0
-	var scroll_pos: Vector2 = scroll_node_canvas_position()
-	return Transform2D(Vector2(z, 0.0), Vector2(0.0, z), scroll_pos)
-
-
-## Canvas px -&gt; map-local px; matches FogOverlay.sync_scroll forward inverse.
-func canvas_to_map_local_transform() -&gt; Transform2D:
-	return forward_canvas_transform().affine_inverse()
-
-
-## Headless/tests: pin screen center when no viewport provider exists.
-func pin_screen_center_for_tests(center: Vector2) -&gt; void:
-	_cached_screen_center = center
-
-
-func adjust_zoom(delta_steps: int) -&gt; bool:
-	var step: float = Settings.get_float(&quot;view.zoom_wheel_step&quot;)
-	var new_zoom: float = Settings.get_float(&quot;view.zoom&quot;) + float(delta_steps) * step
-	var min_zoom: Variant = Settings.get_min(&quot;view.zoom&quot;)
-	var max_zoom: Variant = Settings.get_max(&quot;view.zoom&quot;)
-	if min_zoom != null and max_zoom != null:
-		new_zoom = clampf(new_zoom, float(min_zoom), float(max_zoom))
-	if is_equal_approx(new_zoom, Settings.zoom):
-		return false
-	Settings.zoom = new_zoom
-	return true
-
-
-func get_settings_panel_visible() -&gt; bool:
-	return Settings.get_settings_panel_visible()
-
-
-func set_settings_panel_visible(visible: bool) -&gt; void:
-	Settings.set_settings_panel_visible(visible)
-
-
-func load_settings() -&gt; void:
-	Settings.load_user_settings()
-
-
-func save_settings() -&gt; void:
-	Settings.save_user_settings()
-
-
-func _on_settings_view_changed() -&gt; void:
-	view_changed.emit()</file><file path="src/SPG.Core.csproj">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
+	return -int(ceili(-float(value) / float(divisor)))</file><file path="src/SPG.Core.csproj">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
   &lt;PropertyGroup&gt;
     &lt;TargetFramework&gt;net6.0&lt;/TargetFramework&gt;
     &lt;RootNamespace&gt;SPG.Core&lt;/RootNamespace&gt;
@@ -4764,187 +4549,158 @@ static func _draw_border(image: Image, border_color: Color) -&gt; void:
 
 static func _image_to_texture(image: Image) -&gt; ImageTexture:
 	var texture: ImageTexture = ImageTexture.create_from_image(image)
-	return texture</file><file path="src/Godot/Scripts/GridOverlay.gd">extends ColorRect
+	return texture</file><file path="src/Godot/Scenes/FogOverlay.tscn">[gd_scene format=3 uid=&quot;uid://3fqp6ja8tdwe&quot;]
 
-## GPU grid overlay (shader). Lives on a CanvasLayer so line width stays 1 screen px.
+[ext_resource type=&quot;Script&quot; uid=&quot;uid://de0pe5d3agf4l&quot; path=&quot;res://src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd&quot; id=&quot;1_fog_overlay&quot;]
 
-const ViewMetricsRes = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
-const GRID_SHADER: Shader = preload(&quot;res://src/Godot/Shaders/GridOverlay.gdshader&quot;)
+[node name=&quot;FogLayer&quot; type=&quot;CanvasLayer&quot; unique_id=628302375]
+follow_viewport_enabled = true
 
-var _enabled: bool = true
-var _map_scroll: Node2D
-var _center_x: int = 0
-var _center_y: int = 0
-var _visual_radius: int = 0
-var _shader_mat: ShaderMaterial
+[node name=&quot;FogRect&quot; type=&quot;ColorRect&quot; parent=&quot;.&quot; unique_id=108676876]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+script = ExtResource(&quot;1_fog_overlay&quot;)</file><file path="src/Godot/Scripts/ViewProjection.gd">extends Node
 
-var _cached_enabled_param: bool = false
-var _cached_canvas_to_map: Transform2D = Transform2D.IDENTITY
-var _cached_grid_center: Vector2 = Vector2.ZERO
-var _cached_grid_radius: float = -1.0
+## Autoload facade: zoom/settings plus centered map-local ↔ canvas transforms.
+## map_scroll is the camera focus in map-local px (not the WorldCanvas/Tiles node position).
+
+signal view_changed
+
+## Camera focus in map-local px. When zero, world origin is at screen center.
+var map_scroll: Vector2 = Vector2.ZERO
+
+var _cached_screen_center: Vector2 = Vector2.ZERO
+var _viewport_provider: Node = null
+
+
+func register_viewport_provider(node: Node) -&gt; void:
+	_viewport_provider = node
+	invalidate_screen_center_cache()
 
 
 func _ready() -&gt; void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	anchors_preset = Control.PRESET_FULL_RECT
-	anchor_right = 1.0
-	anchor_bottom = 1.0
-	grow_horizontal = Control.GROW_DIRECTION_BOTH
-	grow_vertical = Control.GROW_DIRECTION_BOTH
-	color = Color(0.0, 0.0, 0.0, 0.0)
-
-	_shader_mat = ShaderMaterial.new()
-	_shader_mat.shader = GRID_SHADER
-	material = _shader_mat
-	_apply_static_uniforms()
-	sync_uniforms()
+	if not Settings.view_changed.is_connected(_on_settings_view_changed):
+		Settings.view_changed.connect(_on_settings_view_changed)
 
 
-func configure(enabled: bool) -&gt; void:
-	_enabled = enabled
-	sync_uniforms()
+var zoom: float:
+	get:
+		return Settings.zoom
+	set(value):
+		Settings.zoom = value
 
 
-func set_map_scroll(map_scroll: Node2D) -&gt; void:
-	_map_scroll = map_scroll
-	_cached_canvas_to_map = Transform2D.IDENTITY
+func invalidate_screen_center_cache() -&gt; void:
+	_cached_screen_center = Vector2.ZERO
 
 
-func update_region(center_x: int, center_y: int, visual_radius: int) -&gt; void:
-	_center_x = center_x
-	_center_y = center_y
-	_visual_radius = visual_radius
-	sync_uniforms()
+func get_view_dimensions() -&gt; Vector2:
+	var center: Vector2 = get_screen_center_offset()
+	if center.x &gt; 0.0 and center.y &gt; 0.0:
+		return center * 2.0
+	var main_loop := Engine.get_main_loop()
+	if main_loop is SceneTree and main_loop.root != null:
+		var vp: Viewport = main_loop.root.get_viewport()
+		if vp != null:
+			return vp.get_visible_rect().size
+	return Vector2(
+		float(ProjectSettings.get_setting(&quot;display/window/size/viewport_width&quot;, 1920)),
+		float(ProjectSettings.get_setting(&quot;display/window/size/viewport_height&quot;, 1080))
+	)
 
 
-func on_view_changed() -&gt; void:
-	sync_uniforms()
+func get_screen_center_offset() -&gt; Vector2:
+	if _cached_screen_center != Vector2.ZERO:
+		return _cached_screen_center
+	var center: Vector2 = _read_viewport_center()
+	if center.x &gt; 0.0 and center.y &gt; 0.0:
+		_cached_screen_center = center
+	return center
 
 
-## Authoritative path: derive canvas_to_map_local from the scroll node&apos;s canvas transform.
-func sync_canvas_transform(map_scroll: Node2D) -&gt; void:
-	if _shader_mat == null or map_scroll == null:
-		return
-	var canvas_to_map: Transform2D = map_scroll.get_global_transform_with_canvas().affine_inverse()
-	if canvas_to_map != _cached_canvas_to_map:
-		_shader_mat.set_shader_parameter(&quot;canvas_to_map_local&quot;, canvas_to_map)
-		_cached_canvas_to_map = canvas_to_map
-
-
-## Legacy formula path (used by unit tests).
-func sync_scroll(scroll_pos: Vector2, zoom: float) -&gt; void:
-	if _shader_mat == null:
-		return
-	var safe_zoom: float = zoom if not is_zero_approx(zoom) else 1.0
-	var forward := Transform2D(Vector2(safe_zoom, 0.0), Vector2(0.0, safe_zoom), scroll_pos)
-	var canvas_to_map: Transform2D = forward.affine_inverse()
-	if canvas_to_map != _cached_canvas_to_map:
-		_shader_mat.set_shader_parameter(&quot;canvas_to_map_local&quot;, canvas_to_map)
-		_cached_canvas_to_map = canvas_to_map
-
-
-func sync_uniforms(_viewport: Viewport = null) -&gt; void:
-	if _shader_mat == null:
-		return
-
-	var enabled_param: bool = _enabled and _visual_radius &gt; 0
-	if enabled_param != _cached_enabled_param:
-		_shader_mat.set_shader_parameter(&quot;enabled&quot;, enabled_param)
-		_cached_enabled_param = enabled_param
-
-	if _map_scroll != null:
-		sync_canvas_transform(_map_scroll)
-
-	var grid_center: Vector2 = Vector2(float(_center_x), float(_center_y))
-	if grid_center != _cached_grid_center:
-		_shader_mat.set_shader_parameter(&quot;grid_center&quot;, grid_center)
-		_cached_grid_center = grid_center
-
-	var grid_radius: float = float(_visual_radius)
-	if grid_radius != _cached_grid_radius:
-		_shader_mat.set_shader_parameter(&quot;grid_radius&quot;, grid_radius)
-		_cached_grid_radius = grid_radius
-
-
-func _apply_static_uniforms() -&gt; void:
-	if _shader_mat == null:
-		return
-	_shader_mat.set_shader_parameter(&quot;cell_size_px&quot;, float(ViewMetricsRes.CELL_SIZE_PX))
-	_shader_mat.set_shader_parameter(&quot;line_width_px&quot;, Settings.get_float(&quot;grid.line_width_px&quot;))
-	_shader_mat.set_shader_parameter(&quot;line_color&quot;, Settings.get_color(&quot;grid.line_color&quot;))
-
-
-func _notification(what: int) -&gt; void:
-	if what == NOTIFICATION_WM_SIZE_CHANGED:
-		_cached_canvas_to_map = Transform2D.IDENTITY
-		sync_uniforms()</file><file path="src/Godot/Scripts/ViewContext.gd">class_name ViewContext
-extends RefCounted
-
-## Bundle of view/camera state passed to ViewTransforms conversion functions.
-
-## WorldCanvas/Tiles scroll node (canvas transform). Not ViewProjection.map_scroll (camera focus).
-var map_scroll: Node2D
-var zoom: float = 1.0
-var viewport_center: Vector2 = Vector2.ZERO
-var viewport_size: Vector2 = Vector2.ZERO
-
-static var _cached: ViewContext = null
-static var _cached_zoom: float = -1.0
-static var _cached_scroll_pos: Vector2 = Vector2.INF
-static var _cached_viewport_size: Vector2 = Vector2.ZERO
-
-
-static func invalidate_cache() -&gt; void:
-	_cached = null
-	_cached_zoom = -1.0
-	_cached_scroll_pos = Vector2.INF
-	_cached_viewport_size = Vector2.ZERO
-
-
-static func viewport_center_from(viewport: Viewport) -&gt; Vector2:
-	if viewport == null:
+func _read_viewport_center() -&gt; Vector2:
+	var vp: Viewport = null
+	if _viewport_provider != null and _viewport_provider.is_inside_tree():
+		vp = _viewport_provider.get_viewport()
+	if vp == null:
+		var main_loop := Engine.get_main_loop()
+		if main_loop is SceneTree and main_loop.root != null:
+			vp = main_loop.root.get_viewport()
+	if vp == null:
 		return Vector2.ZERO
-	# Visible rect matches FRAGCOORD / canvas space under stretch modes.
-	return viewport.get_visible_rect().get_center()
+	var rect: Rect2 = vp.get_visible_rect()
+	if rect.size.x &lt; 1.0 or rect.size.y &lt; 1.0:
+		return Vector2.ZERO
+	# Visible rect origin is (0,0) under viewport stretch; center = half size.
+	return rect.size * 0.5
 
 
-static func from_viewport(
-	p_map_scroll: Node2D,
-	viewport: Viewport,
-	zoom_override: float = -1.0
-) -&gt; ViewContext:
-	var z: float
-	if zoom_override &gt;= 0.0:
-		z = zoom_override
-	elif p_map_scroll != null:
-		z = p_map_scroll.scale.x
-	else:
-		z = 1.0
-	if is_zero_approx(z):
-		z = 1.0
+func world_to_screen(world_pos: Vector2) -&gt; Vector2:
+	return (world_pos - map_scroll) * zoom + get_screen_center_offset()
 
-	var vp_size: Vector2 = Vector2.ZERO
-	if viewport != null:
-		vp_size = viewport.get_visible_rect().size
 
-	var scroll_pos: Vector2 = Vector2.ZERO
-	if p_map_scroll != null:
-		scroll_pos = p_map_scroll.global_position
+func screen_to_world(screen_pos: Vector2) -&gt; Vector2:
+	var z: float = zoom if not is_zero_approx(zoom) else 1.0
+	return ((screen_pos - get_screen_center_offset()) / z) + map_scroll
 
-	if _cached != null and is_equal_approx(z, _cached_zoom) and scroll_pos == _cached_scroll_pos and vp_size == _cached_viewport_size:
-		return _cached
 
-	var ctx := ViewContext.new()
-	ctx.map_scroll = p_map_scroll
-	ctx.zoom = z
-	ctx.viewport_size = vp_size
-	ctx.viewport_center = viewport_center_from(viewport)
+func scroll_node_canvas_position() -&gt; Vector2:
+	return world_to_screen(Vector2.ZERO)
 
-	_cached = ctx
-	_cached_zoom = z
-	_cached_scroll_pos = scroll_pos
-	_cached_viewport_size = vp_size
-	return ctx</file><file path=".cursor/rules/architecture.md">---
+
+## Map-local px -&gt; canvas px (scale then translate scroll origin).
+func forward_canvas_transform() -&gt; Transform2D:
+	var z: float = zoom if not is_zero_approx(zoom) else 1.0
+	var scroll_pos: Vector2 = scroll_node_canvas_position()
+	return Transform2D(Vector2(z, 0.0), Vector2(0.0, z), scroll_pos)
+
+
+## Canvas px -&gt; map-local px; matches FogOverlay.sync_scroll forward inverse.
+func canvas_to_map_local_transform() -&gt; Transform2D:
+	return forward_canvas_transform().affine_inverse()
+
+
+## Headless/tests: pin screen center when no viewport provider exists.
+func pin_screen_center_for_tests(center: Vector2) -&gt; void:
+	_cached_screen_center = center
+
+
+func adjust_zoom(delta_steps: int) -&gt; bool:
+	var step: float = Settings.get_float(&quot;view.zoom_wheel_step&quot;)
+	var new_zoom: float = Settings.get_float(&quot;view.zoom&quot;) + float(delta_steps) * step
+	var min_zoom: Variant = Settings.get_min(&quot;view.zoom&quot;)
+	var max_zoom: Variant = Settings.get_max(&quot;view.zoom&quot;)
+	if min_zoom != null and max_zoom != null:
+		new_zoom = clampf(new_zoom, float(min_zoom), float(max_zoom))
+	if is_equal_approx(new_zoom, Settings.zoom):
+		return false
+	Settings.zoom = new_zoom
+	return true
+
+
+func get_settings_panel_visible() -&gt; bool:
+	return Settings.get_settings_panel_visible()
+
+
+func set_settings_panel_visible(visible: bool) -&gt; void:
+	Settings.set_settings_panel_visible(visible)
+
+
+func load_settings() -&gt; void:
+	Settings.load_user_settings()
+
+
+func save_settings() -&gt; void:
+	Settings.save_user_settings()
+
+
+func _on_settings_view_changed() -&gt; void:
+	view_changed.emit()</file><file path=".cursor/rules/architecture.md">---
 description: Core vs Godot layer boundaries, dependency rules, and allowed APIs
 alwaysApply: true
 ---
@@ -5039,7 +4795,240 @@ flowchart TB
 
 - **Godot 4.3 .NET (mono)** editor — project `config/features` includes `&quot;C#&quot;`.
 - **.NET SDK** 6+ for `dotnet build SPG.sln`.
-- Pin CLI to **4.3-mono** (e.g. gdvm) so editor and `godot_console` match.</file><file path="src/Godot/Scenes/MainSandbox.tscn">[gd_scene format=3 uid=&quot;uid://bm7a58e68r7vt&quot;]
+- Pin CLI to **4.3-mono** (e.g. gdvm) so editor and `godot_console` match.</file><file path="src/Godot/Scripts/GridOverlay.gd">extends ColorRect
+
+## GPU grid overlay derived from world/map-local coordinates.
+
+const ViewMetricsRes = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
+const GRID_SHADER: Shader = preload(&quot;res://src/Godot/Shaders/GridOverlay.gdshader&quot;)
+
+var _enabled: bool = false
+var _shader_mat: ShaderMaterial
+
+var _cached_enabled_param: bool = false
+var _cached_visible_state: bool = false
+var _cached_viewport_center: Vector2 = Vector2(-99999.0, -99999.0)
+var _cached_camera_focus: Vector2 = Vector2(-99999.0, -99999.0)
+var _cached_zoom: float = -1.0
+
+
+func _ready() -&gt; void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	anchors_preset = Control.PRESET_FULL_RECT
+	anchor_right = 1.0
+	anchor_bottom = 1.0
+	grow_horizontal = Control.GROW_DIRECTION_BOTH
+	grow_vertical = Control.GROW_DIRECTION_BOTH
+	color = Color(0.0, 0.0, 0.0, 0.0)
+	visible = false
+
+	_shader_mat = ShaderMaterial.new()
+	_shader_mat.shader = GRID_SHADER
+	material = _shader_mat
+	_apply_static_uniforms()
+	_invalidate_projection_cache()
+	sync_uniforms(null, true)
+
+
+func configure(enabled: bool) -&gt; void:
+	_enabled = enabled
+	sync_uniforms(null, false)
+
+
+func set_map_scroll(_map_scroll: Node2D) -&gt; void:
+	_invalidate_projection_cache()
+
+
+## Kept for compatibility with existing callers; grid is fully world-relative now.
+func update_region(_center_x: int, _center_y: int, _visual_radius: int) -&gt; void:
+	pass
+
+
+func on_view_changed() -&gt; void:
+	sync_uniforms()
+
+
+func sync_canvas_transform(_map_scroll_node: Node2D = null) -&gt; void:
+	if _shader_mat == null:
+		return
+	var center: Vector2 = ViewProjection.get_screen_center_offset()
+	var focus: Vector2 = ViewProjection.map_scroll
+	var safe_zoom: float = ViewProjection.zoom
+	if is_zero_approx(safe_zoom):
+		safe_zoom = 1.0
+	_push_projection_uniforms(center, focus, safe_zoom)
+
+
+## Legacy entry point (used by unit tests).
+func sync_scroll(_scroll_pos: Vector2, _zoom: float) -&gt; void:
+	sync_canvas_transform()
+
+
+func sync_uniforms(_viewport: Viewport = null, refresh_projection: bool = true) -&gt; void:
+	if _shader_mat == null:
+		return
+
+	if refresh_projection:
+		sync_canvas_transform()
+
+	var visible_state: bool = _resolve_visible_state()
+	if visible_state != _cached_visible_state:
+		visible = visible_state
+		_cached_visible_state = visible_state
+	if visible_state != _cached_enabled_param:
+		_shader_mat.set_shader_parameter(&quot;enabled&quot;, visible_state)
+		_cached_enabled_param = visible_state
+
+
+func _push_projection_uniforms(center: Vector2, focus: Vector2, safe_zoom: float) -&gt; void:
+	if center != _cached_viewport_center:
+		_shader_mat.set_shader_parameter(&quot;viewport_center_px&quot;, center)
+		_cached_viewport_center = center
+	if focus != _cached_camera_focus:
+		_shader_mat.set_shader_parameter(&quot;camera_focus_map_px&quot;, focus)
+		_cached_camera_focus = focus
+	if not is_equal_approx(safe_zoom, _cached_zoom):
+		_shader_mat.set_shader_parameter(&quot;zoom&quot;, safe_zoom)
+		_cached_zoom = safe_zoom
+
+
+func _invalidate_projection_cache() -&gt; void:
+	_cached_viewport_center = Vector2(-99999.0, -99999.0)
+	_cached_camera_focus = Vector2(-99999.0, -99999.0)
+	_cached_zoom = -1.0
+
+
+func _resolve_visible_state() -&gt; bool:
+	return _enabled and Settings.get_bool(&quot;grid.debug_grid_lines&quot;)
+
+
+func _apply_static_uniforms() -&gt; void:
+	if _shader_mat == null:
+		return
+	_shader_mat.set_shader_parameter(&quot;cell_size_px&quot;, float(ViewMetricsRes.CELL_SIZE_PX))
+	_shader_mat.set_shader_parameter(&quot;line_width_px&quot;, Settings.get_float(&quot;grid.line_width_px&quot;))
+	_shader_mat.set_shader_parameter(&quot;line_color&quot;, Settings.get_color(&quot;grid.line_color&quot;))
+
+
+func _notification(what: int) -&gt; void:
+	if what == NOTIFICATION_WM_SIZE_CHANGED:
+		ViewProjection.invalidate_screen_center_cache()
+		_invalidate_projection_cache()
+		sync_uniforms()</file><file path="src/Godot/Scripts/ViewContext.gd">class_name ViewContext
+extends RefCounted
+
+## Bundle of view/camera state passed to ViewTransforms conversion functions.
+
+## WorldCanvas/Tiles scroll node (canvas transform). Not ViewProjection.map_scroll (camera focus).
+var map_scroll: Node2D
+var zoom: float = 1.0
+var viewport_center: Vector2 = Vector2.ZERO
+var viewport_size: Vector2 = Vector2.ZERO
+
+static var _cached: ViewContext = null
+static var _cached_zoom: float = -1.0
+static var _cached_scroll_pos: Vector2 = Vector2.INF
+static var _cached_viewport_size: Vector2 = Vector2.ZERO
+
+
+static func invalidate_cache() -&gt; void:
+	_cached = null
+	_cached_zoom = -1.0
+	_cached_scroll_pos = Vector2.INF
+	_cached_viewport_size = Vector2.ZERO
+
+
+static func viewport_center_from(viewport: Viewport) -&gt; Vector2:
+	if viewport == null:
+		return Vector2.ZERO
+	# Visible rect matches FRAGCOORD / canvas space under stretch modes.
+	return viewport.get_visible_rect().get_center()
+
+
+static func from_viewport(
+	p_map_scroll: Node2D,
+	viewport: Viewport,
+	zoom_override: float = -1.0
+) -&gt; ViewContext:
+	var z: float
+	if zoom_override &gt;= 0.0:
+		z = zoom_override
+	elif p_map_scroll != null:
+		z = p_map_scroll.scale.x
+	else:
+		z = 1.0
+	if is_zero_approx(z):
+		z = 1.0
+
+	var vp_size: Vector2 = Vector2.ZERO
+	if viewport != null:
+		vp_size = viewport.get_visible_rect().size
+
+	var scroll_pos: Vector2 = Vector2.ZERO
+	if p_map_scroll != null:
+		scroll_pos = p_map_scroll.global_position
+
+	if _cached != null and is_equal_approx(z, _cached_zoom) and scroll_pos == _cached_scroll_pos and vp_size == _cached_viewport_size:
+		return _cached
+
+	var ctx := ViewContext.new()
+	ctx.map_scroll = p_map_scroll
+	ctx.zoom = z
+	ctx.viewport_size = vp_size
+	ctx.viewport_center = viewport_center_from(viewport)
+
+	_cached = ctx
+	_cached_zoom = z
+	_cached_scroll_pos = scroll_pos
+	_cached_viewport_size = vp_size
+	return ctx</file><file path="project.godot">; Engine configuration file.
+; It&apos;s best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
+[application]
+
+config/name=&quot;SPG&quot;
+run/main_scene=&quot;res://src/Godot/Scenes/MainSandbox.tscn&quot;
+config/features=PackedStringArray(&quot;4.6&quot;, &quot;C#&quot;, &quot;Forward Plus&quot;)
+
+[autoload]
+
+CoreBridge=&quot;*res://src/Godot/Interop/CoreBridge.cs&quot;
+Settings=&quot;*res://src/Godot/Scripts/Settings.gd&quot;
+ViewProjection=&quot;*res://src/Godot/Scripts/ViewProjection.gd&quot;
+
+[display]
+
+window/size/viewport_width=3840
+window/size/viewport_height=2160
+window/size/mode=3
+window/size/initial_position_type=3
+window/size/window_width_override=3840
+window/size/window_height_override=2160
+window/stretch/mode=&quot;viewport&quot;
+window/stretch/scale_mode=&quot;integer&quot;
+
+[dotnet]
+
+project/assembly_name=&quot;SPG&quot;
+project/solution_name=&quot;SPG&quot;
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+environment/defaults/default_clear_color=Color(0, 0, 0, 1)
+2d/snap/snap_2d_transforms_to_pixel=false
+2d/snap/snap_2d_vertices_to_pixel=false</file><file path="src/Godot/Scenes/MainSandbox.tscn">[gd_scene format=3 uid=&quot;uid://bm7a58e68r7vt&quot;]
 
 [ext_resource type=&quot;Script&quot; uid=&quot;uid://eu7juqc3bgem&quot; path=&quot;res://src/Godot/Scripts/MainSandbox.gd&quot; id=&quot;1_main_sandbox&quot;]
 [ext_resource type=&quot;PackedScene&quot; uid=&quot;uid://cp16cnfv02sc5&quot; path=&quot;res://src/Godot/Scenes/GridOverlay.tscn&quot; id=&quot;2_grid_overlay&quot;]
@@ -5054,6 +5043,7 @@ script = ExtResource(&quot;1_main_sandbox&quot;)
 
 [node name=&quot;WorldCanvas&quot; type=&quot;CanvasLayer&quot; parent=&quot;.&quot; unique_id=1103161756]
 layer = 0
+follow_viewport_enabled = true
 
 [node name=&quot;Tiles&quot; type=&quot;Node2D&quot; parent=&quot;WorldCanvas&quot; unique_id=720362407]
 
@@ -5131,54 +5121,7 @@ static func grid_to_screen_centered(
 
 
 static func speed_meters_per_second_to_pixels(meters_per_second: float) -&gt; float:
-	return meters_to_pixels(meters_per_second)</file><file path="project.godot">; Engine configuration file.
-; It&apos;s best edited using the editor UI and not directly,
-; since the parameters that go here are not all obvious.
-;
-; Format:
-;   [section] ; section goes between []
-;   param=value ; assign values to parameters
-
-config_version=5
-
-[animation]
-
-compatibility/default_parent_skeleton_in_mesh_instance_3d=true
-
-[application]
-
-config/name=&quot;SPG&quot;
-run/main_scene=&quot;res://src/Godot/Scenes/MainSandbox.tscn&quot;
-config/features=PackedStringArray(&quot;4.6&quot;, &quot;C#&quot;, &quot;Forward Plus&quot;)
-
-[autoload]
-
-CoreBridge=&quot;*res://src/Godot/Interop/CoreBridge.cs&quot;
-Settings=&quot;*res://src/Godot/Scripts/Settings.gd&quot;
-ViewProjection=&quot;*res://src/Godot/Scripts/ViewProjection.gd&quot;
-
-[display]
-
-window/size/viewport_width=3840
-window/size/viewport_height=2160
-window/size/mode=3
-window/size/initial_position_type=3
-window/size/window_width_override=3840
-window/size/window_height_override=2160
-window/stretch/mode=&quot;viewport&quot;
-window/stretch/scale_mode=&quot;integer&quot;
-
-[dotnet]
-
-project/assembly_name=&quot;SPG&quot;
-project/solution_name=&quot;SPG&quot;
-
-[rendering]
-
-textures/canvas_textures/default_texture_filter=0
-environment/defaults/default_clear_color=Color(0, 0, 0, 1)
-2d/snap/snap_2d_transforms_to_pixel=true
-2d/snap/snap_2d_vertices_to_pixel=true</file><file path="src/Godot/Scripts/MainSandbox.gd">extends Node2D
+	return meters_to_pixels(meters_per_second)</file><file path="src/Godot/Scripts/MainSandbox.gd">extends Node2D
 
 const ViewTransformsScript = preload(&quot;res://src/Godot/Scripts/ViewTransforms.gd&quot;)
 const ViewMetricsRes = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
@@ -5208,6 +5151,11 @@ var _cached_visual_radius: int = 0
 var _cached_radius_zoom: float = -1.0
 var _cached_radius_vp_size: Vector2 = Vector2.ZERO
 
+const ZOOM_REBUILD_DELAY_SEC: float = 0.05
+
+var _zoom_rebuild_timer: SceneTreeTimer
+var _zoom_rebuild_scheduled_zoom: float = -1.0
+
 
 func _ready() -&gt; void:
 	y_sort_enabled = false
@@ -5231,7 +5179,6 @@ func _ready() -&gt; void:
 
 	ViewProjection.register_viewport_provider(self)
 	_refresh_viewport_metrics()
-	_recompute_visual_radius_cache()
 
 	_grid_overlay.configure(Settings.get_bool(&quot;grid.debug_grid_lines&quot;))
 	_grid_overlay.set_map_scroll(_map_scroll)
@@ -5265,17 +5212,17 @@ func _finish_ready_viewport_dependent() -&gt; void:
 	_setup_fog()
 	_sync_spawn_tracking_from_player()
 	if _fog_overlay != null:
-		_fog_overlay.force_resync_scroll()
-	_sync_fog_and_overlays(true)
+		_fog_overlay.sync_uniforms()
+	_sync_view_scroll_and_overlays(true)
+	_grid_overlay.sync_uniforms()
 
 
 func _physics_process(_delta: float) -&gt; void:
 	if _party == null or _party.GetSelectedCharacter() == null:
 		return
-	_apply_map_scroll_for_player()
 	if _player != null:
 		_chunk_manager.sync_center_from_player_map_px(_player.position)
-	_sync_fog_and_overlays(false)
+	_sync_view_scroll_and_overlays(false)
 
 
 func _notification(what: int) -&gt; void:
@@ -5283,10 +5230,8 @@ func _notification(what: int) -&gt; void:
 		ViewContext.invalidate_cache()
 		ViewProjection.invalidate_screen_center_cache()
 		_refresh_viewport_metrics()
-		_recompute_visual_radius_cache()
 		_reposition_all()
-		if _chunk_manager != null:
-			_chunk_manager.force_viewport_chunk_refresh()
+		_run_deferred_view_rebuild()
 
 
 func _apply_view_zoom() -&gt; void:
@@ -5294,16 +5239,19 @@ func _apply_view_zoom() -&gt; void:
 	_map_scroll.scale = Vector2(z, z)
 
 
+## Pixel snap on scroll only when zoom is integral; fractional zoom (e.g. 0.5) causes tile seams.
+func _should_snap_scroll_to_pixel() -&gt; bool:
+	if not _snap_scroll_to_pixel:
+		return false
+	var z: float = ViewProjection.zoom
+	return absf(z - roundf(z)) &lt; 0.001
+
+
 func _on_view_changed() -&gt; void:
 	_apply_view_zoom()
-	_recompute_visual_radius_cache()
-	_apply_map_scroll_for_player()
-	if _chunk_manager != null:
-		_chunk_manager.force_viewport_chunk_refresh()
 	_grid_overlay.on_view_changed()
-	if _fog_overlay != null:
-		_fog_overlay.on_view_changed()
-	_sync_fog_and_overlays(true)
+	_sync_view_scroll_and_overlays(true)
+	_schedule_zoom_deferred_rebuild()
 
 
 func _on_player_grid_cell_changed(cell: Vector2i) -&gt; void:
@@ -5314,7 +5262,6 @@ func _on_player_grid_cell_changed(cell: Vector2i) -&gt; void:
 	if character != null:
 		character.MoveTo(cell.x, cell.y)
 
-	_grid_overlay.update_region(cell.x, cell.y, _capped_grid_radius(_visual_spawn_radius()))
 	_chunk_manager.sync_center_from_player_map_px(_player.position)
 	_last_tracked_x = cell.x
 	_last_tracked_y = cell.y
@@ -5341,26 +5288,22 @@ func _setup_fog() -&gt; void:
 	_fog.setup(_player)
 	var fog_mat: ShaderMaterial = _fog_overlay.get_shader_material()
 	_fog.bind_shader_material(fog_mat)
-	_fog_overlay.set_map_scroll(_map_scroll)
 	_fog_overlay.set_player(_player)
+	_fog_overlay.set_map_scroll(_map_scroll)
 	_fog_overlay.configure(_fog.enabled, Color(0.0, 0.0, 0.0, 0.85))
-	_fog_overlay.apply_static_uniforms(
-		_fog.world_origin_map_px,
-		_fog.world_extent_map_px,
-		_fog.get_texture()
-	)
+	_chunk_manager.set_fog_exploration_map(_fog)
+	_chunk_manager.sync_center_from_player_map_px(_player.position)
+	var spawn_grid: Vector2i = _chunk_manager.world_px_to_grid_tile(_player.position)
+	_chunk_manager.force_immediate_startup_pass(spawn_grid)
+	_fog.force_stamp_now()
 	if _fog_overlay.has_method(&quot;update_fog_vision_metrics&quot;):
 		var cell_px: float = float(ViewMetricsRes.CELL_SIZE_PX)
 		_fog_overlay.update_fog_vision_metrics(
 			_fog.get_reveal_radius_map_px() / cell_px,
 			_fog.get_reveal_feather_map_px() / cell_px
 		)
-	_chunk_manager.set_fog_exploration_map(_fog)
-	_chunk_manager.sync_center_from_player_map_px(_player.position)
-	var spawn_grid: Vector2i = _chunk_manager.world_px_to_grid_tile(_player.position)
-	_chunk_manager.force_immediate_startup_pass(spawn_grid)
-	if not _fog.exploration_texture_uploaded.is_connected(_on_fog_texture_uploaded):
-		_fog.exploration_texture_uploaded.connect(_on_fog_texture_uploaded)
+	_fog_overlay.sync_player_position()
+	_fog_overlay.sync_uniforms()
 
 
 func _sync_spawn_tracking_from_player() -&gt; void:
@@ -5375,33 +5318,75 @@ func _sync_spawn_tracking_from_player() -&gt; void:
 
 
 func _on_fog_texture_uploaded() -&gt; void:
-	_sync_fog_and_overlays(false)
+	pass
 
 
-## Scroll transforms when the camera moves; runtime fog uniforms + chunk culling every call.
-func _sync_fog_and_overlays(force: bool = false) -&gt; void:
-	_refresh_viewport_metrics()
+func _on_fog_exploration_stamped() -&gt; void:
+	pass
+
+
+func _schedule_zoom_deferred_rebuild() -&gt; void:
+	_zoom_rebuild_scheduled_zoom = ViewProjection.zoom
+	var rebuild_cb := Callable(self, &quot;_on_zoom_deferred_rebuild&quot;)
+	if _zoom_rebuild_timer != null and is_instance_valid(_zoom_rebuild_timer):
+		if _zoom_rebuild_timer.timeout.is_connected(rebuild_cb):
+			_zoom_rebuild_timer.timeout.disconnect(rebuild_cb)
+	_zoom_rebuild_timer = get_tree().create_timer(ZOOM_REBUILD_DELAY_SEC)
+	_zoom_rebuild_timer.timeout.connect(rebuild_cb, CONNECT_ONE_SHOT)
+
+
+func _on_zoom_deferred_rebuild() -&gt; void:
+	if not is_equal_approx(ViewProjection.zoom, _zoom_rebuild_scheduled_zoom):
+		return
+	_run_deferred_view_rebuild()
+
+
+func _run_deferred_view_rebuild() -&gt; void:
+	if _chunk_manager != null:
+		_chunk_manager.force_viewport_chunk_refresh()
+	_refresh_overlays()
+
+
+## Keeps map scroll and overlay transforms in sync without fog orchestration.
+func _sync_view_scroll_and_overlays(force: bool = false) -&gt; void:
+	if _player == null:
+		return
+
+	var prev_canvas_xf: Transform2D = _last_map_canvas_xf
+	var prev_zoom: float = _last_overlay_zoom
+
+	ViewProjection.map_scroll = _player.position
 	_apply_view_zoom()
-	_apply_map_scroll_for_player()
-	_verify_projection_canvas_parity()
-	var canvas_xf: Transform2D = _map_scroll.get_global_transform_with_canvas()
+	var target_offset: Vector2 = ViewProjection.scroll_node_canvas_position()
+	if _should_snap_scroll_to_pixel():
+		target_offset = target_offset.round()
+	_world_canvas.offset = Vector2.ZERO
+	if not target_offset.is_equal_approx(_map_scroll.position):
+		_map_scroll.position = target_offset
+
+	var canvas_xf: Transform2D = ViewProjection.forward_canvas_transform()
 	var zoom: float = ViewProjection.zoom
-	var scroll_changed: bool = force or canvas_xf != _last_map_canvas_xf
-	var zoom_changed: bool = force or not is_equal_approx(zoom, _last_overlay_zoom)
-	if scroll_changed:
-		_last_map_canvas_xf = canvas_xf
-		_grid_overlay.sync_canvas_transform(_map_scroll)
+	var scroll_changed: bool = force or not canvas_xf.is_equal_approx(prev_canvas_xf)
+	var zoom_changed: bool = force or not is_equal_approx(zoom, prev_zoom)
+
 	if scroll_changed or zoom_changed:
-		_last_overlay_zoom = zoom
-		if _fog_overlay != null:
-			_fog_overlay.sync_canvas_transform(_map_scroll)
-	if _fog_overlay != null and _fog != null:
-		_fog_overlay.sync_runtime(_fog)
-	_chunk_manager.refresh_chunk_fog_visibility()
+		_grid_overlay.sync_canvas_transform(_map_scroll)
+		_refresh_overlays()
+		if scroll_changed:
+			_verify_projection_canvas_parity()
+
+	_last_map_canvas_xf = canvas_xf
+	_last_overlay_zoom = zoom
 
 
-func _refresh_overlays(center_x: int, center_y: int) -&gt; void:
-	_grid_overlay.update_region(center_x, center_y, _capped_grid_radius(_visual_spawn_radius()))
+func _viewport_grid_center() -&gt; Vector2i:
+	var center_grid: Vector2 = ViewTransformsScript.map_local_px_to_grid(ViewProjection.map_scroll)
+	return Vector2i(floori(center_grid.x), floori(center_grid.y))
+
+
+func _refresh_overlays() -&gt; void:
+	var center: Vector2i = _viewport_grid_center()
+	_grid_overlay.update_region(center.x, center.y, _visual_spawn_radius())
 
 
 func _refresh_viewport_metrics() -&gt; void:
@@ -5419,22 +5404,11 @@ func _ensure_viewport_metrics_ready() -&gt; bool:
 	_refresh_viewport_metrics()
 	if _viewport_center.x &lt; 1.0 or _viewport_center.y &lt; 1.0:
 		return false
-	_recompute_visual_radius_cache()
 	return true
 
 
 func _apply_map_scroll_for_player() -&gt; void:
-	if _player == null:
-		return
-	ViewProjection.map_scroll = _player.position
-	_apply_view_zoom()
-	var target_offset: Vector2 = ViewProjection.scroll_node_canvas_position()
-	if _snap_scroll_to_pixel:
-		target_offset = target_offset.round()
-	_map_scroll.position = Vector2.ZERO
-	if target_offset.is_equal_approx(_world_canvas.offset):
-		return
-	_world_canvas.offset = target_offset
+	_sync_view_scroll_and_overlays(false)
 
 
 func _verify_projection_canvas_parity() -&gt; void:
@@ -5474,21 +5448,22 @@ func _visual_spawn_radius() -&gt; int:
 	if viewport != null:
 		vp_size = viewport.get_visible_rect().size
 	if not is_equal_approx(zoom, _cached_radius_zoom) or vp_size != _cached_radius_vp_size:
-		_recompute_visual_radius_cache()
+		_cached_radius_zoom = zoom
+		_cached_radius_vp_size = vp_size
+		var cell_px: float = float(ViewMetricsRes.CELL_SIZE_PX) * maxf(zoom, 0.0001)
+		var buffer_cells: int = Settings.get_int(&quot;grid.visual_radius_buffer&quot;)
+		if cell_px &lt;= 0.0:
+			_cached_visual_radius = buffer_cells
+		else:
+			var half_x: int = int(ceil(vp_size.x * 0.5 / cell_px)) + buffer_cells
+			var half_y: int = int(ceil(vp_size.y * 0.5 / cell_px)) + buffer_cells
+			_cached_visual_radius = maxi(half_x, half_y)
 	return _cached_visual_radius
 
 
-func _capped_grid_radius(visual_radius: int) -&gt; int:
-	return mini(visual_radius, Settings.get_int(&quot;grid.max_grid_radius&quot;))
-
-
 func _reposition_all() -&gt; void:
-	_apply_map_scroll_for_player()
 	_sync_spawn_tracking_from_player()
-	if _player != null:
-		var spawn_grid: Vector2i = _chunk_manager.world_px_to_grid_tile(_player.position)
-		_refresh_overlays(spawn_grid.x, spawn_grid.y)
-	_sync_fog_and_overlays(true)
+	_sync_view_scroll_and_overlays(true)
 
 
 func _unhandled_input(event: InputEvent) -&gt; void:

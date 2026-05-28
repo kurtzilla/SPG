@@ -4,7 +4,7 @@
 
 [node name="GridLayer" type="CanvasLayer"]
 follow_viewport_enabled = true
-layer = 1
+layer = 0
 
 [node name="GridRect" type="ColorRect" parent="."]
 anchors_preset = 15

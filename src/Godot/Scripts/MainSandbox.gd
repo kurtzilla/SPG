@@ -28,6 +28,11 @@ var _cached_visual_radius: int = 0
 var _cached_radius_zoom: float = -1.0
 var _cached_radius_vp_size: Vector2 = Vector2.ZERO
 
+const ZOOM_REBUILD_DELAY_SEC: float = 0.05
+
+var _zoom_rebuild_timer: SceneTreeTimer
+var _zoom_rebuild_scheduled_zoom: float = -1.0
+
 
 func _ready() -> void:
 	y_sort_enabled = false
@@ -51,7 +56,6 @@ func _ready() -> void:
 
 	ViewProjection.register_viewport_provider(self)
 	_refresh_viewport_metrics()
-	_recompute_visual_radius_cache()
 
 	_grid_overlay.configure(Settings.get_bool("grid.debug_grid_lines"))
 	_grid_overlay.set_map_scroll(_map_scroll)
@@ -85,17 +89,17 @@ func _finish_ready_viewport_dependent() -> void:
 	_setup_fog()
 	_sync_spawn_tracking_from_player()
 	if _fog_overlay != null:
-		_fog_overlay.force_resync_scroll()
-	_sync_fog_and_overlays(true)
+		_fog_overlay.sync_uniforms()
+	_sync_view_scroll_and_overlays(true)
+	_grid_overlay.sync_uniforms()
 
 
 func _physics_process(_delta: float) -> void:
 	if _party == null or _party.GetSelectedCharacter() == null:
 		return
-	_apply_map_scroll_for_player()
 	if _player != null:
 		_chunk_manager.sync_center_from_player_map_px(_player.position)
-	_sync_fog_and_overlays(false)
+	_sync_view_scroll_and_overlays(false)
 
 
 func _notification(what: int) -> void:
@@ -103,10 +107,8 @@ func _notification(what: int) -> void:
 		ViewContext.invalidate_cache()
 		ViewProjection.invalidate_screen_center_cache()
 		_refresh_viewport_metrics()
-		_recompute_visual_radius_cache()
 		_reposition_all()
-		if _chunk_manager != null:
-			_chunk_manager.force_viewport_chunk_refresh()
+		_run_deferred_view_rebuild()
 
 
 func _apply_view_zoom() -> void:
@@ -114,16 +116,19 @@ func _apply_view_zoom() -> void:
 	_map_scroll.scale = Vector2(z, z)
 
 
+## Pixel snap on scroll only when zoom is integral; fractional zoom (e.g. 0.5) causes tile seams.
+func _should_snap_scroll_to_pixel() -> bool:
+	if not _snap_scroll_to_pixel:
+		return false
+	var z: float = ViewProjection.zoom
+	return absf(z - roundf(z)) < 0.001
+
+
 func _on_view_changed() -> void:
 	_apply_view_zoom()
-	_recompute_visual_radius_cache()
-	_apply_map_scroll_for_player()
-	if _chunk_manager != null:
-		_chunk_manager.force_viewport_chunk_refresh()
 	_grid_overlay.on_view_changed()
-	if _fog_overlay != null:
-		_fog_overlay.on_view_changed()
-	_sync_fog_and_overlays(true)
+	_sync_view_scroll_and_overlays(true)
+	_schedule_zoom_deferred_rebuild()
 
 
 func _on_player_grid_cell_changed(cell: Vector2i) -> void:
@@ -134,7 +139,6 @@ func _on_player_grid_cell_changed(cell: Vector2i) -> void:
 	if character != null:
 		character.MoveTo(cell.x, cell.y)
 
-	_grid_overlay.update_region(cell.x, cell.y, _capped_grid_radius(_visual_spawn_radius()))
 	_chunk_manager.sync_center_from_player_map_px(_player.position)
 	_last_tracked_x = cell.x
 	_last_tracked_y = cell.y
@@ -161,26 +165,22 @@ func _setup_fog() -> void:
 	_fog.setup(_player)
 	var fog_mat: ShaderMaterial = _fog_overlay.get_shader_material()
 	_fog.bind_shader_material(fog_mat)
-	_fog_overlay.set_map_scroll(_map_scroll)
 	_fog_overlay.set_player(_player)
+	_fog_overlay.set_map_scroll(_map_scroll)
 	_fog_overlay.configure(_fog.enabled, Color(0.0, 0.0, 0.0, 0.85))
-	_fog_overlay.apply_static_uniforms(
-		_fog.world_origin_map_px,
-		_fog.world_extent_map_px,
-		_fog.get_texture()
-	)
+	_chunk_manager.set_fog_exploration_map(_fog)
+	_chunk_manager.sync_center_from_player_map_px(_player.position)
+	var spawn_grid: Vector2i = _chunk_manager.world_px_to_grid_tile(_player.position)
+	_chunk_manager.force_immediate_startup_pass(spawn_grid)
+	_fog.force_stamp_now()
 	if _fog_overlay.has_method("update_fog_vision_metrics"):
 		var cell_px: float = float(ViewMetricsRes.CELL_SIZE_PX)
 		_fog_overlay.update_fog_vision_metrics(
 			_fog.get_reveal_radius_map_px() / cell_px,
 			_fog.get_reveal_feather_map_px() / cell_px
 		)
-	_chunk_manager.set_fog_exploration_map(_fog)
-	_chunk_manager.sync_center_from_player_map_px(_player.position)
-	var spawn_grid: Vector2i = _chunk_manager.world_px_to_grid_tile(_player.position)
-	_chunk_manager.force_immediate_startup_pass(spawn_grid)
-	if not _fog.exploration_texture_uploaded.is_connected(_on_fog_texture_uploaded):
-		_fog.exploration_texture_uploaded.connect(_on_fog_texture_uploaded)
+	_fog_overlay.sync_player_position()
+	_fog_overlay.sync_uniforms()
 
 
 func _sync_spawn_tracking_from_player() -> void:
@@ -195,33 +195,75 @@ func _sync_spawn_tracking_from_player() -> void:
 
 
 func _on_fog_texture_uploaded() -> void:
-	_sync_fog_and_overlays(false)
+	pass
 
 
-## Scroll transforms when the camera moves; runtime fog uniforms + chunk culling every call.
-func _sync_fog_and_overlays(force: bool = false) -> void:
-	_refresh_viewport_metrics()
+func _on_fog_exploration_stamped() -> void:
+	pass
+
+
+func _schedule_zoom_deferred_rebuild() -> void:
+	_zoom_rebuild_scheduled_zoom = ViewProjection.zoom
+	var rebuild_cb := Callable(self, "_on_zoom_deferred_rebuild")
+	if _zoom_rebuild_timer != null and is_instance_valid(_zoom_rebuild_timer):
+		if _zoom_rebuild_timer.timeout.is_connected(rebuild_cb):
+			_zoom_rebuild_timer.timeout.disconnect(rebuild_cb)
+	_zoom_rebuild_timer = get_tree().create_timer(ZOOM_REBUILD_DELAY_SEC)
+	_zoom_rebuild_timer.timeout.connect(rebuild_cb, CONNECT_ONE_SHOT)
+
+
+func _on_zoom_deferred_rebuild() -> void:
+	if not is_equal_approx(ViewProjection.zoom, _zoom_rebuild_scheduled_zoom):
+		return
+	_run_deferred_view_rebuild()
+
+
+func _run_deferred_view_rebuild() -> void:
+	if _chunk_manager != null:
+		_chunk_manager.force_viewport_chunk_refresh()
+	_refresh_overlays()
+
+
+## Keeps map scroll and overlay transforms in sync without fog orchestration.
+func _sync_view_scroll_and_overlays(force: bool = false) -> void:
+	if _player == null:
+		return
+
+	var prev_canvas_xf: Transform2D = _last_map_canvas_xf
+	var prev_zoom: float = _last_overlay_zoom
+
+	ViewProjection.map_scroll = _player.position
 	_apply_view_zoom()
-	_apply_map_scroll_for_player()
-	_verify_projection_canvas_parity()
+	var target_offset: Vector2 = ViewProjection.scroll_node_canvas_position()
+	if _should_snap_scroll_to_pixel():
+		target_offset = target_offset.round()
+	_world_canvas.offset = Vector2.ZERO
+	if not target_offset.is_equal_approx(_map_scroll.position):
+		_map_scroll.position = target_offset
+
 	var canvas_xf: Transform2D = ViewProjection.forward_canvas_transform()
 	var zoom: float = ViewProjection.zoom
-	var scroll_changed: bool = force or canvas_xf != _last_map_canvas_xf
-	var zoom_changed: bool = force or not is_equal_approx(zoom, _last_overlay_zoom)
-	if scroll_changed:
-		_last_map_canvas_xf = canvas_xf
-		_grid_overlay.sync_canvas_transform(_map_scroll)
+	var scroll_changed: bool = force or not canvas_xf.is_equal_approx(prev_canvas_xf)
+	var zoom_changed: bool = force or not is_equal_approx(zoom, prev_zoom)
+
 	if scroll_changed or zoom_changed:
-		_last_overlay_zoom = zoom
-		if _fog_overlay != null:
-			_fog_overlay.sync_canvas_transform(_map_scroll)
-	if _fog_overlay != null and _fog != null:
-		_fog_overlay.sync_runtime(_fog)
-	_chunk_manager.refresh_chunk_fog_visibility()
+		_grid_overlay.sync_canvas_transform(_map_scroll)
+		_refresh_overlays()
+		if scroll_changed:
+			_verify_projection_canvas_parity()
+
+	_last_map_canvas_xf = canvas_xf
+	_last_overlay_zoom = zoom
 
 
-func _refresh_overlays(center_x: int, center_y: int) -> void:
-	_grid_overlay.update_region(center_x, center_y, _capped_grid_radius(_visual_spawn_radius()))
+func _viewport_grid_center() -> Vector2i:
+	var center_grid: Vector2 = ViewTransformsScript.map_local_px_to_grid(ViewProjection.map_scroll)
+	return Vector2i(floori(center_grid.x), floori(center_grid.y))
+
+
+func _refresh_overlays() -> void:
+	var center: Vector2i = _viewport_grid_center()
+	_grid_overlay.update_region(center.x, center.y, _visual_spawn_radius())
 
 
 func _refresh_viewport_metrics() -> void:
@@ -239,22 +281,11 @@ func _ensure_viewport_metrics_ready() -> bool:
 	_refresh_viewport_metrics()
 	if _viewport_center.x < 1.0 or _viewport_center.y < 1.0:
 		return false
-	_recompute_visual_radius_cache()
 	return true
 
 
 func _apply_map_scroll_for_player() -> void:
-	if _player == null:
-		return
-	ViewProjection.map_scroll = _player.position
-	_apply_view_zoom()
-	var target_offset: Vector2 = ViewProjection.scroll_node_canvas_position()
-	if _snap_scroll_to_pixel:
-		target_offset = target_offset.round()
-	_world_canvas.offset = Vector2.ZERO
-	if not target_offset.is_equal_approx(_map_scroll.position):
-		_map_scroll.position = target_offset
-	_last_map_canvas_xf = ViewProjection.forward_canvas_transform()
+	_sync_view_scroll_and_overlays(false)
 
 
 func _verify_projection_canvas_parity() -> void:
@@ -294,21 +325,22 @@ func _visual_spawn_radius() -> int:
 	if viewport != null:
 		vp_size = viewport.get_visible_rect().size
 	if not is_equal_approx(zoom, _cached_radius_zoom) or vp_size != _cached_radius_vp_size:
-		_recompute_visual_radius_cache()
+		_cached_radius_zoom = zoom
+		_cached_radius_vp_size = vp_size
+		var cell_px: float = float(ViewMetricsRes.CELL_SIZE_PX) * maxf(zoom, 0.0001)
+		var buffer_cells: int = Settings.get_int("grid.visual_radius_buffer")
+		if cell_px <= 0.0:
+			_cached_visual_radius = buffer_cells
+		else:
+			var half_x: int = int(ceil(vp_size.x * 0.5 / cell_px)) + buffer_cells
+			var half_y: int = int(ceil(vp_size.y * 0.5 / cell_px)) + buffer_cells
+			_cached_visual_radius = maxi(half_x, half_y)
 	return _cached_visual_radius
 
 
-func _capped_grid_radius(visual_radius: int) -> int:
-	return mini(visual_radius, Settings.get_int("grid.max_grid_radius"))
-
-
 func _reposition_all() -> void:
-	_apply_map_scroll_for_player()
 	_sync_spawn_tracking_from_player()
-	if _player != null:
-		var spawn_grid: Vector2i = _chunk_manager.world_px_to_grid_tile(_player.position)
-		_refresh_overlays(spawn_grid.x, spawn_grid.y)
-	_sync_fog_and_overlays(true)
+	_sync_view_scroll_and_overlays(true)
 
 
 func _unhandled_input(event: InputEvent) -> void:
