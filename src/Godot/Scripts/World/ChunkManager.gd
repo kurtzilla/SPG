@@ -13,8 +13,6 @@ const ChunkLoadJobScript = preload("res://src/Godot/Scripts/World/ChunkLoadJob.g
 const TT = preload("res://src/Godot/Scripts/World/TerrainType.gd")
 const ViewMetricsScript = preload("res://src/Godot/Scripts/ViewMetrics.gd")
 const TerrainSandboxTileSetScript = preload("res://src/Godot/Scripts/TerrainSandboxTileSet.gd")
-const FogExplorationMapScript = preload("res://src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd")
-
 enum BootstrapPhase {NONE, KEEP, PREFETCH, DONE}
 
 var _chunk_size: int = 32
@@ -64,7 +62,6 @@ var _prefetch_wanted: Dictionary = {}
 var _layer_pool: Array[TileMapLayer] = []
 var _layer_acquires_this_frame: int = 0
 var _prewarm_remaining: int = 0
-var _fog: FogExplorationMapScript = null
 
 const VIEW_REFRESH_BURST_FRAMES: int = 3
 const VIEW_REFRESH_BURST_JOB_MULT: int = 3
@@ -171,10 +168,9 @@ func force_viewport_chunk_refresh() -> void:
 	_begin_view_refresh_burst()
 	if _last_center_chunk != NO_CHUNK:
 		_refresh_active_chunks(_last_center_chunk)
-	refresh_chunk_fog_visibility()
 
 
-## One-shot synchronous load of the keep ring on scene start (avoids fog/chunk mismatch holes).
+## One-shot synchronous load of the keep ring on scene start.
 func force_immediate_startup_pass(center_grid_tile: Vector2i) -> void:
 	_last_center_chunk = NO_CHUNK
 	update_center_grid(center_grid_tile)
@@ -189,7 +185,6 @@ func force_immediate_startup_pass(center_grid_tile: Vector2i) -> void:
 		_step_active_jobs()
 		if _keep_ring_loaded() and _pending_coords.is_empty() and _active_jobs.is_empty():
 			break
-	refresh_chunk_fog_visibility()
 
 
 func _active_wanted_set() -> Dictionary:
@@ -213,17 +208,6 @@ func _begin_view_refresh_burst() -> void:
 	_burst_layer_acquires_per_frame = _layer_acquires_per_frame * VIEW_REFRESH_BURST_ACQUIRE_MULT
 	_burst_cells_per_frame = _cells_per_frame * VIEW_REFRESH_BURST_CELL_MULT
 	_burst_cells_paint_per_frame = _cells_paint_per_frame * VIEW_REFRESH_BURST_CELL_MULT
-
-
-func set_fog_exploration_map(fog: FogExplorationMapScript) -> void:
-	_fog = fog
-
-
-func refresh_chunk_fog_visibility() -> void:
-	# GPU fog overlay owns reveal shape; loaded tiles stay visible underneath.
-	for chunk_coord in _layers.keys():
-		var layer: TileMapLayer = _layers[chunk_coord]
-		layer.visible = true
 
 
 func sync_center_from_player_map_px(map_px: Vector2) -> void:
@@ -616,7 +600,6 @@ func _finish_job(job) -> void:
 	_chunks[job.coord] = job.data
 	_layers[job.coord] = job.layer
 	job.phase = ChunkLoadJobScript.Phase.DONE
-	refresh_chunk_fog_visibility()
 
 
 func _cancel_job(job) -> void:

@@ -1,20 +1,23 @@
 extends Node
 
-## Central settings autoload. Defaults from game_settings.json; user overrides in user://settings.cfg.
+## Central settings autoload. Single source of truth: game_settings.json (see USE_USER_SETTINGS_FILE).
 
 const SettingsContext = preload("res://src/Godot/Scripts/SettingsContext.gd")
 const ViewMetrics = preload("res://src/Godot/Scripts/ViewMetrics.gd")
 
 signal setting_changed(path: String)
 signal movement_changed
+signal fog_changed
 signal view_changed
 
 const DEFAULTS_PATH: String = "res://src/Godot/Config/game_settings.json"
+## Dev stage: false = only game_settings.json; true = load/save user://settings.cfg for persist keys.
+const USE_USER_SETTINGS_FILE: bool = false
 const USER_PATH: String = "user://settings.cfg"
 const LEGACY_MOVEMENT_PATH: String = "user://player_movement.cfg"
 const LEGACY_VIEW_PATH: String = "user://view_settings.cfg"
 
-const SKIP_SECTIONS: Array[String] = ["schema_version", "core_reference"]
+const SKIP_SECTIONS: Array[String] = ["schema_version"]
 
 const MOVEMENT_PATHS: Array[String] = [
 	"player_movement.max_speed",
@@ -26,6 +29,17 @@ const VIEW_PATHS: Array[String] = [
 	"view.zoom",
 	"view.settings_panel_visible",
 ]
+
+const FOG_PATHS: Array[String] = [
+	"fog.initial_reveal_radius",
+	"fog.player_reveal_radius",
+]
+
+const LEGACY_FOG_PATH_INITIAL: String = "fog.initial_reveal_radius_cells"
+const LEGACY_FOG_PATH_PLAYER: String = "fog.movement_reveal_radius_cells"
+const LEGACY_FOG_PATH_REVEAL_RADIUS: String = "fog.reveal_radius_cells"
+const FOG_DEFAULT_PATH_INITIAL: String = "fog.initial_reveal_radius"
+const FOG_DEFAULT_PATH_PLAYER: String = "fog.player_reveal_radius"
 
 var _schema: Dictionary = {}
 var _values: Dictionary = {}
@@ -89,7 +103,32 @@ var settings_panel_visible: bool:
 		set_bool("view.settings_panel_visible", value)
 
 
+var initial_reveal_radius: int:
+	get:
+		return get_int("fog.initial_reveal_radius")
+	set(value):
+		set_int("fog.initial_reveal_radius", value)
+
+
+var player_reveal_radius: int:
+	get:
+		return get_int("fog.player_reveal_radius")
+	set(value):
+		set_int("fog.player_reveal_radius", value)
+
+
 # --- Typed getters ---
+
+func get_setting(path: String, default_value: Variant = null) -> Variant:
+	if not has(path):
+		return default_value
+	match _schema[path].get("type", TYPE_NIL):
+		TYPE_BOOL:
+			return get_bool(path)
+		TYPE_INT:
+			return get_int(path)
+		_:
+			return get_float(path)
 
 func get_float(path: String) -> float:
 	return float(_values.get(path, _schema.get(path, {}).get("default", 0.0)))
@@ -185,8 +224,13 @@ func get_settings_panel_visible() -> bool:
 func load_user_settings() -> void:
 	_reset_values_to_defaults()
 
+	if not USE_USER_SETTINGS_FILE:
+		_emit_domain_signals()
+		return
+
 	if not FileAccess.file_exists(USER_PATH):
 		_migrate_legacy_user_settings()
+		_migrate_legacy_fog_values()
 		_emit_domain_signals()
 		return
 
@@ -194,6 +238,7 @@ func load_user_settings() -> void:
 	var err: Error = config.load(USER_PATH)
 	if err != OK:
 		_migrate_legacy_user_settings()
+		_migrate_legacy_fog_values()
 		_emit_domain_signals()
 		return
 
@@ -206,8 +251,14 @@ func load_user_settings() -> void:
 			continue
 		_values[path] = _coerce_value(path, config.get_value(section, path))
 
+	_migrate_legacy_fog_keys_from_config(config)
+	_emit_domain_signals()
+
 
 func save_user_settings() -> void:
+	if not USE_USER_SETTINGS_FILE:
+		return
+
 	var config := ConfigFile.new()
 	for path: String in _schema:
 		var entry: Dictionary = _schema[path]
@@ -305,9 +356,12 @@ func _set_value(path: String, value: Variant) -> void:
 	setting_changed.emit(path)
 	if path in MOVEMENT_PATHS:
 		movement_changed.emit()
+	if path in FOG_PATHS:
+		fog_changed.emit()
+		_persist_fog_path_to_defaults(path, value)
 	if path in VIEW_PATHS or path.begins_with("view."):
 		view_changed.emit()
-	if _schema[path].get("persist", false):
+	if USE_USER_SETTINGS_FILE and _schema[path].get("persist", false):
 		_schedule_save()
 
 
@@ -387,6 +441,46 @@ func _schedule_save() -> void:
 		_save_timer.start()
 
 
+func _persist_fog_path_to_defaults(path: String, value: Variant) -> void:
+	if path != FOG_DEFAULT_PATH_INITIAL and path != FOG_DEFAULT_PATH_PLAYER:
+		return
+	var serialized_path: String = ProjectSettings.globalize_path(DEFAULTS_PATH)
+	var read_file := FileAccess.open(serialized_path, FileAccess.READ)
+	if read_file == null:
+		push_warning("Settings: Cannot open defaults for fog persistence: " + serialized_path)
+		return
+	var raw_text: String = read_file.get_as_text()
+	read_file.close()
+	var json := JSON.new()
+	if json.parse(raw_text) != OK:
+		push_warning("Settings: Cannot parse defaults JSON for fog persistence: " + json.get_error_message())
+		return
+	var root: Variant = json.data
+	if typeof(root) != TYPE_DICTIONARY:
+		push_warning("Settings: Defaults JSON root is not a Dictionary for fog persistence")
+		return
+	var fog_section: Variant = root.get("fog", null)
+	if typeof(fog_section) != TYPE_DICTIONARY:
+		push_warning("Settings: Missing fog section in defaults JSON")
+		return
+	var fog_dict: Dictionary = fog_section
+	var key_name: String = path.get_slice(".", 1)
+	var fog_entry: Variant = fog_dict.get(key_name, null)
+	if typeof(fog_entry) != TYPE_DICTIONARY:
+		push_warning("Settings: Missing fog key in defaults JSON: " + path)
+		return
+	var entry_dict: Dictionary = fog_entry
+	entry_dict["value"] = value
+	fog_dict[key_name] = entry_dict
+	root["fog"] = fog_dict
+	var write_file := FileAccess.open(serialized_path, FileAccess.WRITE)
+	if write_file == null:
+		push_warning("Settings: Cannot write defaults for fog persistence: " + serialized_path)
+		return
+	write_file.store_string(JSON.stringify(root, "\t"))
+	write_file.close()
+
+
 func _migrate_legacy_user_settings() -> void:
 	var migrated: bool = false
 
@@ -425,7 +519,58 @@ func _migrate_legacy_user_settings() -> void:
 	if migrated:
 		save_user_settings()
 
+	_migrate_legacy_fog_values()
+
+
+func _migrate_legacy_fog_keys_from_config(config: ConfigFile) -> void:
+	if _migrate_legacy_fog_values_from_config(config):
+		save_user_settings()
+
+
+func _migrate_legacy_fog_values() -> void:
+	if not FileAccess.file_exists(USER_PATH):
+		return
+	var config := ConfigFile.new()
+	if config.load(USER_PATH) != OK:
+		return
+	if _migrate_legacy_fog_values_from_config(config):
+		save_user_settings()
+
+
+func _migrate_legacy_fog_values_from_config(config: ConfigFile) -> bool:
+	var migrated: bool = false
+	var section: String = SettingsContext.to_section_name(SettingsContext.Context.GAME)
+	if (
+		config.has_section_key(section, LEGACY_FOG_PATH_INITIAL)
+		and not config.has_section_key(section, "fog.initial_reveal_radius")
+	):
+		_values["fog.initial_reveal_radius"] = _clamp_int(
+			"fog.initial_reveal_radius",
+			int(config.get_value(section, LEGACY_FOG_PATH_INITIAL))
+		)
+		migrated = true
+	if (
+		config.has_section_key(section, LEGACY_FOG_PATH_PLAYER)
+		and not config.has_section_key(section, "fog.player_reveal_radius")
+	):
+		_values["fog.player_reveal_radius"] = _clamp_int(
+			"fog.player_reveal_radius",
+			int(config.get_value(section, LEGACY_FOG_PATH_PLAYER))
+		)
+		migrated = true
+	if (
+		config.has_section_key(section, LEGACY_FOG_PATH_REVEAL_RADIUS)
+		and not config.has_section_key(section, "fog.initial_reveal_radius")
+	):
+		_values["fog.initial_reveal_radius"] = _clamp_int(
+			"fog.initial_reveal_radius",
+			int(config.get_value(section, LEGACY_FOG_PATH_REVEAL_RADIUS))
+		)
+		migrated = true
+	return migrated
+
 
 func _emit_domain_signals() -> void:
 	movement_changed.emit()
+	fog_changed.emit()
 	view_changed.emit()

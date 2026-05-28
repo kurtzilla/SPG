@@ -18,19 +18,18 @@ public readonly struct RevealedBounds
 
 public sealed class VisibilityModel
 {
-	// Must match game_settings.json core_reference.visibility_radius_min (manual sync).
+	// Must match game_settings.json fog.initial_reveal_radius min / max clamp range.
 	public const int RadiusMin = 1;
-	// Must match game_settings.json core_reference.visibility_radius_max (manual sync).
-	public const int RadiusMax = 32;
-	// Must match game_settings.json core_reference.visibility_initial_reveal_radius (manual sync).
-	public const int DefaultInitialRevealRadius = 24;
-	// Must match game_settings.json core_reference.visibility_movement_reveal_radius (manual sync).
+	public const int RadiusMax = 256;
+	// Must match game_settings.json fog.initial_reveal_radius default.
+	public const int DefaultInitialRevealRadius = 48;
+	// Must match game_settings.json fog.player_reveal_radius default.
 	public const int DefaultMovementRevealRadius = 24;
 
 	private const float RevealRadiusScaleMin = 0.25f;
 	private const float RevealRadiusScaleMax = 4f;
 
-	private readonly Dictionary<long, CellVisibility> _cells = new();
+	private readonly HashSet<long> _revealed = new();
 
 	private float _revealRadiusScaleX = 1f;
 	private float _revealRadiusScaleY = 1f;
@@ -68,23 +67,27 @@ public sealed class VisibilityModel
 	private int _initialRevealRadius = DefaultInitialRevealRadius;
 	private int _movementRevealRadius = DefaultMovementRevealRadius;
 
-	public CellVisibility GetVisibility(int x, int y)
-	{
-		if (_cells.TryGetValue(MakeKey(x, y), out CellVisibility visibility))
-		{
-			return visibility;
-		}
+	public bool IsRevealed(int x, int y) => _revealed.Contains(MakeKey(x, y));
 
-		return CellVisibility.Hidden;
-	}
+	public CellVisibility GetVisibility(int x, int y) =>
+		IsRevealed(x, y) ? CellVisibility.Revealed : CellVisibility.Hidden;
 
 	public void SetVisibility(int x, int y, CellVisibility visibility)
 	{
 		long key = MakeKey(x, y);
-		_cells[key] = visibility;
 		if (visibility == CellVisibility.Revealed)
 		{
-			ExpandRevealedBounds(x, y);
+			if (_revealed.Add(key))
+			{
+				ExpandRevealedBounds(x, y);
+			}
+
+			return;
+		}
+
+		if (_revealed.Remove(key))
+		{
+			// Bounds are not shrunk on hide; callers use ClearAll for full reset.
 		}
 	}
 
@@ -96,12 +99,11 @@ public sealed class VisibilityModel
 	public bool RevealCell(int x, int y, List<(int X, int Y)>? newlyRevealed)
 	{
 		long key = MakeKey(x, y);
-		if (_cells.TryGetValue(key, out CellVisibility existing) && existing == CellVisibility.Revealed)
+		if (!_revealed.Add(key))
 		{
 			return false;
 		}
 
-		_cells[key] = CellVisibility.Revealed;
 		ExpandRevealedBounds(x, y);
 		newlyRevealed?.Add((x, y));
 		return true;
@@ -141,9 +143,29 @@ public sealed class VisibilityModel
 		return count;
 	}
 
+	/// <summary>
+	/// Fills a row-major R8 mask: 255 = revealed, 0 = hidden.
+	/// </summary>
+	public void FillRevealedMask(int originX, int originY, int width, int height, Span<byte> outMask)
+	{
+		if (outMask.Length < width * height)
+		{
+			throw new ArgumentException("Mask buffer is too small.", nameof(outMask));
+		}
+
+		int index = 0;
+		for (int gy = originY; gy < originY + height; gy++)
+		{
+			for (int gx = originX; gx < originX + width; gx++)
+			{
+				outMask[index++] = IsRevealed(gx, gy) ? (byte)255 : (byte)0;
+			}
+		}
+	}
+
 	public void ClearAll()
 	{
-		_cells.Clear();
+		_revealed.Clear();
 		_hasRevealedBounds = false;
 	}
 

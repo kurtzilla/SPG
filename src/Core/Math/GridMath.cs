@@ -6,7 +6,7 @@ namespace SPG.Core;
 /// </summary>
 public static class GridMath
 {
-	// Must match game_settings.json scale.meters_per_cell (see core_reference.meters_per_cell).
+	// Must match game_settings.json scale.meters_per_cell.
 	public const float MetersPerCell = 1.0f;
 
 	public static readonly (int dx, int dy)[] Neighbor4 =

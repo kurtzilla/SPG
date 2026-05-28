@@ -10,7 +10,7 @@ const FogOverlayScript = preload("res://src/Godot/Scripts/Systems/fog-of-war/Fog
 @onready var _map_scroll: Node2D = $WorldCanvas/Tiles
 @onready var _chunk_manager: Node2D = $WorldCanvas/Tiles/ChunkManager
 @onready var _fog: FogExplorationMapScript = $FogExploration
-@onready var _fog_overlay: FogOverlayScript = $FogOverlay/FogRect
+@onready var _fog_overlay: FogOverlayScript = $WorldCanvas/Tiles/FogOverlay
 @onready var _grid_overlay: ColorRect = $GridOverlay/GridRect
 @onready var _settings_ui: CanvasLayer = $SettingsUi
 @onready var _player: PlayerControllerScript = %Player
@@ -38,6 +38,7 @@ func _ready() -> void:
 	y_sort_enabled = false
 	_map_scroll.y_sort_enabled = false
 	_snap_scroll_to_pixel = ProjectSettings.get_setting("rendering/2d/snap/snap_2d_transforms_to_pixel")
+	_mount_fog_overlay_to_screen_space()
 
 	if not ViewProjection.view_changed.is_connected(_on_view_changed):
 		ViewProjection.view_changed.connect(_on_view_changed)
@@ -88,8 +89,6 @@ func _finish_ready_viewport_dependent() -> void:
 	_apply_map_scroll_for_player()
 	_setup_fog()
 	_sync_spawn_tracking_from_player()
-	if _fog_overlay != null:
-		_fog_overlay.sync_uniforms()
 	_sync_view_scroll_and_overlays(true)
 	_grid_overlay.sync_uniforms()
 
@@ -142,6 +141,8 @@ func _on_player_grid_cell_changed(cell: Vector2i) -> void:
 	_chunk_manager.sync_center_from_player_map_px(_player.position)
 	_last_tracked_x = cell.x
 	_last_tracked_y = cell.y
+	if _fog != null:
+		_fog.on_player_cell_changed(cell)
 
 
 func _bootstrap_after_frame() -> void:
@@ -161,45 +162,33 @@ func _on_settings_changed() -> void:
 func _setup_fog() -> void:
 	if _fog == null or _fog_overlay == null or _player == null:
 		return
-	_fog.configure_world_anchor(_player.position)
-	_fog.setup(_player)
-	var fog_mat: ShaderMaterial = _fog_overlay.get_shader_material()
-	_fog.bind_shader_material(fog_mat)
-	_fog_overlay.set_player(_player)
-	_fog_overlay.set_map_scroll(_map_scroll)
-	_fog_overlay.configure(_fog.enabled, Color(0.0, 0.0, 0.0, 0.85))
-	_chunk_manager.set_fog_exploration_map(_fog)
+	_fog.setup(_player, _fog_overlay)
 	_chunk_manager.sync_center_from_player_map_px(_player.position)
 	var spawn_grid: Vector2i = _chunk_manager.world_px_to_grid_tile(_player.position)
+	_fog.bootstrap_exploration(spawn_grid)
+	_fog_overlay.set_enabled_visible(_fog.enabled)
 	_chunk_manager.force_immediate_startup_pass(spawn_grid)
-	_fog.force_stamp_now()
-	if _fog_overlay.has_method("update_fog_vision_metrics"):
-		var cell_px: float = float(ViewMetricsRes.CELL_SIZE_PX)
-		_fog_overlay.update_fog_vision_metrics(
-			_fog.get_reveal_radius_map_px() / cell_px,
-			_fog.get_reveal_feather_map_px() / cell_px
-		)
-	_fog_overlay.sync_player_position()
-	_fog_overlay.sync_uniforms()
+
+
+func _mount_fog_overlay_to_screen_space() -> void:
+	if _fog_overlay == null:
+		return
+	var parent: Node = _fog_overlay.get_parent()
+	if parent == self:
+		return
+	if parent != null:
+		parent.remove_child(_fog_overlay)
+	add_child(_fog_overlay)
 
 
 func _sync_spawn_tracking_from_player() -> void:
 	if _player == null:
 		return
 	var spawn_map_px: Vector2 = _player.position
-	_fog.configure_world_anchor(spawn_map_px)
 	_chunk_manager.sync_center_from_player_map_px(spawn_map_px)
 	var spawn_grid: Vector2i = _chunk_manager.world_px_to_grid_tile(spawn_map_px)
 	_last_tracked_x = spawn_grid.x
 	_last_tracked_y = spawn_grid.y
-
-
-func _on_fog_texture_uploaded() -> void:
-	pass
-
-
-func _on_fog_exploration_stamped() -> void:
-	pass
 
 
 func _schedule_zoom_deferred_rebuild() -> void:
@@ -249,6 +238,8 @@ func _sync_view_scroll_and_overlays(force: bool = false) -> void:
 	if scroll_changed or zoom_changed:
 		_grid_overlay.sync_canvas_transform(_map_scroll)
 		_refresh_overlays()
+		if scroll_changed or zoom_changed:
+			_sync_fog_view_transform()
 		if scroll_changed:
 			_verify_projection_canvas_parity()
 
@@ -264,6 +255,21 @@ func _viewport_grid_center() -> Vector2i:
 func _refresh_overlays() -> void:
 	var center: Vector2i = _viewport_grid_center()
 	_grid_overlay.update_region(center.x, center.y, _visual_spawn_radius())
+
+
+func _sync_fog_view_transform() -> void:
+	if _fog_overlay == null or _player == null or not _fog_overlay.has_method("sync_view_transform"):
+		return
+	var viewport: Viewport = get_viewport()
+	if viewport == null:
+		return
+	var player_cell: Vector2i = _chunk_manager.world_px_to_grid_tile(_player.position)
+	_fog_overlay.sync_view_transform(
+		viewport.get_visible_rect().size,
+		ViewProjection.zoom,
+		player_cell,
+		ViewProjection.map_scroll
+	)
 
 
 func _refresh_viewport_metrics() -> void:

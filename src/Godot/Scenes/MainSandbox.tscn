@@ -22,10 +22,10 @@ follow_viewport_enabled = true
 [node name="Player" parent="WorldCanvas/Tiles" unique_id=604040316 instance=ExtResource("6_player")]
 unique_name_in_owner = true
 
+[node name="FogOverlay" parent="WorldCanvas/Tiles" unique_id=1869907483 instance=ExtResource("8_fog_overlay")]
+
 [node name="FogExploration" type="Node" parent="." unique_id=1777612534]
 script = ExtResource("7_fog_exploration")
-
-[node name="FogOverlay" parent="." unique_id=1869907483 instance=ExtResource("8_fog_overlay")]
 
 [node name="GridOverlay" parent="." unique_id=316111383 instance=ExtResource("2_grid_overlay")]
 

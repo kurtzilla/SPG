@@ -1,296 +1,261 @@
 {
-  "schema_version": 1,
-  "view": {
-    "zoom": {
-      "value": 0.5,
-      "min": 0.2,
-      "max": 2.0,
-      "persist": false,
-      "context": "game"
-    },
-    "zoom_wheel_step": {
-      "value": 0.1,
-      "context": "game"
-    },
-    "settings_panel_visible": {
-      "value": true,
-      "persist": true,
-      "context": "game"
-    },
-    "save_debounce_sec": {
-      "value": 0.5,
-      "context": "game"
-    }
-  },
-  "player_movement": {
-    "max_speed": {
-      "value": 250.0,
-      "min": 50.0,
-      "max": 500.0,
-      "step": 10.0,
-      "persist": true,
-      "context": "game"
-    },
-    "acceleration": {
-      "value": 25.0,
-      "min": 5.0,
-      "max": 60.0,
-      "step": 1.0,
-      "persist": true,
-      "context": "game"
-    },
-    "friction": {
-      "value": 45.0,
-      "min": 5.0,
-      "max": 60.0,
-      "step": 1.0,
-      "persist": true,
-      "context": "game"
-    },
-    "velocity_snap_threshold_sq": {
-      "value": 0.01,
-      "context": "game"
-    }
-  },
-  "world": {
-    "noise_seed": {
-      "value": 42,
-      "context": "game"
-    },
-    "noise_frequency": {
-      "value": 0.04,
-      "context": "game"
-    },
-    "water_threshold": {
-      "value": 0.62,
-      "context": "game"
-    },
-    "mud_threshold": {
-      "value": 0.45,
-      "context": "game"
-    },
-    "cells_per_frame": {
-      "value": 192,
-      "min": 1,
-      "context": "game"
-    },
-    "chunk_frame_budget_usec": {
-      "value": 3500,
-      "min": 500,
-      "context": "game"
-    },
-    "bootstrap_cells_per_frame": {
-      "value": 512,
-      "min": 1,
-      "context": "game"
-    },
-    "bootstrap_cells_paint_per_frame": {
-      "value": 256,
-      "min": 1,
-      "context": "game"
-    },
-    "bootstrap_max_active_chunk_jobs": {
-      "value": 3,
-      "min": 1,
-      "context": "game"
-    },
-    "bootstrap_layer_acquires_per_frame": {
-      "value": 3,
-      "min": 1,
-      "context": "game"
-    },
-    "bootstrap_chunk_frame_budget_usec": {
-      "value": 6000,
-      "min": 500,
-      "context": "game"
-    },
-    "unload_chunks_per_frame": {
-      "value": 1,
-      "min": 1,
-      "context": "game"
-    },
-    "chunk_size": {
-      "value": 32,
-      "min": 8,
-      "context": "game"
-    },
-    "load_radius": {
-      "value": 1,
-      "min": 0,
-      "context": "game"
-    },
-    "load_radius_buffer": {
-      "value": 1,
-      "min": 0,
-      "context": "game"
-    },
-    "load_radius_view_padding": {
-      "value": 2,
-      "min": 0,
-      "context": "game"
-    },
-    "max_active_chunk_jobs": {
-      "value": 2,
-      "min": 1,
-      "context": "game"
-    },
-    "layer_acquires_per_frame": {
-      "value": 2,
-      "min": 1,
-      "context": "game"
-    },
-    "cells_paint_per_frame": {
-      "value": 96,
-      "min": 1,
-      "context": "game"
-    },
-    "spawn_safe_zone_x": {
-      "value": 0,
-      "context": "game"
-    },
-    "spawn_safe_zone_y": {
-      "value": 0,
-      "context": "game"
-    },
-    "safe_zone_radius": {
-      "value": 2,
-      "min": 0,
-      "context": "game"
-    }
-  },
-  "fog": {
-    "enabled": {
-      "value": true,
-      "context": "game"
-    },
-    "texture_update_hz": {
-      "value": 10,
-      "min": 1,
-      "context": "game"
-    },
-    "reveal_radius_cells": {
-      "value": 12,
-      "min": 1,
-      "context": "game",
-      "comment": "Matches core_reference.visibility_initial_reveal_radius; converted to map px via CELL_SIZE_PX"
-    },
-    "reveal_radius_screen_px": {
-      "value": 768,
-      "min": 1,
-      "context": "game",
-      "comment": "Legacy map-px mirror of reveal_radius_cells × CELL_SIZE_PX (64)"
-    },
-    "reveal_feather_cells": {
-      "value": 8,
-      "min": 0,
-      "context": "game"
-    },
-    "reveal_feather_screen_px": {
-      "value": 256,
-      "min": 0,
-      "context": "game",
-      "comment": "Legacy map-px mirror of reveal_feather_cells × CELL_SIZE_PX"
-    },
-    "world_extent_x": {
-      "value": 8192,
-      "min": 1,
-      "context": "game"
-    },
-    "world_extent_y": {
-      "value": 8192,
-      "min": 1,
-      "context": "game"
-    }
-  },
-  "grid": {
-    "visual_radius_buffer": {
-      "value": 2,
-      "context": "game"
-    },
-    "max_grid_radius": {
-      "value": 40,
-      "min": 1,
-      "context": "game"
-    },
-    "debug_grid_lines": {
-      "value": true,
-      "context": "game"
-    },
-    "line_width_px": {
-      "value": 1.0,
-      "context": "game"
-    },
-    "line_color": {
-      "value": [0.2, 0.22, 0.18, 0.6],
-      "context": "game"
-    }
-  },
-  "hud": {
-    "font_size": {
-      "value": 10,
-      "context": "game"
-    },
-    "value_color": {
-      "value": [0.75, 0.78, 0.82, 1.0],
-      "context": "game"
-    },
-    "max_speed_slider_step": {
-      "value": 10.0,
-      "context": "game"
-    },
-    "acceleration_slider_step": {
-      "value": 1.0,
-      "context": "game"
-    },
-    "friction_slider_step": {
-      "value": 1.0,
-      "context": "game"
-    }
-  },
-  "scale": {
-    "pixels_per_meter": {
-      "value": 64,
-      "min": 1,
-      "context": "game"
-    },
-    "meters_per_cell": {
-      "value": 1.0,
-      "min": 0.001,
-      "context": "game"
-    }
-  },
-  "core_reference": {
-    "_comment": "Manual sync with C# — not loaded into Settings runtime",
-    "meters_per_cell": {
-      "value": 1.0,
-      "source": "core",
-      "sync": "manual",
-      "csharp": "SPG.Core.GridMath.MetersPerCell",
-      "json_mirror": "scale.meters_per_cell"
-    },
-    "visibility_radius_min": {
-      "value": 1,
-      "source": "core",
-      "sync": "manual",
-      "csharp": "SPG.Core.VisibilityModel.RadiusMin"
-    },
-    "visibility_radius_max": {
-      "value": 32,
-      "source": "core",
-      "sync": "manual",
-      "csharp": "SPG.Core.VisibilityModel.RadiusMax"
-    },
-    "visibility_initial_reveal_radius": {
-      "value": 12,
-      "source": "core",
-      "sync": "manual",
-      "csharp": "SPG.Core.VisibilityModel.DefaultInitialRevealRadius"
-    },
-    "visibility_movement_reveal_radius": {
-      "value": 24,
-      "source": "core",
-      "sync": "manual",
-      "csharp": "SPG.Core.VisibilityModel.DefaultMovementRevealRadius"
-    }
-  }
+	"_comment": "Single source of truth for game tuning. Edit values here; user://settings.cfg is not used in this dev stage.",
+	"fog": {
+		"buffer_size_cells": {
+			"comment": "Sliding fog presentation buffer (1 texel = 1 grid cell)",
+			"context": "game",
+			"min": 32.0,
+			"value": 128.0
+		},
+		"enabled": {
+			"context": "game",
+			"value": true
+		},
+		"initial_reveal_radius": {
+			"comment": "Spawn reveal radius. Mirrors VisibilityModel.DefaultInitialRevealRadius when not set from Godot.",
+			"context": "game",
+			"max": 256.0,
+			"min": 1.0,
+			"persist": false,
+			"step": 1.0,
+			"value": 19
+		},
+		"player_reveal_radius": {
+			"comment": "Movement reveal radius. Mirrors VisibilityModel.DefaultMovementRevealRadius when not set from Godot.",
+			"context": "game",
+			"max": 256.0,
+			"min": 1.0,
+			"persist": false,
+			"step": 1.0,
+			"value": 13.0
+		},
+		"recenter_margin_cells": {
+			"comment": "Re-center buffer when player is within this many cells of the buffer edge",
+			"context": "game",
+			"min": 4.0,
+			"value": 24.0
+		}
+	},
+	"grid": {
+		"debug_grid_lines": {
+			"context": "game",
+			"value": true
+		},
+		"line_color": {
+			"context": "game",
+			"value": [
+				0.2,
+				0.22,
+				0.18,
+				0.6
+			]
+		},
+		"line_width_px": {
+			"context": "game",
+			"value": 1.0
+		},
+		"visual_radius_buffer": {
+			"context": "game",
+			"value": 2.0
+		}
+	},
+	"hud": {
+		"acceleration_slider_step": {
+			"context": "game",
+			"value": 1.0
+		},
+		"font_size": {
+			"context": "game",
+			"value": 10.0
+		},
+		"friction_slider_step": {
+			"context": "game",
+			"value": 1.0
+		},
+		"max_speed_slider_step": {
+			"context": "game",
+			"value": 10.0
+		},
+		"value_color": {
+			"context": "game",
+			"value": [
+				0.75,
+				0.78,
+				0.82,
+				1.0
+			]
+		}
+	},
+	"player_movement": {
+		"acceleration": {
+			"context": "game",
+			"max": 60.0,
+			"min": 5.0,
+			"persist": false,
+			"step": 1.0,
+			"value": 25.0
+		},
+		"friction": {
+			"context": "game",
+			"max": 60.0,
+			"min": 5.0,
+			"persist": false,
+			"step": 1.0,
+			"value": 45.0
+		},
+		"max_speed": {
+			"context": "game",
+			"max": 500.0,
+			"min": 50.0,
+			"persist": false,
+			"step": 10.0,
+			"value": 250.0
+		},
+		"velocity_snap_threshold_sq": {
+			"context": "game",
+			"value": 0.01
+		}
+	},
+	"scale": {
+		"meters_per_cell": {
+			"comment": "Must match SPG.Core.GridMath.MetersPerCell",
+			"context": "game",
+			"min": 0.001,
+			"value": 1.0
+		},
+		"pixels_per_meter": {
+			"context": "game",
+			"min": 1.0,
+			"value": 64.0
+		}
+	},
+	"schema_version": 1.0,
+	"view": {
+		"save_debounce_sec": {
+			"context": "game",
+			"value": 0.5
+		},
+		"settings_panel_visible": {
+			"context": "game",
+			"persist": false,
+			"value": true
+		},
+		"zoom": {
+			"context": "game",
+			"max": 2.0,
+			"min": 0.2,
+			"persist": false,
+			"value": 0.5
+		},
+		"zoom_wheel_step": {
+			"context": "game",
+			"value": 0.1
+		}
+	},
+	"world": {
+		"bootstrap_cells_paint_per_frame": {
+			"context": "game",
+			"min": 1.0,
+			"value": 256.0
+		},
+		"bootstrap_cells_per_frame": {
+			"context": "game",
+			"min": 1.0,
+			"value": 512.0
+		},
+		"bootstrap_chunk_frame_budget_usec": {
+			"context": "game",
+			"min": 500.0,
+			"value": 6000.0
+		},
+		"bootstrap_layer_acquires_per_frame": {
+			"context": "game",
+			"min": 1.0,
+			"value": 3.0
+		},
+		"bootstrap_max_active_chunk_jobs": {
+			"context": "game",
+			"min": 1.0,
+			"value": 3.0
+		},
+		"cells_paint_per_frame": {
+			"context": "game",
+			"min": 1.0,
+			"value": 96.0
+		},
+		"cells_per_frame": {
+			"context": "game",
+			"min": 1.0,
+			"value": 192.0
+		},
+		"chunk_frame_budget_usec": {
+			"context": "game",
+			"min": 500.0,
+			"value": 3500.0
+		},
+		"chunk_size": {
+			"context": "game",
+			"min": 8.0,
+			"value": 32.0
+		},
+		"layer_acquires_per_frame": {
+			"context": "game",
+			"min": 1.0,
+			"value": 2.0
+		},
+		"load_radius": {
+			"context": "game",
+			"min": 0.0,
+			"value": 1.0
+		},
+		"load_radius_buffer": {
+			"context": "game",
+			"min": 0.0,
+			"value": 1.0
+		},
+		"load_radius_view_padding": {
+			"context": "game",
+			"min": 0.0,
+			"value": 2.0
+		},
+		"max_active_chunk_jobs": {
+			"context": "game",
+			"min": 1.0,
+			"value": 2.0
+		},
+		"mud_threshold": {
+			"context": "game",
+			"value": 0.45
+		},
+		"noise_frequency": {
+			"context": "game",
+			"value": 0.04
+		},
+		"noise_seed": {
+			"context": "game",
+			"value": 42.0
+		},
+		"safe_zone_radius": {
+			"context": "game",
+			"min": 0.0,
+			"value": 2.0
+		},
+		"spawn_safe_zone_x": {
+			"context": "game",
+			"value": 0.0
+		},
+		"spawn_safe_zone_y": {
+			"context": "game",
+			"value": 0.0
+		},
+		"unload_chunks_per_frame": {
+			"context": "game",
+			"min": 1.0,
+			"value": 1.0
+		},
+		"water_threshold": {
+			"context": "game",
+			"value": 0.62
+		}
+	}
 }

@@ -23,6 +23,8 @@ public partial class VisibilityModelGd : RefCounted
 		set => _model.MovementRevealRadius = value;
 	}
 
+	public bool IsRevealed(int x, int y) => _model.IsRevealed(x, y);
+
 	public int GetVisibility(int x, int y) => (int)_model.GetVisibility(x, y);
 
 	public void SetVisibility(int x, int y, int visibility) =>
@@ -34,6 +36,13 @@ public partial class VisibilityModelGd : RefCounted
 		_model.RevealDisc(centerX, centerY, radius);
 
 	public void ClearAll() => _model.ClearAll();
+
+	public byte[] FillRevealedMask(int originX, int originY, int width, int height)
+	{
+		var mask = new byte[width * height];
+		_model.FillRevealedMask(originX, originY, width, height, mask);
+		return mask;
+	}
 
 	public bool TryGetRevealedBounds(out int minX, out int minY, out int maxX, out int maxY)
 	{

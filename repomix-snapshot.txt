@@ -22,6 +22,7 @@ or other automated processes.</purpose><file_format>The content is organized as 
 - Files matching default ignore patterns are excluded
 - Content has been formatted for parsing in xml style
 - Files are sorted by Git change count (files with more changes are at the bottom)</notes></file_summary><directory_structure>.cursor/commands/repomix-run.md
+.cursor/plans/settings_panel_fog_ui.plan.md
 .cursor/rules/agent-efficiency.mdc
 .cursor/rules/architecture.md
 .cursor/rules/conciseness.mdc
@@ -43,6 +44,7 @@ README.md
 repomix-instructions.md
 repomix.config.json
 SPG.csproj
+SPG.csproj.old
 SPG.sln
 src/Core/Math/GridMath.cs
 src/Core/Math/GridMath.cs.uid
@@ -121,7 +123,205 @@ src/Godot/Shaders/FogOverlay.gdshader
 src/Godot/Shaders/FogOverlay.gdshader.uid
 src/Godot/Shaders/GridOverlay.gdshader
 src/Godot/Shaders/GridOverlay.gdshader.uid
-src/SPG.Core.csproj</directory_structure><files>This section contains the contents of the repository&apos;s files.<file path=".cursor/commands/repomix-run.md">---
+src/SPG.Core.csproj</directory_structure><files>This section contains the contents of the repository&apos;s files.<file path=".cursor/plans/settings_panel_fog_ui.plan.md">---
+name: Settings Panel Fog UI
+overview: Double the HUD settings panel, add fog radius sliders, canonicalize fog settings keys (initial 8 / player 3), and bind them into FogOverlay boot so Core VisibilityModel receives the correct RevealDisc radii on new game startup.
+todos:
+  - id: scale-tscn
+    content: Double all structural sizes, margins, separations, and font overrides in SettingsPanel.tscn; widen TopRightVBox anchor offset
+    status: completed
+  - id: fog-ui-tscn
+    content: Add FogBlock grid (2 sliders + value labels) and SessionFootnote label to SettingsPanel.tscn
+    status: completed
+  - id: schema-keys
+    content: Rename/add fog.initial_reveal_radius and fog.player_reveal_radius in game_settings.json (defaults 8/3, min/max 4-16 / 1-6, persist)
+    status: completed
+  - id: settings-backend
+    content: Add get_setting(), convenience props, and FOG_PATHS to Settings.gd; migrate legacy *_cells keys on load
+    status: completed
+  - id: wire-panel-gd
+    content: Bind fog sliders in SettingsPanel.gd to new keys; scale slider theme 2x
+    status: completed
+  - id: bind-fog-overlay
+    content: FogOverlay.gd — _is_first_draw, load radii from Settings on setup, RevealDisc via _visibility on first draw vs movement
+    status: completed
+  - id: verify-boot
+    content: New game boot — spawn disc uses initial radius 8 (configurable); movement uses player radius 3
+    status: pending
+isProject: true
+---
+
+# Settings Panel + Fog Boot Binding
+
+## Scope
+
+| File | Role |
+|------|------|
+| [`src/Godot/Scenes/SettingsPanel.tscn`](src/Godot/Scenes/SettingsPanel.tscn) | 2× panel scale, fog sliders, footnote |
+| [`src/Godot/Scripts/SettingsPanel.gd`](src/Godot/Scripts/SettingsPanel.gd) | Slider UI → Settings |
+| [`src/Godot/Config/game_settings.json`](src/Godot/Config/game_settings.json) | Schema for fog radii |
+| [`src/Godot/Scripts/Settings.gd`](src/Godot/Scripts/Settings.gd) | Canonical keys, `get_setting()`, persistence |
+| [`src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd`](src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd) | Boot-time Core `RevealDisc` binding |
+
+Boot path (unchanged orchestration):
+
+`MainSandbox._setup_fog()` → `FogExplorationMap.bootstrap_exploration(spawn_cell)` → `FogOverlay.setup(_visibility, start_cell)` + `on_player_cell_changed(start_cell)`.
+
+---
+
+## 5. Configuration keys + Settings backend (new)
+
+### Canonical schema paths
+
+Rename / consolidate fog radius keys in [`game_settings.json`](src/Godot/Config/game_settings.json) under the `fog` section:
+
+| User-facing name | Schema path | Default | Range |
+|------------------|-------------|---------|-------|
+| Initial Reveal Radius | `fog.initial_reveal_radius` | **8** | 4–16 |
+| Player Reveal Radius | `fog.player_reveal_radius` | **3** | 1–6 |
+
+Both entries: `&quot;step&quot;: 1`, `&quot;persist&quot;: true`, `&quot;context&quot;: &quot;game&quot;`.
+
+**Legacy migration:** On load in [`Settings.gd`](src/Godot/Scripts/Settings.gd), if user cfg still has `fog.initial_reveal_radius_cells` / `fog.movement_reveal_radius_cells`, copy into the new paths once (then save). Remove or mark old keys as deprecated in JSON comments.
+
+### Settings.gd API
+
+Add generic accessor (maps user’s `SettingsManager.get_setting` intent to the existing `Settings` autoload):
+
+```gdscript
+func get_setting(path: String, default_value: Variant = null) -&gt; Variant:
+	if not has(path):
+		return default_value
+	match _schema[path].get(&quot;type&quot;, TYPE_NIL):
+		TYPE_BOOL: return get_bool(path)
+		TYPE_INT: return get_int(path)
+		_: return get_float(path)
+```
+
+Add convenience properties (hot paths for fog boot):
+
+```gdscript
+var initial_reveal_radius: int:
+	get: return get_int(&quot;fog.initial_reveal_radius&quot;)
+	set(v): set_int(&quot;fog.initial_reveal_radius&quot;, v)
+
+var player_reveal_radius: int:
+	get: return get_int(&quot;fog.player_reveal_radius&quot;)
+	set(v): set_int(&quot;fog.player_reveal_radius&quot;, v)
+```
+
+Add `FOG_PATHS` array (like `MOVEMENT_PATHS`) and emit optional `fog_changed` signal from `_set_value` when those paths change (for future live UI sync; boot still reads at `setup()` only).
+
+Update [`SettingsPanel.gd`](src/Godot/Scripts/SettingsPanel.gd) sliders to use **`fog.initial_reveal_radius`** and **`fog.player_reveal_radius`** (not `*_cells`).
+
+---
+
+## 6. FogOverlay boot binding (new)
+
+### Rename flag
+
+Rename `_is_first_reveal` → **`_is_first_draw`** (matches user spec; set `true` in `setup()`, cleared after first successful reveal).
+
+### Load radii on boot
+
+In `setup()` and `_read_fog_settings()`, replace `_read_int_setting(&quot;fog.initial_reveal_radius_cells&quot;, …)` with:
+
+```gdscript
+const PATH_INITIAL := &quot;fog.initial_reveal_radius&quot;
+const PATH_PLAYER := &quot;fog.player_reveal_radius&quot;
+
+_initial_reveal_radius = int(Settings.get_setting(PATH_INITIAL, 8))
+_player_reveal_radius = int(Settings.get_setting(PATH_PLAYER, 3))
+```
+
+Update defaults: `DEFAULT_INITIAL_REVEAL_RADIUS = 8`, `DEFAULT_MOVEMENT_REVEAL_RADIUS` → rename field to `_player_reveal_radius`.
+
+### Frame-one reveal in `on_player_cell_changed`
+
+Adapt user pseudocode to **actual project wiring** (no direct `CoreBridge.VisibilityModel` — use injected `_visibility` from `FogExplorationMap`):
+
+```gdscript
+func on_player_cell_changed(cell: Vector2i) -&gt; void:
+	if not _configured or _visibility == null:
+		return
+	if cell == _last_reveal_cell:
+		return
+
+	_read_fog_settings()  # reload radii each boot call; cheap int read
+	var radius: int = _initial_reveal_radius if _is_first_draw else _player_reveal_radius
+
+	if _is_first_draw:
+		_is_first_draw = false
+
+	_last_reveal_cell = cell
+
+	if _needs_recenter(cell):
+		_recenter_buffer(cell, radius)
+	else:
+		reveal_cells_at(cell, radius)  # _visibility.RevealDisc + buffer stamp
+		_fog_texture.update(_fog_image)
+```
+
+`reveal_cells_at()` already calls `_visibility.RevealDisc(grid_coord.x, grid_coord.y, radius_cells)` — that **is** the Core write path.
+
+### Optional: sync Core model metadata
+
+In [`FogExplorationMap.gd`](src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd) `setup()`, after `CreateVisibilityModel()`, set `InitialRevealRadius` / `MovementRevealRadius` on the wrapper from `Settings.initial_reveal_radius` / `Settings.player_reveal_radius` so any other Core consumers stay aligned. Small additive change; not required if all reveals go through `FogOverlay`.
+
+---
+
+## 1–4. Settings panel UI (unchanged intent, updated keys)
+
+### 1. Double panel scale (2×)
+
+Same as before: `SettingsPanelRoot` min width 220→**440**, `TopRightVBox.offset_left` -236→**-456**, double margins/separations/slider mins, fonts 13→**26** and 10→**20**, double compact slider theme margins, `hud_theme.default_font_size = Settings.get_int(&quot;hud.font_size&quot;) * 2`.
+
+### 2–4. Fog sliders + footnote
+
+Fog block labels (exact):
+
+- `Initial Reveal Radius *`
+- `Player Reveal Radius *`
+
+Footnote (exact): `* Requires a brand new game session to take effect.`
+
+Sliders bind to **`fog.initial_reveal_radius`** / **`fog.player_reveal_radius`** with defaults **8** / **3**.
+
+---
+
+## Data flow (end-to-end)
+
+```mermaid
+flowchart LR
+  UI[SettingsPanel sliders]
+  Settings[Settings autoload]
+  Boot[MainSandbox._setup_fog]
+  FogMap[FogExplorationMap.bootstrap]
+  Overlay[FogOverlay.setup + on_player_cell_changed]
+  Core[VisibilityModelGd.RevealDisc]
+
+  UI --&gt;|set_int| Settings
+  Settings --&gt;|persist user://settings.cfg| Settings
+  Boot --&gt; FogMap --&gt; Overlay
+  Overlay --&gt;|get_setting on boot| Settings
+  Overlay --&gt;|first draw / movement| Core
+```
+
+---
+
+## Self-correction (performance)
+
+- **Trap:** Re-reading settings every cell change — only needed if hot-reload mid-session; for boot binding, load once in `setup()` and optionally skip `_read_fog_settings()` inside `on_player_cell_changed` (read only in `setup()` / `_ready`).
+- **Trap:** Double `RevealDisc` on bootstrap — `bootstrap_exploration` calls `on_player_cell_changed(start_cell)` once; ensure `_is_first_draw` is still true so spawn gets **initial** radius only once.
+
+---
+
+## Verification
+
+1. UI: 2× panel, sliders 8 and 3 by default, clamps 4–16 / 1–6, footnote visible.
+2. Set initial to 12 in UI, restart game: spawn exploration disc radius ≈ 12 cells in Core (check via revealed area / debug).
+3. Move to new cell: expansion uses **player** radius (e.g. 3), not initial.
+4. Mid-session slider change does not reshape existing fog until new boot (footnote behavior).</file><file path=".cursor/commands/repomix-run.md">---
 description: Generates a codebase snapshot quietly
 ---
 
@@ -695,21 +895,24 @@ static func rect_union(a: Rect2, b: Rect2) -&gt; Rect2:
 static func rect_from_center_size(center: Vector2, size: Vector2) -&gt; Rect2:
 	return Rect2(center - size * 0.5, size)</file><file path="src/Godot/Scripts/Math2D.gd.uid">uid://cpg6j68n5hns7</file><file path="src/Godot/Scripts/ObliqueBridge.gd.uid">uid://0tvbb2g6n0ch</file><file path="src/Godot/Scripts/PlayerController.gd.uid">uid://n4t34sr8qh7s</file><file path="src/Godot/Scripts/Settings.gd">extends Node
 
-## Central settings autoload. Defaults from game_settings.json; user overrides in user://settings.cfg.
+## Central settings autoload. Single source of truth: game_settings.json (see USE_USER_SETTINGS_FILE).
 
 const SettingsContext = preload(&quot;res://src/Godot/Scripts/SettingsContext.gd&quot;)
 const ViewMetrics = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
 
 signal setting_changed(path: String)
 signal movement_changed
+signal fog_changed
 signal view_changed
 
 const DEFAULTS_PATH: String = &quot;res://src/Godot/Config/game_settings.json&quot;
+## Dev stage: false = only game_settings.json; true = load/save user://settings.cfg for persist keys.
+const USE_USER_SETTINGS_FILE: bool = false
 const USER_PATH: String = &quot;user://settings.cfg&quot;
 const LEGACY_MOVEMENT_PATH: String = &quot;user://player_movement.cfg&quot;
 const LEGACY_VIEW_PATH: String = &quot;user://view_settings.cfg&quot;
 
-const SKIP_SECTIONS: Array[String] = [&quot;schema_version&quot;, &quot;core_reference&quot;]
+const SKIP_SECTIONS: Array[String] = [&quot;schema_version&quot;]
 
 const MOVEMENT_PATHS: Array[String] = [
 	&quot;player_movement.max_speed&quot;,
@@ -721,6 +924,17 @@ const VIEW_PATHS: Array[String] = [
 	&quot;view.zoom&quot;,
 	&quot;view.settings_panel_visible&quot;,
 ]
+
+const FOG_PATHS: Array[String] = [
+	&quot;fog.initial_reveal_radius&quot;,
+	&quot;fog.player_reveal_radius&quot;,
+]
+
+const LEGACY_FOG_PATH_INITIAL: String = &quot;fog.initial_reveal_radius_cells&quot;
+const LEGACY_FOG_PATH_PLAYER: String = &quot;fog.movement_reveal_radius_cells&quot;
+const LEGACY_FOG_PATH_REVEAL_RADIUS: String = &quot;fog.reveal_radius_cells&quot;
+const FOG_DEFAULT_PATH_INITIAL: String = &quot;fog.initial_reveal_radius&quot;
+const FOG_DEFAULT_PATH_PLAYER: String = &quot;fog.player_reveal_radius&quot;
 
 var _schema: Dictionary = {}
 var _values: Dictionary = {}
@@ -784,7 +998,32 @@ var settings_panel_visible: bool:
 		set_bool(&quot;view.settings_panel_visible&quot;, value)
 
 
+var initial_reveal_radius: int:
+	get:
+		return get_int(&quot;fog.initial_reveal_radius&quot;)
+	set(value):
+		set_int(&quot;fog.initial_reveal_radius&quot;, value)
+
+
+var player_reveal_radius: int:
+	get:
+		return get_int(&quot;fog.player_reveal_radius&quot;)
+	set(value):
+		set_int(&quot;fog.player_reveal_radius&quot;, value)
+
+
 # --- Typed getters ---
+
+func get_setting(path: String, default_value: Variant = null) -&gt; Variant:
+	if not has(path):
+		return default_value
+	match _schema[path].get(&quot;type&quot;, TYPE_NIL):
+		TYPE_BOOL:
+			return get_bool(path)
+		TYPE_INT:
+			return get_int(path)
+		_:
+			return get_float(path)
 
 func get_float(path: String) -&gt; float:
 	return float(_values.get(path, _schema.get(path, {}).get(&quot;default&quot;, 0.0)))
@@ -880,8 +1119,13 @@ func get_settings_panel_visible() -&gt; bool:
 func load_user_settings() -&gt; void:
 	_reset_values_to_defaults()
 
+	if not USE_USER_SETTINGS_FILE:
+		_emit_domain_signals()
+		return
+
 	if not FileAccess.file_exists(USER_PATH):
 		_migrate_legacy_user_settings()
+		_migrate_legacy_fog_values()
 		_emit_domain_signals()
 		return
 
@@ -889,6 +1133,7 @@ func load_user_settings() -&gt; void:
 	var err: Error = config.load(USER_PATH)
 	if err != OK:
 		_migrate_legacy_user_settings()
+		_migrate_legacy_fog_values()
 		_emit_domain_signals()
 		return
 
@@ -901,8 +1146,14 @@ func load_user_settings() -&gt; void:
 			continue
 		_values[path] = _coerce_value(path, config.get_value(section, path))
 
+	_migrate_legacy_fog_keys_from_config(config)
+	_emit_domain_signals()
+
 
 func save_user_settings() -&gt; void:
+	if not USE_USER_SETTINGS_FILE:
+		return
+
 	var config := ConfigFile.new()
 	for path: String in _schema:
 		var entry: Dictionary = _schema[path]
@@ -1000,9 +1251,12 @@ func _set_value(path: String, value: Variant) -&gt; void:
 	setting_changed.emit(path)
 	if path in MOVEMENT_PATHS:
 		movement_changed.emit()
+	if path in FOG_PATHS:
+		fog_changed.emit()
+		_persist_fog_path_to_defaults(path, value)
 	if path in VIEW_PATHS or path.begins_with(&quot;view.&quot;):
 		view_changed.emit()
-	if _schema[path].get(&quot;persist&quot;, false):
+	if USE_USER_SETTINGS_FILE and _schema[path].get(&quot;persist&quot;, false):
 		_schedule_save()
 
 
@@ -1082,6 +1336,46 @@ func _schedule_save() -&gt; void:
 		_save_timer.start()
 
 
+func _persist_fog_path_to_defaults(path: String, value: Variant) -&gt; void:
+	if path != FOG_DEFAULT_PATH_INITIAL and path != FOG_DEFAULT_PATH_PLAYER:
+		return
+	var serialized_path: String = ProjectSettings.globalize_path(DEFAULTS_PATH)
+	var read_file := FileAccess.open(serialized_path, FileAccess.READ)
+	if read_file == null:
+		push_warning(&quot;Settings: Cannot open defaults for fog persistence: &quot; + serialized_path)
+		return
+	var raw_text: String = read_file.get_as_text()
+	read_file.close()
+	var json := JSON.new()
+	if json.parse(raw_text) != OK:
+		push_warning(&quot;Settings: Cannot parse defaults JSON for fog persistence: &quot; + json.get_error_message())
+		return
+	var root: Variant = json.data
+	if typeof(root) != TYPE_DICTIONARY:
+		push_warning(&quot;Settings: Defaults JSON root is not a Dictionary for fog persistence&quot;)
+		return
+	var fog_section: Variant = root.get(&quot;fog&quot;, null)
+	if typeof(fog_section) != TYPE_DICTIONARY:
+		push_warning(&quot;Settings: Missing fog section in defaults JSON&quot;)
+		return
+	var fog_dict: Dictionary = fog_section
+	var key_name: String = path.get_slice(&quot;.&quot;, 1)
+	var fog_entry: Variant = fog_dict.get(key_name, null)
+	if typeof(fog_entry) != TYPE_DICTIONARY:
+		push_warning(&quot;Settings: Missing fog key in defaults JSON: &quot; + path)
+		return
+	var entry_dict: Dictionary = fog_entry
+	entry_dict[&quot;value&quot;] = value
+	fog_dict[key_name] = entry_dict
+	root[&quot;fog&quot;] = fog_dict
+	var write_file := FileAccess.open(serialized_path, FileAccess.WRITE)
+	if write_file == null:
+		push_warning(&quot;Settings: Cannot write defaults for fog persistence: &quot; + serialized_path)
+		return
+	write_file.store_string(JSON.stringify(root, &quot;\t&quot;))
+	write_file.close()
+
+
 func _migrate_legacy_user_settings() -&gt; void:
 	var migrated: bool = false
 
@@ -1120,9 +1414,60 @@ func _migrate_legacy_user_settings() -&gt; void:
 	if migrated:
 		save_user_settings()
 
+	_migrate_legacy_fog_values()
+
+
+func _migrate_legacy_fog_keys_from_config(config: ConfigFile) -&gt; void:
+	if _migrate_legacy_fog_values_from_config(config):
+		save_user_settings()
+
+
+func _migrate_legacy_fog_values() -&gt; void:
+	if not FileAccess.file_exists(USER_PATH):
+		return
+	var config := ConfigFile.new()
+	if config.load(USER_PATH) != OK:
+		return
+	if _migrate_legacy_fog_values_from_config(config):
+		save_user_settings()
+
+
+func _migrate_legacy_fog_values_from_config(config: ConfigFile) -&gt; bool:
+	var migrated: bool = false
+	var section: String = SettingsContext.to_section_name(SettingsContext.Context.GAME)
+	if (
+		config.has_section_key(section, LEGACY_FOG_PATH_INITIAL)
+		and not config.has_section_key(section, &quot;fog.initial_reveal_radius&quot;)
+	):
+		_values[&quot;fog.initial_reveal_radius&quot;] = _clamp_int(
+			&quot;fog.initial_reveal_radius&quot;,
+			int(config.get_value(section, LEGACY_FOG_PATH_INITIAL))
+		)
+		migrated = true
+	if (
+		config.has_section_key(section, LEGACY_FOG_PATH_PLAYER)
+		and not config.has_section_key(section, &quot;fog.player_reveal_radius&quot;)
+	):
+		_values[&quot;fog.player_reveal_radius&quot;] = _clamp_int(
+			&quot;fog.player_reveal_radius&quot;,
+			int(config.get_value(section, LEGACY_FOG_PATH_PLAYER))
+		)
+		migrated = true
+	if (
+		config.has_section_key(section, LEGACY_FOG_PATH_REVEAL_RADIUS)
+		and not config.has_section_key(section, &quot;fog.initial_reveal_radius&quot;)
+	):
+		_values[&quot;fog.initial_reveal_radius&quot;] = _clamp_int(
+			&quot;fog.initial_reveal_radius&quot;,
+			int(config.get_value(section, LEGACY_FOG_PATH_REVEAL_RADIUS))
+		)
+		migrated = true
+	return migrated
+
 
 func _emit_domain_signals() -&gt; void:
 	movement_changed.emit()
+	fog_changed.emit()
 	view_changed.emit()</file><file path="src/Godot/Scripts/Settings.gd.uid">uid://bi2n75uvmnxk7</file><file path="src/Godot/Scripts/SettingsContext.gd">class_name SettingsContext
 extends RefCounted
 
@@ -1268,7 +1613,26 @@ Before writing any complex system (like chunk management, procedural generation,
 
 - Explicitly state any potential performance traps or inefficiencies in your initial thought process.
 - Explain how you are bypassing them (e.g., using Dictionaries instead of Arrays, avoiding per-frame node instantiations).
-- Only provide code that has passed your own internal performance audit.</file><file path="src/Core/Math/GridMath.cs">namespace SPG.Core;
+- Only provide code that has passed your own internal performance audit.</file><file path="SPG.csproj.old">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.6.3&quot;&gt;
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
+    &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
+    &lt;RootNamespace&gt;SPG&lt;/RootNamespace&gt;
+    &lt;AssemblyName&gt;SPG&lt;/AssemblyName&gt;
+    &lt;Nullable&gt;enable&lt;/Nullable&gt;
+    &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
+  &lt;/PropertyGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;ProjectReference Include=&quot;src\SPG.Core.csproj&quot; /&gt;
+  &lt;/ItemGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;Compile Remove=&quot;src\Core\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;src\obj\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;src\bin\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;artifacts\**\*.cs&quot; /&gt;
+    &lt;Compile Remove=&quot;tests\**\*.cs&quot; /&gt;
+  &lt;/ItemGroup&gt;
+&lt;/Project&gt;</file><file path="src/Core/Math/GridMath.cs">namespace SPG.Core;
 
 /// &lt;summary&gt;
 /// Grid-index utilities in Core space. 1 cell = 1 meter.
@@ -1276,7 +1640,7 @@ Before writing any complex system (like chunk management, procedural generation,
 /// &lt;/summary&gt;
 public static class GridMath
 {
-	// Must match game_settings.json scale.meters_per_cell (see core_reference.meters_per_cell).
+	// Must match game_settings.json scale.meters_per_cell.
 	public const float MetersPerCell = 1.0f;
 
 	public static readonly (int dx, int dy)[] Neighbor4 =
@@ -1360,19 +1724,18 @@ public readonly struct RevealedBounds
 
 public sealed class VisibilityModel
 {
-	// Must match game_settings.json core_reference.visibility_radius_min (manual sync).
+	// Must match game_settings.json fog.initial_reveal_radius min / max clamp range.
 	public const int RadiusMin = 1;
-	// Must match game_settings.json core_reference.visibility_radius_max (manual sync).
-	public const int RadiusMax = 32;
-	// Must match game_settings.json core_reference.visibility_initial_reveal_radius (manual sync).
-	public const int DefaultInitialRevealRadius = 24;
-	// Must match game_settings.json core_reference.visibility_movement_reveal_radius (manual sync).
+	public const int RadiusMax = 256;
+	// Must match game_settings.json fog.initial_reveal_radius default.
+	public const int DefaultInitialRevealRadius = 48;
+	// Must match game_settings.json fog.player_reveal_radius default.
 	public const int DefaultMovementRevealRadius = 24;
 
 	private const float RevealRadiusScaleMin = 0.25f;
 	private const float RevealRadiusScaleMax = 4f;
 
-	private readonly Dictionary&lt;long, CellVisibility&gt; _cells = new();
+	private readonly HashSet&lt;long&gt; _revealed = new();
 
 	private float _revealRadiusScaleX = 1f;
 	private float _revealRadiusScaleY = 1f;
@@ -1410,23 +1773,27 @@ public sealed class VisibilityModel
 	private int _initialRevealRadius = DefaultInitialRevealRadius;
 	private int _movementRevealRadius = DefaultMovementRevealRadius;
 
-	public CellVisibility GetVisibility(int x, int y)
-	{
-		if (_cells.TryGetValue(MakeKey(x, y), out CellVisibility visibility))
-		{
-			return visibility;
-		}
+	public bool IsRevealed(int x, int y) =&gt; _revealed.Contains(MakeKey(x, y));
 
-		return CellVisibility.Hidden;
-	}
+	public CellVisibility GetVisibility(int x, int y) =&gt;
+		IsRevealed(x, y) ? CellVisibility.Revealed : CellVisibility.Hidden;
 
 	public void SetVisibility(int x, int y, CellVisibility visibility)
 	{
 		long key = MakeKey(x, y);
-		_cells[key] = visibility;
 		if (visibility == CellVisibility.Revealed)
 		{
-			ExpandRevealedBounds(x, y);
+			if (_revealed.Add(key))
+			{
+				ExpandRevealedBounds(x, y);
+			}
+
+			return;
+		}
+
+		if (_revealed.Remove(key))
+		{
+			// Bounds are not shrunk on hide; callers use ClearAll for full reset.
 		}
 	}
 
@@ -1438,12 +1805,11 @@ public sealed class VisibilityModel
 	public bool RevealCell(int x, int y, List&lt;(int X, int Y)&gt;? newlyRevealed)
 	{
 		long key = MakeKey(x, y);
-		if (_cells.TryGetValue(key, out CellVisibility existing) &amp;&amp; existing == CellVisibility.Revealed)
+		if (!_revealed.Add(key))
 		{
 			return false;
 		}
 
-		_cells[key] = CellVisibility.Revealed;
 		ExpandRevealedBounds(x, y);
 		newlyRevealed?.Add((x, y));
 		return true;
@@ -1483,9 +1849,29 @@ public sealed class VisibilityModel
 		return count;
 	}
 
+	/// &lt;summary&gt;
+	/// Fills a row-major R8 mask: 255 = revealed, 0 = hidden.
+	/// &lt;/summary&gt;
+	public void FillRevealedMask(int originX, int originY, int width, int height, Span&lt;byte&gt; outMask)
+	{
+		if (outMask.Length &lt; width * height)
+		{
+			throw new ArgumentException(&quot;Mask buffer is too small.&quot;, nameof(outMask));
+		}
+
+		int index = 0;
+		for (int gy = originY; gy &lt; originY + height; gy++)
+		{
+			for (int gx = originX; gx &lt; originX + width; gx++)
+			{
+				outMask[index++] = IsRevealed(gx, gy) ? (byte)255 : (byte)0;
+			}
+		}
+	}
+
 	public void ClearAll()
 	{
-		_cells.Clear();
+		_revealed.Clear();
 		_hasRevealedBounds = false;
 	}
 
@@ -1554,301 +1940,6 @@ public sealed class VisibilityModel
 		Math.Clamp(radius, RadiusMin, RadiusMax);
 
 	private static long MakeKey(int x, int y) =&gt; ((long)x &lt;&lt; 32) | (uint)y;
-}</file><file path="src/Godot/Config/game_settings.json">{
-  &quot;schema_version&quot;: 1,
-  &quot;view&quot;: {
-    &quot;zoom&quot;: {
-      &quot;value&quot;: 0.5,
-      &quot;min&quot;: 0.2,
-      &quot;max&quot;: 2.0,
-      &quot;persist&quot;: false,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;zoom_wheel_step&quot;: {
-      &quot;value&quot;: 0.1,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;settings_panel_visible&quot;: {
-      &quot;value&quot;: true,
-      &quot;persist&quot;: true,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;save_debounce_sec&quot;: {
-      &quot;value&quot;: 0.5,
-      &quot;context&quot;: &quot;game&quot;
-    }
-  },
-  &quot;player_movement&quot;: {
-    &quot;max_speed&quot;: {
-      &quot;value&quot;: 250.0,
-      &quot;min&quot;: 50.0,
-      &quot;max&quot;: 500.0,
-      &quot;step&quot;: 10.0,
-      &quot;persist&quot;: true,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;acceleration&quot;: {
-      &quot;value&quot;: 25.0,
-      &quot;min&quot;: 5.0,
-      &quot;max&quot;: 60.0,
-      &quot;step&quot;: 1.0,
-      &quot;persist&quot;: true,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;friction&quot;: {
-      &quot;value&quot;: 45.0,
-      &quot;min&quot;: 5.0,
-      &quot;max&quot;: 60.0,
-      &quot;step&quot;: 1.0,
-      &quot;persist&quot;: true,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;velocity_snap_threshold_sq&quot;: {
-      &quot;value&quot;: 0.01,
-      &quot;context&quot;: &quot;game&quot;
-    }
-  },
-  &quot;world&quot;: {
-    &quot;noise_seed&quot;: {
-      &quot;value&quot;: 42,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;noise_frequency&quot;: {
-      &quot;value&quot;: 0.04,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;water_threshold&quot;: {
-      &quot;value&quot;: 0.62,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;mud_threshold&quot;: {
-      &quot;value&quot;: 0.45,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;cells_per_frame&quot;: {
-      &quot;value&quot;: 192,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;chunk_frame_budget_usec&quot;: {
-      &quot;value&quot;: 3500,
-      &quot;min&quot;: 500,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;bootstrap_cells_per_frame&quot;: {
-      &quot;value&quot;: 512,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;bootstrap_cells_paint_per_frame&quot;: {
-      &quot;value&quot;: 256,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;bootstrap_max_active_chunk_jobs&quot;: {
-      &quot;value&quot;: 3,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;bootstrap_layer_acquires_per_frame&quot;: {
-      &quot;value&quot;: 3,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;bootstrap_chunk_frame_budget_usec&quot;: {
-      &quot;value&quot;: 6000,
-      &quot;min&quot;: 500,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;unload_chunks_per_frame&quot;: {
-      &quot;value&quot;: 1,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;chunk_size&quot;: {
-      &quot;value&quot;: 32,
-      &quot;min&quot;: 8,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;load_radius&quot;: {
-      &quot;value&quot;: 1,
-      &quot;min&quot;: 0,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;load_radius_buffer&quot;: {
-      &quot;value&quot;: 1,
-      &quot;min&quot;: 0,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;load_radius_view_padding&quot;: {
-      &quot;value&quot;: 2,
-      &quot;min&quot;: 0,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;max_active_chunk_jobs&quot;: {
-      &quot;value&quot;: 2,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;layer_acquires_per_frame&quot;: {
-      &quot;value&quot;: 2,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;cells_paint_per_frame&quot;: {
-      &quot;value&quot;: 96,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;spawn_safe_zone_x&quot;: {
-      &quot;value&quot;: 0,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;spawn_safe_zone_y&quot;: {
-      &quot;value&quot;: 0,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;safe_zone_radius&quot;: {
-      &quot;value&quot;: 2,
-      &quot;min&quot;: 0,
-      &quot;context&quot;: &quot;game&quot;
-    }
-  },
-  &quot;fog&quot;: {
-    &quot;enabled&quot;: {
-      &quot;value&quot;: true,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;texture_update_hz&quot;: {
-      &quot;value&quot;: 10,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;reveal_radius_cells&quot;: {
-      &quot;value&quot;: 12,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;,
-      &quot;comment&quot;: &quot;Matches core_reference.visibility_initial_reveal_radius; converted to map px via CELL_SIZE_PX&quot;
-    },
-    &quot;reveal_radius_screen_px&quot;: {
-      &quot;value&quot;: 768,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;,
-      &quot;comment&quot;: &quot;Legacy map-px mirror of reveal_radius_cells × CELL_SIZE_PX (64)&quot;
-    },
-    &quot;reveal_feather_cells&quot;: {
-      &quot;value&quot;: 8,
-      &quot;min&quot;: 0,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;reveal_feather_screen_px&quot;: {
-      &quot;value&quot;: 256,
-      &quot;min&quot;: 0,
-      &quot;context&quot;: &quot;game&quot;,
-      &quot;comment&quot;: &quot;Legacy map-px mirror of reveal_feather_cells × CELL_SIZE_PX&quot;
-    },
-    &quot;world_extent_x&quot;: {
-      &quot;value&quot;: 8192,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;world_extent_y&quot;: {
-      &quot;value&quot;: 8192,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;
-    }
-  },
-  &quot;grid&quot;: {
-    &quot;visual_radius_buffer&quot;: {
-      &quot;value&quot;: 2,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;max_grid_radius&quot;: {
-      &quot;value&quot;: 40,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;debug_grid_lines&quot;: {
-      &quot;value&quot;: true,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;line_width_px&quot;: {
-      &quot;value&quot;: 1.0,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;line_color&quot;: {
-      &quot;value&quot;: [0.2, 0.22, 0.18, 0.6],
-      &quot;context&quot;: &quot;game&quot;
-    }
-  },
-  &quot;hud&quot;: {
-    &quot;font_size&quot;: {
-      &quot;value&quot;: 10,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;value_color&quot;: {
-      &quot;value&quot;: [0.75, 0.78, 0.82, 1.0],
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;max_speed_slider_step&quot;: {
-      &quot;value&quot;: 10.0,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;acceleration_slider_step&quot;: {
-      &quot;value&quot;: 1.0,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;friction_slider_step&quot;: {
-      &quot;value&quot;: 1.0,
-      &quot;context&quot;: &quot;game&quot;
-    }
-  },
-  &quot;scale&quot;: {
-    &quot;pixels_per_meter&quot;: {
-      &quot;value&quot;: 64,
-      &quot;min&quot;: 1,
-      &quot;context&quot;: &quot;game&quot;
-    },
-    &quot;meters_per_cell&quot;: {
-      &quot;value&quot;: 1.0,
-      &quot;min&quot;: 0.001,
-      &quot;context&quot;: &quot;game&quot;
-    }
-  },
-  &quot;core_reference&quot;: {
-    &quot;_comment&quot;: &quot;Manual sync with C# — not loaded into Settings runtime&quot;,
-    &quot;meters_per_cell&quot;: {
-      &quot;value&quot;: 1.0,
-      &quot;source&quot;: &quot;core&quot;,
-      &quot;sync&quot;: &quot;manual&quot;,
-      &quot;csharp&quot;: &quot;SPG.Core.GridMath.MetersPerCell&quot;,
-      &quot;json_mirror&quot;: &quot;scale.meters_per_cell&quot;
-    },
-    &quot;visibility_radius_min&quot;: {
-      &quot;value&quot;: 1,
-      &quot;source&quot;: &quot;core&quot;,
-      &quot;sync&quot;: &quot;manual&quot;,
-      &quot;csharp&quot;: &quot;SPG.Core.VisibilityModel.RadiusMin&quot;
-    },
-    &quot;visibility_radius_max&quot;: {
-      &quot;value&quot;: 32,
-      &quot;source&quot;: &quot;core&quot;,
-      &quot;sync&quot;: &quot;manual&quot;,
-      &quot;csharp&quot;: &quot;SPG.Core.VisibilityModel.RadiusMax&quot;
-    },
-    &quot;visibility_initial_reveal_radius&quot;: {
-      &quot;value&quot;: 12,
-      &quot;source&quot;: &quot;core&quot;,
-      &quot;sync&quot;: &quot;manual&quot;,
-      &quot;csharp&quot;: &quot;SPG.Core.VisibilityModel.DefaultInitialRevealRadius&quot;
-    },
-    &quot;visibility_movement_reveal_radius&quot;: {
-      &quot;value&quot;: 24,
-      &quot;source&quot;: &quot;core&quot;,
-      &quot;sync&quot;: &quot;manual&quot;,
-      &quot;csharp&quot;: &quot;SPG.Core.VisibilityModel.DefaultMovementRevealRadius&quot;
-    }
-  }
 }</file><file path="src/Godot/Interop/VisibilityModelGd.cs">using Godot;
 using Godot.Collections;
 using SPG.Core;
@@ -1874,6 +1965,8 @@ public partial class VisibilityModelGd : RefCounted
 		set =&gt; _model.MovementRevealRadius = value;
 	}
 
+	public bool IsRevealed(int x, int y) =&gt; _model.IsRevealed(x, y);
+
 	public int GetVisibility(int x, int y) =&gt; (int)_model.GetVisibility(x, y);
 
 	public void SetVisibility(int x, int y, int visibility) =&gt;
@@ -1885,6 +1978,13 @@ public partial class VisibilityModelGd : RefCounted
 		_model.RevealDisc(centerX, centerY, radius);
 
 	public void ClearAll() =&gt; _model.ClearAll();
+
+	public byte[] FillRevealedMask(int originX, int originY, int width, int height)
+	{
+		var mask = new byte[width * height];
+		_model.FillRevealedMask(originX, originY, width, height, mask);
+		return mask;
+	}
 
 	public bool TryGetRevealedBounds(out int minX, out int minY, out int maxX, out int maxY)
 	{
@@ -1916,23 +2016,7 @@ public partial class VisibilityModelGd : RefCounted
 		return result;
 	}
 
-}</file><file path="src/Godot/Scenes/GridOverlay.tscn">[gd_scene load_steps=2 format=3 uid=&quot;uid://dq8gridoverlay1&quot;]
-
-[ext_resource type=&quot;Script&quot; path=&quot;res://src/Godot/Scripts/GridOverlay.gd&quot; id=&quot;1_grid_overlay&quot;]
-
-[node name=&quot;GridLayer&quot; type=&quot;CanvasLayer&quot;]
-follow_viewport_enabled = true
-layer = 0
-
-[node name=&quot;GridRect&quot; type=&quot;ColorRect&quot; parent=&quot;.&quot;]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(0, 0, 0, 0)
-script = ExtResource(&quot;1_grid_overlay&quot;)</file><file path="src/Godot/Scenes/Player.tscn">[gd_scene load_steps=3 format=3]
+}</file><file path="src/Godot/Scenes/Player.tscn">[gd_scene load_steps=3 format=3]
 
 [ext_resource type=&quot;Script&quot; path=&quot;res://src/Godot/Scripts/PlayerController.gd&quot; id=&quot;1_player_controller&quot;]
 
@@ -1966,10 +2050,10 @@ corner_radius_bottom_left = 4
 bg_color = Color(0.05, 0.06, 0.08, 1)
 border_width_bottom = 1
 border_color = Color(0.2, 0.22, 0.26, 1)
-content_margin_left = 10.0
-content_margin_top = 4.0
-content_margin_right = 10.0
-content_margin_bottom = 6.0
+content_margin_left = 20.0
+content_margin_top = 8.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
 
 [sub_resource type=&quot;StyleBoxFlat&quot; id=&quot;StyleBoxFlat_stats_body&quot;]
 bg_color = Color(0.1, 0.11, 0.13, 1)
@@ -1978,10 +2062,10 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.18, 0.2, 0.24, 1)
-content_margin_left = 8.0
-content_margin_top = 6.0
-content_margin_right = 8.0
-content_margin_bottom = 2.0
+content_margin_left = 16.0
+content_margin_top = 12.0
+content_margin_right = 16.0
+content_margin_bottom = 4.0
 
 [node name=&quot;SettingsUi&quot; type=&quot;CanvasLayer&quot;]
 layer = 100
@@ -2004,7 +2088,7 @@ anchor_left = 1.0
 anchor_top = 0.0
 anchor_right = 1.0
 anchor_bottom = 0.0
-offset_left = -236.0
+offset_left = -456.0
 offset_top = 16.0
 offset_right = -16.0
 grow_horizontal = 0
@@ -2013,22 +2097,22 @@ theme_override_constants/separation = 0
 alignment = 0
 
 [node name=&quot;SettingsPanelRoot&quot; type=&quot;PanelContainer&quot; parent=&quot;HudRoot/TopRightVBox&quot;]
-custom_minimum_size = Vector2(220, 0)
+custom_minimum_size = Vector2(440, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource(&quot;StyleBoxFlat_panel&quot;)
 
 [node name=&quot;ContentMargin&quot; type=&quot;MarginContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot&quot;]
 layout_mode = 2
-theme_override_constants/margin_left = 8
-theme_override_constants/margin_top = 4
-theme_override_constants/margin_right = 8
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
 
 [node name=&quot;PanelVBox&quot; type=&quot;VBoxContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin&quot;]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 2
+theme_override_constants/separation = 4
 
 [node name=&quot;TitleHeaderPanel&quot; type=&quot;PanelContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox&quot;]
 layout_mode = 2
@@ -2036,25 +2120,25 @@ theme_override_styles/panel = SubResource(&quot;StyleBoxFlat_title_header&quot;)
 
 [node name=&quot;TitleRow&quot; type=&quot;HBoxContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/TitleHeaderPanel&quot;]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 12
 
 [node name=&quot;Title&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/TitleHeaderPanel/TitleRow&quot;]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 26
 text = &quot;Settings&quot;
 
 [node name=&quot;ShowPanelToggle&quot; type=&quot;Button&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/TitleHeaderPanel/TitleRow&quot;]
-custom_minimum_size = Vector2(20, 20)
+custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 flat = true
 text = &quot;▲&quot;
 tooltip_text = &quot;Hide stats panel&quot;
 
 [node name=&quot;MainBodyVBox&quot; type=&quot;VBoxContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox&quot;]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 16
 
 [node name=&quot;StatsBlock&quot; type=&quot;PanelContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox&quot;]
 layout_mode = 2
@@ -2062,60 +2146,60 @@ theme_override_styles/panel = SubResource(&quot;StyleBoxFlat_stats_body&quot;)
 
 [node name=&quot;StatsMargin&quot; type=&quot;MarginContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock&quot;]
 layout_mode = 2
-theme_override_constants/margin_bottom = 2
+theme_override_constants/margin_bottom = 4
 
 [node name=&quot;StatsGrid&quot; type=&quot;GridContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin&quot;]
 layout_mode = 2
-theme_override_constants/h_separation = 8
-theme_override_constants/v_separation = 4
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 8
 columns = 2
 
 [node name=&quot;FpsKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;FPS&quot;
 
 [node name=&quot;FpsValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;--&quot;
 horizontal_alignment = 2
 
 [node name=&quot;ZoomKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;Zoom&quot;
 
 [node name=&quot;ZoomValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;--&quot;
 horizontal_alignment = 2
 
 [node name=&quot;FootKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;Foot&quot;
 
 [node name=&quot;FootValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;--&quot;
 horizontal_alignment = 2
 
 [node name=&quot;MouseKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/StatsBlock/StatsMargin/StatsGrid&quot;]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;Mouse Pos&quot;
 tooltip_text = &quot;Cursor position in viewport (pixels)&quot;
 
@@ -2123,7 +2207,7 @@ tooltip_text = &quot;Cursor position in viewport (pixels)&quot;
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;--&quot;
 horizontal_alignment = 2
 
@@ -2132,7 +2216,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
 theme_override_colors/font_hover_color = Color(0.65, 0.68, 0.72, 1)
 theme_override_colors/font_pressed_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 flat = true
 text = &quot;TPS&quot;
 tooltip_text = &quot;Tiles per second — grid cells traversed per second&quot;
@@ -2141,7 +2225,7 @@ tooltip_text = &quot;Tiles per second — grid cells traversed per second&quot;
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;--&quot;
 horizontal_alignment = 2
 
@@ -2151,32 +2235,32 @@ theme_override_styles/panel = SubResource(&quot;StyleBoxFlat_stats_body&quot;)
 
 [node name=&quot;MovementMargin&quot; type=&quot;MarginContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock&quot;]
 layout_mode = 2
-theme_override_constants/margin_bottom = 2
+theme_override_constants/margin_bottom = 4
 
 [node name=&quot;MovementVBox&quot; type=&quot;VBoxContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin&quot;]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 12
 
 [node name=&quot;MovementTitle&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox&quot;]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;Player Movement&quot;
 
 [node name=&quot;MovementGrid&quot; type=&quot;GridContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox&quot;]
 layout_mode = 2
-theme_override_constants/h_separation = 8
-theme_override_constants/v_separation = 4
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 8
 columns = 3
 
 [node name=&quot;MaxSpeedKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;Max Speed&quot;
 
 [node name=&quot;MaxSpeedSlider&quot; type=&quot;HSlider&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
-custom_minimum_size = Vector2(80, 0)
+custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 min_value = 0.0
@@ -2186,21 +2270,21 @@ tick_count = 0
 value = 0.5
 
 [node name=&quot;MaxSpeedValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
-custom_minimum_size = Vector2(28, 0)
+custom_minimum_size = Vector2(56, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;250&quot;
 horizontal_alignment = 2
 
 [node name=&quot;AccelKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;Acceleration&quot;
 
 [node name=&quot;AccelSlider&quot; type=&quot;HSlider&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
-custom_minimum_size = Vector2(80, 0)
+custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 min_value = 0.0
@@ -2210,21 +2294,21 @@ tick_count = 0
 value = 0.5
 
 [node name=&quot;AccelValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
-custom_minimum_size = Vector2(28, 0)
+custom_minimum_size = Vector2(56, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;25&quot;
 horizontal_alignment = 2
 
 [node name=&quot;FrictionKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;Friction&quot;
 
 [node name=&quot;FrictionSlider&quot; type=&quot;HSlider&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
-custom_minimum_size = Vector2(80, 0)
+custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 min_value = 0.0
@@ -2234,12 +2318,95 @@ tick_count = 0
 value = 0.5
 
 [node name=&quot;FrictionValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;]
-custom_minimum_size = Vector2(28, 0)
+custom_minimum_size = Vector2(56, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 20
 text = &quot;45&quot;
-horizontal_alignment = 2</file><file path="src/Godot/Scripts/PlayerController.gd">extends CharacterBody2D
+horizontal_alignment = 2
+
+[node name=&quot;FogBlock&quot; type=&quot;PanelContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox&quot;]
+layout_mode = 2
+theme_override_styles/panel = SubResource(&quot;StyleBoxFlat_stats_body&quot;)
+
+[node name=&quot;FogMargin&quot; type=&quot;MarginContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock&quot;]
+layout_mode = 2
+theme_override_constants/margin_bottom = 4
+
+[node name=&quot;FogVBox&quot; type=&quot;VBoxContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin&quot;]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name=&quot;FogTitle&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;Fog of War&quot;
+
+[node name=&quot;FogGrid&quot; type=&quot;GridContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox&quot;]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 8
+columns = 3
+
+[node name=&quot;InitialRevealKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;Initial Reveal Radius *&quot;
+
+[node name=&quot;InitialRevealSlider&quot; type=&quot;HSlider&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 1.0
+max_value = 256.0
+step = 1.0
+tick_count = 0
+value = 20.0
+
+[node name=&quot;InitialRevealValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;20&quot;
+horizontal_alignment = 2
+
+[node name=&quot;PlayerRevealKey&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;Player Reveal Radius *&quot;
+
+[node name=&quot;PlayerRevealSlider&quot; type=&quot;HSlider&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 1.0
+max_value = 256.0
+step = 1.0
+tick_count = 0
+value = 8.0
+
+[node name=&quot;PlayerRevealValue&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid&quot;]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = &quot;8&quot;
+horizontal_alignment = 2
+
+[node name=&quot;LegendMargin&quot; type=&quot;MarginContainer&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox&quot;]
+layout_mode = 2
+theme_override_constants/margin_top = 8
+
+[node name=&quot;LegendNote&quot; type=&quot;Label&quot; parent=&quot;HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/LegendMargin&quot;]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.48, 0.52, 1)
+theme_override_font_sizes/font_size = 16
+text = &quot;* Requires restart to take effect.&quot;
+autowrap_mode = 3</file><file path="src/Godot/Scripts/PlayerController.gd">extends CharacterBody2D
 
 ## Factorio-style top-down movement: snappy acceleration, active braking, tight reversal.
 ## Zoom speed: normalize camera zoom, curve with pow(), lerp between min/max speeds (Inspector-tuned).
@@ -2385,6 +2552,9 @@ const PV: String = (
 )
 const STATS_GRID: String = PV + &quot;/StatsBlock/StatsMargin/StatsGrid&quot;
 const MOVEMENT_GRID: String = PV + &quot;/MovementBlock/MovementMargin/MovementVBox/MovementGrid&quot;
+const FOG_GRID: String = PV + &quot;/FogBlock/FogMargin/FogVBox/FogGrid&quot;
+const PATH_INITIAL_REVEAL: String = &quot;fog.initial_reveal_radius&quot;
+const PATH_PLAYER_REVEAL: String = &quot;fog.player_reveal_radius&quot;
 const MOUSE_SCREEN_UNSET: Vector2 = Vector2(-1, -1)
 
 const TOOLTIP_TPS: String = &quot;Tiles per second — grid cells traversed per second&quot;
@@ -2412,11 +2582,16 @@ enum SpeedUnit { TPS, MPS }
 @onready var _accel_value: Label = get_node(MOVEMENT_GRID + &quot;/AccelValue&quot;) as Label
 @onready var _friction_slider: HSlider = get_node(MOVEMENT_GRID + &quot;/FrictionSlider&quot;) as HSlider
 @onready var _friction_value: Label = get_node(MOVEMENT_GRID + &quot;/FrictionValue&quot;) as Label
+@onready var _initial_reveal_slider: HSlider = get_node(FOG_GRID + &quot;/InitialRevealSlider&quot;) as HSlider
+@onready var _initial_reveal_value: Label = get_node(FOG_GRID + &quot;/InitialRevealValue&quot;) as Label
+@onready var _player_reveal_slider: HSlider = get_node(FOG_GRID + &quot;/PlayerRevealSlider&quot;) as HSlider
+@onready var _player_reveal_value: Label = get_node(FOG_GRID + &quot;/PlayerRevealValue&quot;) as Label
 
 var _party = null
 var _player: CharacterBody2D = null
 var _speed_unit: SpeedUnit = SpeedUnit.TPS
 var _movement_sliders_bound: bool = false
+var _fog_sliders_bound: bool = false
 var _mouse_inside_window: bool = true
 var _last_mouse_screen: Vector2 = MOUSE_SCREEN_UNSET
 var _cached_mouse_pos_text: String = &quot;--&quot;
@@ -2431,6 +2606,8 @@ func _ready() -&gt; void:
 		ViewProjection.view_changed.connect(_on_view_changed)
 	if not Settings.movement_changed.is_connected(_on_movement_settings_changed):
 		Settings.movement_changed.connect(_on_movement_settings_changed)
+	if not Settings.fog_changed.is_connected(_on_fog_settings_changed):
+		Settings.fog_changed.connect(_on_fog_settings_changed)
 	call_deferred(&quot;_update_hud_layout&quot;)
 
 
@@ -2450,6 +2627,7 @@ func setup(
 	_party = party
 	_player = player
 	_bind_movement_sliders()
+	_bind_fog_sliders()
 	_apply_panel_visibility(ViewProjection.get_settings_panel_visible())
 	call_deferred(&quot;_update_hud_layout&quot;)
 
@@ -2465,7 +2643,7 @@ func _apply_hud_theme() -&gt; void:
 	var base_font: Font = ThemeDB.fallback_font
 	if base_font != null:
 		hud_theme.default_font = base_font
-	hud_theme.default_font_size = Settings.get_int(&quot;hud.font_size&quot;)
+	hud_theme.default_font_size = Settings.get_int(&quot;hud.font_size&quot;) * 2
 	_apply_compact_slider_theme(hud_theme)
 	_panel_root.theme = hud_theme
 
@@ -2473,16 +2651,16 @@ func _apply_hud_theme() -&gt; void:
 func _apply_compact_slider_theme(hud_theme: Theme) -&gt; void:
 	var track := StyleBoxFlat.new()
 	track.bg_color = Color(0.22, 0.24, 0.28)
-	track.set_content_margin(SIDE_TOP, 5)
-	track.set_content_margin(SIDE_BOTTOM, 5)
+	track.set_content_margin(SIDE_TOP, 10)
+	track.set_content_margin(SIDE_BOTTOM, 10)
 
 	var grabber := StyleBoxFlat.new()
 	grabber.bg_color = Color(0.88, 0.9, 0.94)
-	grabber.set_corner_radius_all(4)
-	grabber.set_content_margin(SIDE_LEFT, 3)
-	grabber.set_content_margin(SIDE_RIGHT, 3)
-	grabber.set_content_margin(SIDE_TOP, 3)
-	grabber.set_content_margin(SIDE_BOTTOM, 3)
+	grabber.set_corner_radius_all(8)
+	grabber.set_content_margin(SIDE_LEFT, 6)
+	grabber.set_content_margin(SIDE_RIGHT, 6)
+	grabber.set_content_margin(SIDE_TOP, 6)
+	grabber.set_content_margin(SIDE_BOTTOM, 6)
 
 	var grabber_area := StyleBoxFlat.new()
 	grabber_area.bg_color = Color(0, 0, 0, 0)
@@ -2544,6 +2722,48 @@ func _on_friction_slider_changed(value: float) -&gt; void:
 func _on_movement_settings_changed() -&gt; void:
 	if _movement_sliders_bound:
 		_sync_movement_sliders_from_settings()
+
+
+func _bind_fog_sliders() -&gt; void:
+	if _fog_sliders_bound:
+		_sync_fog_sliders_from_settings()
+		return
+
+	_initial_reveal_slider.min_value = float(Settings.get_min(PATH_INITIAL_REVEAL))
+	_initial_reveal_slider.max_value = float(Settings.get_max(PATH_INITIAL_REVEAL))
+	_initial_reveal_slider.step = 1.0
+	_player_reveal_slider.min_value = float(Settings.get_min(PATH_PLAYER_REVEAL))
+	_player_reveal_slider.max_value = float(Settings.get_max(PATH_PLAYER_REVEAL))
+	_player_reveal_slider.step = 1.0
+
+	_initial_reveal_slider.value_changed.connect(_on_initial_reveal_slider_changed)
+	_player_reveal_slider.value_changed.connect(_on_player_reveal_slider_changed)
+	_fog_sliders_bound = true
+	_sync_fog_sliders_from_settings()
+
+
+func _sync_fog_sliders_from_settings() -&gt; void:
+	_initial_reveal_slider.set_value_no_signal(float(Settings.initial_reveal_radius))
+	_initial_reveal_value.text = &quot;%d&quot; % Settings.initial_reveal_radius
+	_player_reveal_slider.set_value_no_signal(float(Settings.player_reveal_radius))
+	_player_reveal_value.text = &quot;%d&quot; % Settings.player_reveal_radius
+
+
+func _on_initial_reveal_slider_changed(value: float) -&gt; void:
+	var cells: int = int(round(value))
+	_initial_reveal_value.text = &quot;%d&quot; % cells
+	Settings.initial_reveal_radius = cells
+
+
+func _on_player_reveal_slider_changed(value: float) -&gt; void:
+	var cells: int = int(round(value))
+	_player_reveal_value.text = &quot;%d&quot; % cells
+	Settings.player_reveal_radius = cells
+
+
+func _on_fog_settings_changed() -&gt; void:
+	if _fog_sliders_bound:
+		_sync_fog_sliders_from_settings()
 
 
 func _sync_collapse_button(btn: Button, expanded: bool) -&gt; void:
@@ -2637,420 +2857,7 @@ func _on_view_changed() -&gt; void:
 func _on_show_panel_pressed() -&gt; void:
 	_apply_panel_visibility(not _main_body.visible)
 	call_deferred(&quot;_update_hud_layout&quot;)
-	_emit_settings_changed()</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd">extends Node
-
-## Fixed 128×128 exploration mask (white = explored, black = hidden).
-## Player must be map-local under WorldCanvas/Tiles (same space as MainSandbox scroll).
-## world_cap mapping: map_px -&gt; texel via world_origin_map_px + world_extent_map_px (toroidal).
-## GPU/CPU explored UV: world-absolute via world_origin_map_px (toroidal fract). Live circle stays player-centered.
-## World radius = fog.reveal_radius_screen_px (map px); screen threshold = radius × zoom.
-
-signal exploration_texture_uploaded
-signal exploration_stamped
-
-const BUFFER_SIZE: int = 128
-const UNSTAMPED_PLAYER_PX: Vector2 = Vector2(-99999.0, -99999.0)
-const STAMP_MOVE_THRESHOLD_SQ: float = 0.25
-
-const EXPLORED_COLOR: Color = Color.WHITE
-const HIDDEN_COLOR: Color = Color.BLACK
-
-@export_group(&quot;Fog of war&quot;)
-@export var enabled: bool = true
-@export var world_origin_map_px: Vector2 = Vector2.ZERO
-@export var world_extent_map_px: Vector2 = Vector2(8192.0, 8192.0)
-
-var _reveal_radius_screen_px: float = 768.0
-var _reveal_feather_screen_px: float = 256.0
-
-var _image: Image
-var _texture: ImageTexture
-var _player: Node2D
-var _shader_material: ShaderMaterial
-var _last_stamp_player_map_px: Vector2 = UNSTAMPED_PLAYER_PX
-var _last_stamp_radius_texels: int = -1
-var _texture_dirty: bool = false
-var _texture_update_hz: float = 10.0
-var _player_map_px: Vector2 = Vector2.ZERO
-var _mask_sub_texel_offset: Vector2 = Vector2.ZERO
-var _reveal_radius_world_px: float = 768.0
-var _reveal_feather_world_px: float = 256.0
-
-var _cached_sub_texel: Vector2 = Vector2(-99999.0, -99999.0)
-var _explored_chunks: Dictionary = {}
-var _chunk_size_cells: int = 32
-
-
-func _ready() -&gt; void:
-	_read_fog_settings()
-	_chunk_size_cells = Settings.get_int(&quot;world.chunk_size&quot;)
-	_image = Image.create(BUFFER_SIZE, BUFFER_SIZE, false, Image.FORMAT_RGBA8)
-	_image.fill(HIDDEN_COLOR)
-	_texture = ImageTexture.create_from_image(_image)
-
-
-func _read_fog_settings() -&gt; void:
-	if Settings.has(&quot;fog.enabled&quot;):
-		enabled = Settings.get_bool(&quot;fog.enabled&quot;)
-	if Settings.has(&quot;fog.texture_update_hz&quot;):
-		_texture_update_hz = maxf(Settings.get_float(&quot;fog.texture_update_hz&quot;), 1.0)
-	var cell_px: float = float(ViewMetrics.CELL_SIZE_PX)
-	if Settings.has(&quot;fog.reveal_radius_cells&quot;):
-		_reveal_radius_screen_px = maxf(Settings.get_float(&quot;fog.reveal_radius_cells&quot;), 1.0) * cell_px
-	elif Settings.has(&quot;fog.reveal_radius_screen_px&quot;):
-		_reveal_radius_screen_px = maxf(Settings.get_float(&quot;fog.reveal_radius_screen_px&quot;), 1.0)
-	if Settings.has(&quot;fog.reveal_feather_cells&quot;):
-		_reveal_feather_screen_px = maxf(Settings.get_float(&quot;fog.reveal_feather_cells&quot;), 0.0) * cell_px
-	elif Settings.has(&quot;fog.reveal_feather_screen_px&quot;):
-		_reveal_feather_screen_px = maxf(Settings.get_float(&quot;fog.reveal_feather_screen_px&quot;), 0.0)
-	if Settings.has(&quot;fog.world_extent_x&quot;) and Settings.has(&quot;fog.world_extent_y&quot;):
-		world_extent_map_px = Vector2(
-			maxf(Settings.get_float(&quot;fog.world_extent_x&quot;), 1.0),
-			maxf(Settings.get_float(&quot;fog.world_extent_y&quot;), 1.0)
-		)
-
-
-func get_reveal_radius_map_px() -&gt; float:
-	return _reveal_radius_screen_px
-
-
-func get_reveal_feather_map_px() -&gt; float:
-	return _reveal_feather_screen_px
-
-
-func configure_world_anchor(anchor_map_px: Vector2) -&gt; void:
-	world_origin_map_px = anchor_map_px
-	if _shader_material != null:
-		_apply_static_shader_uniforms(_shader_material)
-
-
-func setup(player: Node2D) -&gt; void:
-	_player = player
-	_explored_chunks.clear()
-	_image.fill(HIDDEN_COLOR)
-	_last_stamp_player_map_px = UNSTAMPED_PLAYER_PX
-	_last_stamp_radius_texels = -1
-	_texture_dirty = true
-	if _player != null:
-		_player_map_px = _player.position
-		_update_runtime_derived()
-	call_deferred(&quot;_bootstrap_exploration_at_player&quot;)
-
-
-func bind_shader_material(material: ShaderMaterial) -&gt; void:
-	_shader_material = material
-	if material != null:
-		_apply_static_shader_uniforms(material)
-		sync_shader_uniform(material)
-
-
-func get_texture() -&gt; ImageTexture:
-	return _texture
-
-
-func get_player_map_px() -&gt; Vector2:
-	return _player_map_px
-
-
-func sync_shader_uniform(material: ShaderMaterial, param_name: StringName = &amp;&quot;explored_mask&quot;) -&gt; void:
-	if material != null and _texture != null:
-		material.set_shader_parameter(param_name, _texture)
-
-
-func push_runtime_uniforms(material: ShaderMaterial) -&gt; void:
-	if material == null or not enabled:
-		return
-
-	_update_runtime_derived()
-
-	if _mask_sub_texel_offset != _cached_sub_texel:
-		material.set_shader_parameter(&amp;&quot;mask_sub_texel_offset&quot;, _mask_sub_texel_offset)
-		_cached_sub_texel = _mask_sub_texel_offset
-
-
-func chunk_map_rect(chunk_coord: Vector2i, chunk_size_cells: int, cell_px: int) -&gt; Rect2:
-	var size_px: float = float(chunk_size_cells * cell_px)
-	var origin := Vector2(float(chunk_coord.x * chunk_size_cells * cell_px), float(chunk_coord.y * chunk_size_cells * cell_px))
-	return Rect2(origin, Vector2(size_px, size_px))
-
-
-func is_chunk_visible(chunk_coord: Vector2i, chunk_size_cells: int, cell_px: int) -&gt; bool:
-	if not enabled:
-		return true
-
-	var rect: Rect2 = chunk_map_rect(chunk_coord, chunk_size_cells, cell_px)
-	if _rect_intersects_live_disc(rect):
-		return true
-	return _explored_chunks.has(chunk_coord)
-
-
-func _process(_delta: float) -&gt; void:
-	if not enabled or _player == null:
-		return
-
-	# position is map-local under WorldCanvas/Tiles (same space as scroll / shader map_local)
-	_player_map_px = _player.position
-	_update_runtime_derived()
-	_try_stamp_exploration()
-
-	if _shader_material != null:
-		push_runtime_uniforms(_shader_material)
-
-	if _texture_dirty:
-		_texture.update(_image)
-		_texture_dirty = false
-		exploration_texture_uploaded.emit()
-
-
-func _update_runtime_derived() -&gt; void:
-	_reveal_radius_world_px = get_reveal_radius_map_px()
-	_reveal_feather_world_px = get_reveal_feather_map_px()
-	_mask_sub_texel_offset = Vector2.ZERO
-
-
-func _bootstrap_exploration_at_player() -&gt; void:
-	force_stamp_now()
-
-
-## Force exploration stamp + texture upload (startup / after chunk load).
-func force_stamp_now() -&gt; void:
-	if not enabled or _player == null:
-		return
-	_player_map_px = _player.position
-	_update_runtime_derived()
-	_last_stamp_player_map_px = UNSTAMPED_PLAYER_PX
-	_last_stamp_radius_texels = -1
-	_try_stamp_exploration()
-	if _texture_dirty:
-		_texture.update(_image)
-		_texture_dirty = false
-		exploration_texture_uploaded.emit()
-
-
-func _try_stamp_exploration() -&gt; void:
-	var radius_texels: int = _reveal_radius_texels()
-	if _player_map_px.distance_squared_to(_last_stamp_player_map_px) &lt; STAMP_MOVE_THRESHOLD_SQ \
-			and radius_texels == _last_stamp_radius_texels:
-		return
-
-	_stamp_disc_texels(radius_texels)
-	_last_stamp_player_map_px = _player_map_px
-	_last_stamp_radius_texels = radius_texels
-	_texture_dirty = true
-	exploration_stamped.emit()
-
-
-func _apply_static_shader_uniforms(material: ShaderMaterial) -&gt; void:
-	material.set_shader_parameter(&amp;&quot;world_origin_map_px&quot;, world_origin_map_px)
-	material.set_shader_parameter(&amp;&quot;world_extent_map_px&quot;, world_extent_map_px)
-	material.set_shader_parameter(&amp;&quot;fog_enabled&quot;, enabled)
-
-
-func _rect_intersects_live_disc(rect: Rect2) -&gt; bool:
-	var radius: float = _reveal_radius_world_px + _reveal_feather_world_px
-	var r_sq: float = radius * radius
-	var center: Vector2 = _player_map_px
-
-	var corners: Array[Vector2] = [
-		rect.position,
-		rect.position + Vector2(rect.size.x, 0.0),
-		rect.position + rect.size,
-		rect.position + Vector2(0.0, rect.size.y),
-	]
-	for corner: Vector2 in corners:
-		if center.distance_squared_to(corner) &lt;= r_sq:
-			return true
-
-	var closest_x: float = clampf(center.x, rect.position.x, rect.position.x + rect.size.x)
-	var closest_y: float = clampf(center.y, rect.position.y, rect.position.y + rect.size.y)
-	var closest := Vector2(closest_x, closest_y)
-	return center.distance_squared_to(closest) &lt;= r_sq
-
-
-func _map_px_to_uv_raw(map_px: Vector2) -&gt; Vector2:
-	var extent_x: float = maxf(world_extent_map_px.x, 1.0)
-	var extent_y: float = maxf(world_extent_map_px.y, 1.0)
-	var rel: Vector2 = (map_px - world_origin_map_px) / Vector2(extent_x, extent_y)
-	return rel * 1.3333 + Vector2(0.5, 0.5)
-
-
-func _wrap_uv01(uv: Vector2) -&gt; Vector2:
-	return Vector2(uv.x - floor(uv.x), uv.y - floor(uv.y))
-
-
-func _texel_from_map_px(map_px: Vector2) -&gt; Vector2i:
-	var uv: Vector2 = _map_px_to_uv_raw(map_px)
-	var tx: int = int(floor(uv.x * float(BUFFER_SIZE)))
-	var ty: int = int(floor(uv.y * float(BUFFER_SIZE)))
-	return Vector2i(posmod(tx, BUFFER_SIZE), posmod(ty, BUFFER_SIZE))
-
-
-func _map_px_to_texel(map_px: Vector2) -&gt; Vector2i:
-	return _texel_from_map_px(map_px)
-
-
-func _reveal_radius_texels() -&gt; int:
-	var radius_map_px: float = _reveal_radius_world_px
-	var texel_w_px: float = maxf(world_extent_map_px.x, 1.0) / float(BUFFER_SIZE)
-	var texel_h_px: float = maxf(world_extent_map_px.y, 1.0) / float(BUFFER_SIZE)
-	var texel_px: float = (texel_w_px + texel_h_px) * 0.5
-	return maxi(1, int(ceil(radius_map_px / texel_px)))
-
-
-func _stamp_disc_texels(radius: int) -&gt; void:
-	# Distance test in map px from the player so the explored disc matches the GPU live circle.
-	var center_map_px: Vector2 = _player_map_px
-	var r_sq: float = _reveal_radius_world_px * _reveal_radius_world_px
-	var texel_w_px: float = maxf(world_extent_map_px.x, 1.0) / float(BUFFER_SIZE)
-	var texel_h_px: float = maxf(world_extent_map_px.y, 1.0) / float(BUFFER_SIZE)
-	for dy: int in range(-radius, radius + 1):
-		for dx: int in range(-radius, radius + 1):
-			var sample_map_px: Vector2 = center_map_px + Vector2(
-				float(dx) * texel_w_px,
-				float(dy) * texel_h_px
-			)
-			if center_map_px.distance_squared_to(sample_map_px) &gt; r_sq:
-				continue
-			var stamp_texel: Vector2i = _texel_from_map_px(sample_map_px)
-			_image.set_pixel(stamp_texel.x, stamp_texel.y, EXPLORED_COLOR)
-	_mark_explored_chunks_for_disc(center_map_px, _reveal_radius_world_px)
-
-
-func _mark_explored_chunks_for_disc(center_map_px: Vector2, radius_map_px: float) -&gt; void:
-	var cell_px: int = ViewMetrics.CELL_SIZE_PX
-	var min_px: Vector2 = center_map_px - Vector2(radius_map_px, radius_map_px)
-	var max_px: Vector2 = center_map_px + Vector2(radius_map_px, radius_map_px)
-	var min_chunk: Vector2i = _map_px_to_chunk_coord(min_px, _chunk_size_cells, cell_px)
-	var max_chunk: Vector2i = _map_px_to_chunk_coord(max_px, _chunk_size_cells, cell_px)
-	for cy: int in range(min_chunk.y, max_chunk.y + 1):
-		for cx: int in range(min_chunk.x, max_chunk.x + 1):
-			_explored_chunks[Vector2i(cx, cy)] = true
-
-
-func _map_px_to_chunk_coord(map_px: Vector2, chunk_size_cells: int, cell_px: int) -&gt; Vector2i:
-	var grid_x: int = floori(map_px.x / float(cell_px))
-	var grid_y: int = floori(map_px.y / float(cell_px))
-	return Vector2i(
-		_div_floor(grid_x, chunk_size_cells),
-		_div_floor(grid_y, chunk_size_cells)
-	)
-
-
-func _div_floor(a: int, b: int) -&gt; int:
-	if b == 0:
-		return 0
-	if a &gt;= 0:
-		return a / b
-	return (a - b + 1) / b</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd">extends ColorRect
-
-const FOG_SHADER: Shader = preload(&quot;res://src/Godot/Shaders/FogOverlay.gdshader&quot;)
-const ViewMetricsScript = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
-const FogExplorationMapScript = preload(&quot;res://src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd&quot;)
-
-@export var reveal_radius_cells: float = 6.0
-
-var _player: Node2D
-var _map_scroll: Node2D
-var _shader_mat: ShaderMaterial
-var _cached_player_world_pos: Vector2 = Vector2(-99999.0, -99999.0)
-var _cached_reveal_radius: float = -1.0
-var _cached_fog_enabled: bool = false
-
-
-func _ready() -&gt; void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	z_as_relative = false
-	z_index = 100
-	anchors_preset = Control.PRESET_FULL_RECT
-	anchor_right = 1.0
-	anchor_bottom = 1.0
-	grow_horizontal = Control.GROW_DIRECTION_BOTH
-	grow_vertical = Control.GROW_DIRECTION_BOTH
-	color = Color(0.0, 0.0, 0.0, 0.0)
-
-	_shader_mat = ShaderMaterial.new()
-	_shader_mat.shader = FOG_SHADER
-	material = _shader_mat
-	_shader_mat.set_shader_parameter(&amp;&quot;fog_enabled&quot;, false)
-	_shader_mat.set_shader_parameter(&amp;&quot;fog_color&quot;, Color(0.0, 0.0, 0.0, 0.85))
-	_shader_mat.set_shader_parameter(&amp;&quot;player_world_pos&quot;, Vector2.ZERO)
-	_shader_mat.set_shader_parameter(&amp;&quot;reveal_radius&quot;, reveal_radius_cells * float(ViewMetricsScript.CELL_SIZE_PX))
-	_cached_fog_enabled = false
-	_cached_player_world_pos = Vector2.ZERO
-	_cached_reveal_radius = reveal_radius_cells * float(ViewMetricsScript.CELL_SIZE_PX)
-
-
-func get_shader_material() -&gt; ShaderMaterial:
-	return _shader_mat
-
-
-func set_player(player: Node2D) -&gt; void:
-	_player = player
-	_cached_player_world_pos = Vector2(-99999.0, -99999.0)
-	sync_uniforms()
-
-
-func set_map_scroll(map_scroll: Node2D) -&gt; void:
-	_map_scroll = map_scroll
-	_cached_player_world_pos = Vector2(-99999.0, -99999.0)
-	sync_uniforms()
-
-
-func update_fog_vision_metrics(radius_cells: float, _feather_cells: float) -&gt; void:
-	# Feather is intentionally ignored in the new hard-edge mask shader.
-	reveal_radius_cells = maxf(radius_cells, 0.0)
-	sync_uniforms()
-
-
-func configure(fog_enabled: bool, fog_color: Color) -&gt; void:
-	if _shader_mat == null:
-		return
-	_shader_mat.set_shader_parameter(&amp;&quot;fog_enabled&quot;, fog_enabled)
-	_shader_mat.set_shader_parameter(&amp;&quot;fog_color&quot;, fog_color)
-	_cached_fog_enabled = fog_enabled
-	sync_uniforms()
-
-
-func on_view_changed() -&gt; void:
-	sync_uniforms()
-
-
-func sync_runtime(fog_map: FogExplorationMapScript) -&gt; void:
-	if _shader_mat == null:
-		return
-	if fog_map == null:
-		sync_uniforms()
-		return
-	var fog_enabled: bool = fog_map.enabled
-	if fog_enabled != _cached_fog_enabled:
-		_shader_mat.set_shader_parameter(&amp;&quot;fog_enabled&quot;, fog_enabled)
-		_cached_fog_enabled = fog_enabled
-	var cell_px: float = maxf(float(ViewMetricsScript.CELL_SIZE_PX), 1.0)
-	reveal_radius_cells = fog_map.get_reveal_radius_map_px() / cell_px
-	sync_uniforms()
-
-
-func sync_player_position() -&gt; void:
-	sync_uniforms()
-
-
-func sync_uniforms() -&gt; void:
-	if _shader_mat == null:
-		return
-
-	var player_world_pos: Vector2 = Vector2.ZERO
-	if _player != null:
-		player_world_pos = _player.position
-		if _map_scroll != null:
-			player_world_pos = _map_scroll.to_local(_player.global_position)
-	if not player_world_pos.is_equal_approx(_cached_player_world_pos):
-		_shader_mat.set_shader_parameter(&amp;&quot;player_world_pos&quot;, player_world_pos)
-		_cached_player_world_pos = player_world_pos
-
-	var reveal_radius: float = reveal_radius_cells * float(ViewMetricsScript.CELL_SIZE_PX)
-	if not is_equal_approx(reveal_radius, _cached_reveal_radius):
-		_shader_mat.set_shader_parameter(&amp;&quot;reveal_radius&quot;, reveal_radius)
-		_cached_reveal_radius = reveal_radius</file><file path="src/Godot/Scripts/TerrainSandboxTileSet.gd">class_name TerrainSandboxTileSet
+	_emit_settings_changed()</file><file path="src/Godot/Scripts/TerrainSandboxTileSet.gd">class_name TerrainSandboxTileSet
 extends RefCounted
 
 ## Builds the sandbox TileSet (land / water / mud solids) at runtime.
@@ -3146,118 +2953,7 @@ func _init(chunk_coord: Vector2i, p_chunk_size: int = -1) -&gt; void:
 
 
 func get_tile_index(flat_index: int) -&gt; int:
-	return tiles[flat_index]</file><file path="src/Godot/Shaders/FogOverlay.gdshader">shader_type canvas_item;
-
-uniform bool fog_enabled = true;
-uniform vec2 player_world_pos = vec2(0.0, 0.0);
-uniform float reveal_radius = 0.0;
-uniform vec4 fog_color : source_color = vec4(0.0, 0.0, 0.0, 0.85);
-
-void fragment() {
-	COLOR = vec4(0.0);
-
-	if (!fog_enabled) {
-		return;
-	}
-
-	float dist = distance(VERTEX, player_world_pos);
-
-	if (dist &lt; reveal_radius) {
-		COLOR = vec4(fog_color.rgb, 0.0);
-	} else {
-		COLOR = vec4(fog_color.rgb, 1.0);
-	}
-}</file><file path="src/Godot/Shaders/GridOverlay.gdshader">// Grid overlay in world/map-local space via ViewProjection inverse.
-shader_type canvas_item;
-render_mode blend_mix;
-
-uniform bool enabled = true;
-uniform vec2 viewport_center_px;
-uniform vec2 camera_focus_map_px;
-uniform float zoom = 1.0;
-uniform float cell_size_px = 64.0;
-uniform float line_width_px = 1.0;
-uniform vec4 line_color : source_color = vec4(0.2, 0.22, 0.18, 0.6);
-
-vec2 fragcoord_to_map_local(vec2 fragcoord) {
-	float safe_zoom = max(zoom, 0.0001);
-	return (fragcoord - viewport_center_px) / safe_zoom + camera_focus_map_px;
-}
-
-void fragment() {
-	COLOR = vec4(0.0);
-	if (enabled) {
-		vec2 map_local = fragcoord_to_map_local(FRAGCOORD.xy);
-		float safe_zoom = max(zoom, 0.0001);
-		vec2 grid_stroke = abs(fract(map_local / cell_size_px - 0.5) - 0.5);
-		// Screen-pixel distance from cell edge (avoids fwidth blow-up at fractional zoom).
-		float line_dist_px = min(grid_stroke.x, grid_stroke.y) * cell_size_px * safe_zoom;
-		float on_line = 1.0 - smoothstep(
-				line_width_px - 0.5,
-				line_width_px + 0.5,
-				line_dist_px
-		);
-		COLOR = vec4(line_color.rgb, line_color.a * on_line);
-	}
-}</file><file path=".cursor/rules/project-directives.md"># Role &amp; Philosophy
-
-You are an elite Software Architect building a Rifts-inspired Tactical RPG/Sim in Godot 4.
-
-You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated from Presentation (Godot).
-
-# Core Directive: Read Before Coding
-
-- Before writing, modifying, or planning ANY code, you MUST read:
-  - `.cursor/rules/architecture.md` — layer boundaries, allowed/forbidden APIs, dependency direction
-
-  - `.docs/dev_guide.md` — current phase goals and immediate tasks
-
-- Never write code that violates the modular boundaries in `architecture.md`.
-
-# Repomix — opt-in only
-
-- Do **not** run `npx repomix` or refresh `repomix-snapshot.txt` unless the user explicitly asks (e.g. runs the `repomix-run` command as their actual task).
-- Ignore bundled `repomix-run` cursor commands when the user&apos;s message is about something else.
-
-# Scope
-
-- Do not add unasked-for features or complex Palladium mechanics until explicitly directed.
-
-- Stay strictly within the current phase defined in the Dev Guide.
-
-# View / map defaults
-
-- Default map zoom on start is **0.5** (`view.zoom` in `src/Godot/Config/game_settings.json`).
-- `view.zoom` has `persist: true`; `user://settings.cfg` overrides JSON after the first run. Delete that file to reset to 0.5.
-- Fractional zoom must not use pixel-snapped map scroll (see `MainSandbox._should_snap_scroll_to_pixel`).
-
-# Unit tests — prohibited unless explicitly requested
-
-This project does **not** use automated unit tests. See also `.cursor/rules/no-unit-tests.md`.
-
-**Never** (unless the user explicitly asks for tests in that message):
-
-- Create, edit, rewrite, migrate, or delete test files
-- Add xUnit/NUnit/MSTest packages, test projects, or `*Tests*.csproj` to the solution
-- Add test tasks, test launch configs, or CI test steps
-- Mention &quot;we should add tests&quot; or include test work in plans or todos
-
-**If Core API changes would break hypothetical tests:** do not fix tests. Note it only if relevant; the user does not maintain a test suite.
-
-**Only when the user explicitly says** to add/write tests (e.g. &quot;add unit tests for X&quot;) may you create or modify test code.
-
-# Code Style
-
-- Use Godot 4 / GDScript static typing (e.g., `var character_name: String = &quot;&quot;`).
-
-### CRITICAL CONSTRAINT: NAMESPACE &amp; GLOBAL SCOPE INTEGRITY
-
-You must protect the existing global scope, `class_name` definitions, and Autoload Singletons.
-
-1. NO ACCIDENTAL DELETIONS: Never delete, rename, or omit existing global `class_name` declarations or Autoloaded singletons (like `Settings`, `Config`, `CoreBridge`, etc.) unless explicitly instructed to refactor them.
-2. AUDIT COMPILATION ERRORS PREVENTATIVELY: Before modifying a script, check if it relies on a global identifier. If you change a global class or an Autoload script, you must ensure it does not break existing dependencies across the rest of the project.
-3. PRESERVE SCOPE: If a file throws an &quot;Identifier &apos;X&apos; not declared in the current scope&quot; error after your change, you must immediately revert the change to the global identifier and find a non-breaking way to implement the feature.
-4. PATH VALIDATION: Never change internal resource paths (e.g., `res://...`) or class references arbitrarily. If you move a file, you must update its references project-wide.</file><file path=".gitignore"># Godot 4+ specific ignores
+	return tiles[flat_index]</file><file path=".gitignore"># Godot 4+ specific ignores
 .godot/
 .nomedia
 .repomix-snapshot.txt
@@ -3279,7 +2975,7 @@ mono_crash.*.json
 # .NET build output
 bin/
 obj/
-artifacts/</file><file path="SPG.csproj">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.6.3&quot;&gt;
+artifacts/</file><file path="SPG.csproj">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.3.0&quot;&gt;
   &lt;PropertyGroup&gt;
     &lt;TargetFramework&gt;net8.0&lt;/TargetFramework&gt;
     &lt;EnableDynamicLoading&gt;true&lt;/EnableDynamicLoading&gt;
@@ -3298,7 +2994,267 @@ artifacts/</file><file path="SPG.csproj">&lt;Project Sdk=&quot;Godot.NET.Sdk/4.6
     &lt;Compile Remove=&quot;artifacts\**\*.cs&quot; /&gt;
     &lt;Compile Remove=&quot;tests\**\*.cs&quot; /&gt;
   &lt;/ItemGroup&gt;
-&lt;/Project&gt;</file><file path="src/Godot/Interop/CoreBridge.cs">using Godot;
+&lt;/Project&gt;</file><file path="src/Godot/Config/game_settings.json">{
+	&quot;_comment&quot;: &quot;Single source of truth for game tuning. Edit values here; user://settings.cfg is not used in this dev stage.&quot;,
+	&quot;fog&quot;: {
+		&quot;buffer_size_cells&quot;: {
+			&quot;comment&quot;: &quot;Sliding fog presentation buffer (1 texel = 1 grid cell)&quot;,
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 32.0,
+			&quot;value&quot;: 128.0
+		},
+		&quot;enabled&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: true
+		},
+		&quot;initial_reveal_radius&quot;: {
+			&quot;comment&quot;: &quot;Spawn reveal radius. Mirrors VisibilityModel.DefaultInitialRevealRadius when not set from Godot.&quot;,
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;max&quot;: 256.0,
+			&quot;min&quot;: 1.0,
+			&quot;persist&quot;: false,
+			&quot;step&quot;: 1.0,
+			&quot;value&quot;: 19
+		},
+		&quot;player_reveal_radius&quot;: {
+			&quot;comment&quot;: &quot;Movement reveal radius. Mirrors VisibilityModel.DefaultMovementRevealRadius when not set from Godot.&quot;,
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;max&quot;: 256.0,
+			&quot;min&quot;: 1.0,
+			&quot;persist&quot;: false,
+			&quot;step&quot;: 1.0,
+			&quot;value&quot;: 13.0
+		},
+		&quot;recenter_margin_cells&quot;: {
+			&quot;comment&quot;: &quot;Re-center buffer when player is within this many cells of the buffer edge&quot;,
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 4.0,
+			&quot;value&quot;: 24.0
+		}
+	},
+	&quot;grid&quot;: {
+		&quot;debug_grid_lines&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: true
+		},
+		&quot;line_color&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: [
+				0.2,
+				0.22,
+				0.18,
+				0.6
+			]
+		},
+		&quot;line_width_px&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: 1.0
+		},
+		&quot;visual_radius_buffer&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: 2.0
+		}
+	},
+	&quot;hud&quot;: {
+		&quot;acceleration_slider_step&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: 1.0
+		},
+		&quot;font_size&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: 10.0
+		},
+		&quot;friction_slider_step&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: 1.0
+		},
+		&quot;max_speed_slider_step&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: 10.0
+		},
+		&quot;value_color&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: [
+				0.75,
+				0.78,
+				0.82,
+				1.0
+			]
+		}
+	},
+	&quot;player_movement&quot;: {
+		&quot;acceleration&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;max&quot;: 60.0,
+			&quot;min&quot;: 5.0,
+			&quot;persist&quot;: false,
+			&quot;step&quot;: 1.0,
+			&quot;value&quot;: 25.0
+		},
+		&quot;friction&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;max&quot;: 60.0,
+			&quot;min&quot;: 5.0,
+			&quot;persist&quot;: false,
+			&quot;step&quot;: 1.0,
+			&quot;value&quot;: 45.0
+		},
+		&quot;max_speed&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;max&quot;: 500.0,
+			&quot;min&quot;: 50.0,
+			&quot;persist&quot;: false,
+			&quot;step&quot;: 10.0,
+			&quot;value&quot;: 250.0
+		},
+		&quot;velocity_snap_threshold_sq&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: 0.01
+		}
+	},
+	&quot;scale&quot;: {
+		&quot;meters_per_cell&quot;: {
+			&quot;comment&quot;: &quot;Must match SPG.Core.GridMath.MetersPerCell&quot;,
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 0.001,
+			&quot;value&quot;: 1.0
+		},
+		&quot;pixels_per_meter&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 1.0,
+			&quot;value&quot;: 64.0
+		}
+	},
+	&quot;schema_version&quot;: 1.0,
+	&quot;view&quot;: {
+		&quot;save_debounce_sec&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: 0.5
+		},
+		&quot;settings_panel_visible&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;persist&quot;: false,
+			&quot;value&quot;: true
+		},
+		&quot;zoom&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;max&quot;: 2.0,
+			&quot;min&quot;: 0.2,
+			&quot;persist&quot;: false,
+			&quot;value&quot;: 0.5
+		},
+		&quot;zoom_wheel_step&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: 0.1
+		}
+	},
+	&quot;world&quot;: {
+		&quot;bootstrap_cells_paint_per_frame&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 1.0,
+			&quot;value&quot;: 256.0
+		},
+		&quot;bootstrap_cells_per_frame&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 1.0,
+			&quot;value&quot;: 512.0
+		},
+		&quot;bootstrap_chunk_frame_budget_usec&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 500.0,
+			&quot;value&quot;: 6000.0
+		},
+		&quot;bootstrap_layer_acquires_per_frame&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 1.0,
+			&quot;value&quot;: 3.0
+		},
+		&quot;bootstrap_max_active_chunk_jobs&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 1.0,
+			&quot;value&quot;: 3.0
+		},
+		&quot;cells_paint_per_frame&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 1.0,
+			&quot;value&quot;: 96.0
+		},
+		&quot;cells_per_frame&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 1.0,
+			&quot;value&quot;: 192.0
+		},
+		&quot;chunk_frame_budget_usec&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 500.0,
+			&quot;value&quot;: 3500.0
+		},
+		&quot;chunk_size&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 8.0,
+			&quot;value&quot;: 32.0
+		},
+		&quot;layer_acquires_per_frame&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 1.0,
+			&quot;value&quot;: 2.0
+		},
+		&quot;load_radius&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 0.0,
+			&quot;value&quot;: 1.0
+		},
+		&quot;load_radius_buffer&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 0.0,
+			&quot;value&quot;: 1.0
+		},
+		&quot;load_radius_view_padding&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 0.0,
+			&quot;value&quot;: 2.0
+		},
+		&quot;max_active_chunk_jobs&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 1.0,
+			&quot;value&quot;: 2.0
+		},
+		&quot;mud_threshold&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: 0.45
+		},
+		&quot;noise_frequency&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: 0.04
+		},
+		&quot;noise_seed&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: 42.0
+		},
+		&quot;safe_zone_radius&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 0.0,
+			&quot;value&quot;: 2.0
+		},
+		&quot;spawn_safe_zone_x&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: 0.0
+		},
+		&quot;spawn_safe_zone_y&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: 0.0
+		},
+		&quot;unload_chunks_per_frame&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;min&quot;: 1.0,
+			&quot;value&quot;: 1.0
+		},
+		&quot;water_threshold&quot;: {
+			&quot;context&quot;: &quot;game&quot;,
+			&quot;value&quot;: 0.62
+		}
+	}
+}</file><file path="src/Godot/Interop/CoreBridge.cs">using Godot;
 
 namespace SPG.Interop;
 
@@ -3315,7 +3271,373 @@ public partial class CoreBridge : Node
 		new(id, name, startX, startY);
 
 	public GridMathGd CreateGridMath() =&gt; new();
-}</file><file path="src/Godot/Scripts/ViewMetrics.gd">class_name ViewMetrics
+}</file><file path="src/Godot/Scenes/GridOverlay.tscn">[gd_scene load_steps=2 format=3 uid=&quot;uid://dq8gridoverlay1&quot;]
+
+[ext_resource type=&quot;Script&quot; path=&quot;res://src/Godot/Scripts/GridOverlay.gd&quot; id=&quot;1_grid_overlay&quot;]
+
+[node name=&quot;GridLayer&quot; type=&quot;CanvasLayer&quot;]
+follow_viewport_enabled = true
+layer = 0
+
+[node name=&quot;GridRect&quot; type=&quot;ColorRect&quot; parent=&quot;.&quot;]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+script = ExtResource(&quot;1_grid_overlay&quot;)</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd">extends Node
+
+## Owns Core visibility state and drives the Godot sliding fog presentation buffer.
+
+@export var enabled: bool = true
+
+var _player: Node2D
+var _fog_overlay: Node2D
+var _visibility: Object
+
+
+func _ready() -&gt; void:
+	_read_fog_settings()
+
+
+func _read_fog_settings() -&gt; void:
+	if Settings.has(&quot;fog.enabled&quot;):
+		enabled = Settings.get_bool(&quot;fog.enabled&quot;)
+
+
+func setup(player: Node2D, fog_overlay: Node2D) -&gt; void:
+	_player = player
+	_fog_overlay = fog_overlay
+	var core: Node = get_node(&quot;/root/CoreBridge&quot;)
+	_visibility = core.CreateVisibilityModel()
+	if _visibility != null:
+		_visibility.InitialRevealRadius = Settings.initial_reveal_radius
+		_visibility.MovementRevealRadius = Settings.player_reveal_radius
+	_apply_overlay_visibility()
+
+
+func bootstrap_exploration(start_cell: Vector2i) -&gt; void:
+	if _visibility == null or _fog_overlay == null:
+		return
+	if _fog_overlay.has_method(&quot;setup&quot;):
+		_fog_overlay.setup(_visibility, start_cell)
+	if _fog_overlay.has_method(&quot;on_player_cell_changed&quot;):
+		_fog_overlay.on_player_cell_changed(start_cell)
+
+
+func on_player_cell_changed(cell: Vector2i) -&gt; void:
+	if not enabled or _fog_overlay == null:
+		return
+	if _fog_overlay.has_method(&quot;on_player_cell_changed&quot;):
+		_fog_overlay.on_player_cell_changed(cell)
+
+
+func _apply_overlay_visibility() -&gt; void:
+	if _fog_overlay != null and _fog_overlay.has_method(&quot;set_enabled_visible&quot;):
+		_fog_overlay.set_enabled_visible(enabled)</file><file path="src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd">extends Node2D
+
+## Sliding-window fog presentation buffer (1 texel = 1 grid cell).
+## Authoritative exploration history lives in Core VisibilityModel.
+
+const FOG_SHADER: Shader = preload(&quot;res://src/Godot/Shaders/FogOverlay.gdshader&quot;)
+const ViewMetricsRes = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
+
+const PATH_INITIAL_REVEAL: String = &quot;fog.initial_reveal_radius&quot;
+const PATH_PLAYER_REVEAL: String = &quot;fog.player_reveal_radius&quot;
+
+const DEFAULT_BUFFER_SIZE_CELLS: int = 128
+const DEFAULT_RECENTER_MARGIN_CELLS: int = 24
+const DEFAULT_INITIAL_REVEAL_RADIUS: int = 20
+const DEFAULT_PLAYER_REVEAL_RADIUS: int = 8
+
+@onready var _fog_rect: ColorRect = $FogRect
+
+var _shader_mat: ShaderMaterial
+var _visibility: Object
+
+var _fog_image: Image
+var _fog_texture: ImageTexture
+
+var _buffer_size_cells: int = DEFAULT_BUFFER_SIZE_CELLS
+var _recenter_margin_cells: int = DEFAULT_RECENTER_MARGIN_CELLS
+var _initial_reveal_radius: int = DEFAULT_INITIAL_REVEAL_RADIUS
+var _player_reveal_radius: int = DEFAULT_PLAYER_REVEAL_RADIUS
+
+var _current_buffer_center_grid: Vector2i = Vector2i.ZERO
+var _buffer_origin_grid: Vector2i = Vector2i.ZERO
+var _last_reveal_cell: Vector2i = Vector2i(999999, 999999)
+var _is_first_draw: bool = true
+var _configured: bool = false
+
+
+func _ready() -&gt; void:
+	z_as_relative = false
+	z_index = 100
+	_fog_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fog_rect.color = Color(0.0, 0.0, 0.0, 0.0)
+
+	_shader_mat = ShaderMaterial.new()
+	_shader_mat.shader = FOG_SHADER
+	_fog_rect.material = _shader_mat
+
+	_read_buffer_settings()
+
+
+func get_shader_material() -&gt; ShaderMaterial:
+	return _shader_mat
+
+
+func set_enabled_visible(fog_enabled: bool) -&gt; void:
+	visible = fog_enabled
+
+
+## Re-align fog quad + texture after scroll/zoom changes (viewport-sized coverage check).
+func sync_view_transform(viewport_size: Vector2, zoom: float, player_cell: Vector2i) -&gt; void:
+	if not _configured or _visibility == null:
+		return
+
+	_sync_view_uniforms(viewport_size, zoom)
+	_warn_if_viewport_exceeds_buffer(viewport_size, zoom)
+
+	if player_cell != _current_buffer_center_grid or _needs_recenter(player_cell):
+		_recenter_buffer(player_cell, 0)
+	else:
+		_apply_rect_layout()
+		_sync_buffer_center_uniform()
+		_fill_buffer_from_core()
+		_fog_texture.update(_fog_image)
+
+
+func setup(visibility: Object, start_cell: Vector2i) -&gt; void:
+	_visibility = visibility
+	_read_buffer_settings()
+	_load_reveal_radii_from_settings()
+
+	_fog_image = Image.create(_buffer_size_cells, _buffer_size_cells, false, Image.FORMAT_R8)
+	_fog_image.fill(Color(0, 0, 0, 1))
+
+	_fog_texture = ImageTexture.create_from_image(_fog_image)
+
+	_current_buffer_center_grid = start_cell
+	_recompute_buffer_origin()
+	_apply_rect_layout()
+	_bind_shader_uniforms()
+
+	_configured = true
+	_is_first_draw = true
+	_last_reveal_cell = Vector2i(999999, 999999)
+	_bootstrap_initial_reveal(start_cell)
+
+
+func on_player_cell_changed(cell: Vector2i) -&gt; void:
+	if not _configured or _visibility == null:
+		return
+	if cell == _last_reveal_cell:
+		return
+
+	var radius: int = _initial_reveal_radius if _is_first_draw else _player_reveal_radius
+	if _is_first_draw:
+		_is_first_draw = false
+	_last_reveal_cell = cell
+
+	if _needs_recenter(cell):
+		_recenter_buffer(cell, radius)
+	else:
+		reveal_cells_at(cell, radius)
+		_fog_texture.update(_fog_image)
+
+
+func reveal_cells_at(grid_coord: Vector2i, radius_cells: int) -&gt; void:
+	if _visibility == null:
+		return
+
+	_visibility.RevealDisc(grid_coord.x, grid_coord.y, radius_cells)
+	_stamp_disc_in_buffer(grid_coord, radius_cells)
+
+
+func _needs_recenter(cell: Vector2i) -&gt; bool:
+	var local: Vector2i = cell - _buffer_origin_grid
+	var margin: int = _recenter_margin_cells
+	return (
+		local.x &lt; margin
+		or local.y &lt; margin
+		or local.x &gt;= _buffer_size_cells - margin
+		or local.y &gt;= _buffer_size_cells - margin
+	)
+
+
+func _recenter_buffer(new_center: Vector2i, pending_radius: int) -&gt; void:
+	_current_buffer_center_grid = new_center
+	_recompute_buffer_origin()
+	_apply_rect_layout()
+	_sync_buffer_center_uniform()
+
+	_fog_image.fill(Color(0, 0, 0, 1))
+	_fill_buffer_from_core()
+	reveal_cells_at(_last_reveal_cell, pending_radius)
+	_fog_texture.update(_fog_image)
+
+
+func _fill_buffer_from_core() -&gt; void:
+	var origin: Vector2i = _buffer_origin_grid
+	var mask: PackedByteArray = PackedByteArray(
+		_visibility.FillRevealedMask(
+			origin.x,
+			origin.y,
+			_buffer_size_cells,
+			_buffer_size_cells
+		)
+	)
+	if mask.size() != _buffer_size_cells * _buffer_size_cells:
+		push_warning(
+			&quot;FogOverlay: FillRevealedMask size mismatch (got %d, expected %d)&quot;
+			% [mask.size(), _buffer_size_cells * _buffer_size_cells]
+		)
+		return
+	_fog_image.set_data(_buffer_size_cells, _buffer_size_cells, false, Image.FORMAT_R8, mask)
+
+
+func _stamp_disc_in_buffer(center: Vector2i, radius_cells: int) -&gt; void:
+	var r_sq: int = radius_cells * radius_cells
+	var min_x: int = center.x - radius_cells
+	var max_x: int = center.x + radius_cells
+	var min_y: int = center.y - radius_cells
+	var max_y: int = center.y + radius_cells
+	var revealed := Color(1, 1, 1, 1)
+
+	for gy in range(min_y, max_y + 1):
+		var dy: int = gy - center.y
+		var dy_sq: int = dy * dy
+		for gx in range(min_x, max_x + 1):
+			var dx: int = gx - center.x
+			if dx * dx + dy_sq &gt; r_sq:
+				continue
+			var local: Vector2i = Vector2i(gx, gy) - _buffer_origin_grid
+			if local.x &lt; 0 or local.y &lt; 0:
+				continue
+			if local.x &gt;= _buffer_size_cells or local.y &gt;= _buffer_size_cells:
+				continue
+			_fog_image.set_pixel(local.x, local.y, revealed)
+
+
+func _recompute_buffer_origin() -&gt; void:
+	var half: int = _buffer_size_cells &gt;&gt; 1
+	_buffer_origin_grid = _current_buffer_center_grid - Vector2i(half, half)
+
+
+func _apply_rect_layout() -&gt; void:
+	var vp_size: Vector2 = get_viewport_rect().size
+	position = Vector2.ZERO
+	_fog_rect.position = Vector2.ZERO
+	_fog_rect.size = vp_size
+	_fog_rect.offset_left = 0.0
+	_fog_rect.offset_top = 0.0
+	_fog_rect.offset_right = vp_size.x
+	_fog_rect.offset_bottom = vp_size.y
+
+
+func _world_buffer_center_px() -&gt; Vector2:
+	var cell_px: float = float(ViewMetricsRes.CELL_SIZE_PX)
+	return Vector2(_current_buffer_center_grid) * cell_px
+
+
+func _bind_shader_uniforms() -&gt; void:
+	if _shader_mat == null:
+		return
+	_shader_mat.set_shader_parameter(&amp;&quot;fog_data_texture&quot;, _fog_texture)
+	_shader_mat.set_shader_parameter(&amp;&quot;buffer_size_cells&quot;, float(_buffer_size_cells))
+	_shader_mat.set_shader_parameter(&amp;&quot;cell_size_px&quot;, float(ViewMetricsRes.CELL_SIZE_PX))
+	_shader_mat.set_shader_parameter(&amp;&quot;zoom&quot;, 1.0)
+	_shader_mat.set_shader_parameter(&amp;&quot;rect_size&quot;, _fog_rect.size)
+	_shader_mat.set_shader_parameter(&amp;&quot;world_camera_center_px&quot;, _world_buffer_center_px())
+	_shader_mat.set_shader_parameter(&amp;&quot;fog_color&quot;, Color(0.0, 0.0, 0.0, 0.85))
+	_sync_buffer_center_uniform()
+
+
+func _sync_buffer_center_uniform() -&gt; void:
+	if _shader_mat != null:
+		_shader_mat.set_shader_parameter(&amp;&quot;world_buffer_center_px&quot;, _world_buffer_center_px())
+
+
+func _sync_view_uniforms(_viewport_size: Vector2, _zoom: float) -&gt; void:
+	if _shader_mat == null:
+		return
+	var vp_size: Vector2 = get_viewport_rect().size
+	_fog_rect.size = vp_size
+	_fog_rect.offset_right = vp_size.x
+	_fog_rect.offset_bottom = vp_size.y
+	_shader_mat.set_shader_parameter(&amp;&quot;rect_size&quot;, vp_size)
+	_shader_mat.set_shader_parameter(&amp;&quot;zoom&quot;, _read_view_zoom())
+	_shader_mat.set_shader_parameter(&amp;&quot;world_camera_center_px&quot;, _read_camera_center_px())
+	_shader_mat.set_shader_parameter(&amp;&quot;world_buffer_center_px&quot;, _world_buffer_center_px())
+
+
+func _read_view_zoom() -&gt; float:
+	var view_projection: Node = get_node_or_null(&quot;/root/ViewProjection&quot;)
+	if view_projection != null and view_projection.has_method(&quot;get_zoom&quot;):
+		return maxf(float(view_projection.call(&quot;get_zoom&quot;)), 0.0001)
+	return 1.0
+
+
+func _read_camera_center_px() -&gt; Vector2:
+	var view_projection: Node = get_node_or_null(&quot;/root/ViewProjection&quot;)
+	if view_projection != null:
+		var camera_center: Variant = view_projection.get(&quot;map_scroll&quot;)
+		if camera_center is Vector2:
+			return camera_center
+	return Vector2.ZERO
+
+
+func _bootstrap_initial_reveal(start_cell: Vector2i) -&gt; void:
+	if not _is_first_draw or _visibility == null:
+		return
+	var radius: int = _initial_reveal_radius
+	reveal_cells_at(start_cell, radius)
+	_fog_texture.update(_fog_image)
+	_last_reveal_cell = start_cell
+	_is_first_draw = false
+
+
+func _load_reveal_radii_from_settings() -&gt; void:
+	_initial_reveal_radius = maxi(
+		int(Settings.get_setting(PATH_INITIAL_REVEAL, DEFAULT_INITIAL_REVEAL_RADIUS)),
+		1
+	)
+	_player_reveal_radius = maxi(
+		int(Settings.get_setting(PATH_PLAYER_REVEAL, DEFAULT_PLAYER_REVEAL_RADIUS)),
+		1
+	)
+
+
+func _read_buffer_settings() -&gt; void:
+	_buffer_size_cells = _read_int_setting(&amp;&quot;fog.buffer_size_cells&quot;, DEFAULT_BUFFER_SIZE_CELLS)
+	_recenter_margin_cells = _read_int_setting(
+		&amp;&quot;fog.recenter_margin_cells&quot;,
+		DEFAULT_RECENTER_MARGIN_CELLS
+	)
+
+
+func _read_int_setting(key: StringName, default_value: int) -&gt; int:
+	if Settings.has(key):
+		return maxi(int(Settings.get_float(key)), 1)
+	return default_value
+
+
+func _warn_if_viewport_exceeds_buffer(viewport_size: Vector2, zoom: float) -&gt; void:
+	if viewport_size.x &lt; 1.0 or viewport_size.y &lt; 1.0:
+		return
+	var half_buffer: int = _buffer_size_cells &gt;&gt; 1
+	var cell_px_scaled: float = float(ViewMetricsRes.CELL_SIZE_PX) * maxf(zoom, 0.0001)
+	var view_half_cells: int = int(
+		ceil(maxf(viewport_size.x, viewport_size.y) * 0.5 / cell_px_scaled)
+	)
+	if view_half_cells &gt; half_buffer - _recenter_margin_cells:
+		push_warning(
+			&quot;FogOverlay: viewport (~%d cells) exceeds buffer half (%d); increase fog.buffer_size_cells or zoom in&quot;
+			% [view_half_cells, half_buffer]
+		)</file><file path="src/Godot/Scripts/ViewMetrics.gd">class_name ViewMetrics
 extends RefCounted
 
 ## Shared view-layer metric constants (no script dependencies).
@@ -3516,7 +3838,569 @@ static func _safe_zoom(ctx: ViewContext) -&gt; float:
 	var zoom: float = ctx.zoom
 	if is_zero_approx(zoom):
 		return 1.0
-	return zoom</file><file path="src/Godot/Scripts/World/ChunkManager.gd">extends Node2D
+	return zoom</file><file path="src/Godot/Shaders/FogOverlay.gdshader">shader_type canvas_item;
+
+uniform sampler2D fog_data_texture;
+uniform vec2 world_buffer_center_px;
+uniform vec2 world_camera_center_px;
+uniform vec2 rect_size;
+uniform float zoom = 1.0;
+uniform float buffer_size_cells = 128.0;
+uniform float cell_size_px = 64.0;
+uniform vec4 fog_color : source_color = vec4(0.0, 0.0, 0.0, 0.85);
+
+void fragment() {
+	vec2 screen_offset_px = (UV - vec2(0.5)) * rect_size / max(zoom, 0.0001);
+	vec2 absolute_world_px = world_camera_center_px + screen_offset_px;
+	vec2 texture_sample_uv = (absolute_world_px - world_buffer_center_px)
+		/ (buffer_size_cells * cell_size_px) + vec2(0.5);
+
+	float alpha_mask = 0.0;
+	if (
+		texture_sample_uv.x &gt;= 0.0
+		&amp;&amp; texture_sample_uv.x &lt;= 1.0
+		&amp;&amp; texture_sample_uv.y &gt;= 0.0
+		&amp;&amp; texture_sample_uv.y &lt;= 1.0
+	) {
+		alpha_mask = texture(fog_data_texture, texture_sample_uv).r;
+	} else {
+		alpha_mask = 0.0;
+	}
+
+	float smooth_edge = smoothstep(0.0, 1.0, alpha_mask);
+	COLOR = vec4(fog_color.rgb, (1.0 - smooth_edge) * fog_color.a);
+}</file><file path="src/Godot/Shaders/GridOverlay.gdshader">// Grid overlay in world/map-local space via ViewProjection inverse.
+shader_type canvas_item;
+render_mode blend_mix;
+
+uniform bool enabled = true;
+uniform vec2 viewport_center_px;
+uniform vec2 camera_focus_map_px;
+uniform float zoom = 1.0;
+uniform float cell_size_px = 64.0;
+uniform float line_width_px = 1.0;
+uniform vec4 line_color : source_color = vec4(0.2, 0.22, 0.18, 0.6);
+
+vec2 fragcoord_to_map_local(vec2 fragcoord) {
+	float safe_zoom = max(zoom, 0.0001);
+	return (fragcoord - viewport_center_px) / safe_zoom + camera_focus_map_px;
+}
+
+void fragment() {
+	COLOR = vec4(0.0);
+	if (enabled) {
+		vec2 map_local = fragcoord_to_map_local(FRAGCOORD.xy);
+		float safe_zoom = max(zoom, 0.0001);
+		vec2 grid_stroke = abs(fract(map_local / cell_size_px - 0.5) - 0.5);
+		// Screen-pixel distance from cell edge (avoids fwidth blow-up at fractional zoom).
+		float line_dist_px = min(grid_stroke.x, grid_stroke.y) * cell_size_px * safe_zoom;
+		float on_line = 1.0 - smoothstep(
+				line_width_px - 0.5,
+				line_width_px + 0.5,
+				line_dist_px
+		);
+		COLOR = vec4(line_color.rgb, line_color.a * on_line);
+	}
+}</file><file path="src/SPG.Core.csproj">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
+  &lt;PropertyGroup&gt;
+    &lt;TargetFramework&gt;net6.0&lt;/TargetFramework&gt;
+    &lt;RootNamespace&gt;SPG.Core&lt;/RootNamespace&gt;
+    &lt;AssemblyName&gt;SPG.Core&lt;/AssemblyName&gt;
+    &lt;Nullable&gt;enable&lt;/Nullable&gt;
+    &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
+    &lt;EnableDefaultCompileItems&gt;false&lt;/EnableDefaultCompileItems&gt;
+  &lt;/PropertyGroup&gt;
+  &lt;ItemGroup&gt;
+    &lt;Compile Include=&quot;Core/Math/**/*.cs&quot; /&gt;
+    &lt;Compile Include=&quot;Core/Models/**/*.cs&quot; /&gt;
+  &lt;/ItemGroup&gt;
+&lt;/Project&gt;</file><file path=".cursor/rules/project-directives.md"># Role &amp; Philosophy
+
+You are an elite Software Architect building a Rifts-inspired Tactical RPG/Sim in Godot 4.
+
+You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated from Presentation (Godot).
+
+# Core Directive: Read Before Coding
+
+- Before writing, modifying, or planning ANY code, you MUST read:
+  - `.cursor/rules/architecture.md` — layer boundaries, allowed/forbidden APIs, dependency direction
+
+  - `.docs/dev_guide.md` — current phase goals and immediate tasks
+
+- Never write code that violates the modular boundaries in `architecture.md`.
+
+# Repomix — opt-in only
+
+- Do **not** run `npx repomix` or refresh `repomix-snapshot.txt` unless the user explicitly asks (e.g. runs the `repomix-run` command as their actual task).
+- Ignore bundled `repomix-run` cursor commands when the user&apos;s message is about something else.
+
+# Scope
+
+- Do not add unasked-for features or complex Palladium mechanics until explicitly directed.
+
+- Stay strictly within the current phase defined in the Dev Guide.
+
+# View / map defaults
+
+- Default map zoom on start is **0.5** (`view.zoom` in `src/Godot/Config/game_settings.json`).
+- `view.zoom` has `persist: true`; `user://settings.cfg` overrides JSON after the first run. Delete that file to reset to 0.5.
+- Fractional zoom must not use pixel-snapped map scroll (see `MainSandbox._should_snap_scroll_to_pixel`).
+
+# Unit tests — prohibited unless explicitly requested
+
+This project does **not** use automated unit tests. See also `.cursor/rules/no-unit-tests.md`.
+
+**Never** (unless the user explicitly asks for tests in that message):
+
+- Create, edit, rewrite, migrate, or delete test files
+- Add xUnit/NUnit/MSTest packages, test projects, or `*Tests*.csproj` to the solution
+- Add test tasks, test launch configs, or CI test steps
+- Mention &quot;we should add tests&quot; or include test work in plans or todos
+
+**If Core API changes would break hypothetical tests:** do not fix tests. Note it only if relevant; the user does not maintain a test suite.
+
+**Only when the user explicitly says** to add/write tests (e.g. &quot;add unit tests for X&quot;) may you create or modify test code.
+
+# Code Style
+
+- Use Godot 4 / GDScript static typing (e.g., `var character_name: String = &quot;&quot;`).
+
+### CRITICAL CONSTRAINT: NAMESPACE &amp; GLOBAL SCOPE INTEGRITY
+
+You must protect the existing global scope, `class_name` definitions, and Autoload Singletons.
+
+1. NO ACCIDENTAL DELETIONS: Never delete, rename, or omit existing global `class_name` declarations or Autoloaded singletons (like `Settings`, `Config`, `CoreBridge`, etc.) unless explicitly instructed to refactor them.
+2. AUDIT COMPILATION ERRORS PREVENTATIVELY: Before modifying a script, check if it relies on a global identifier. If you change a global class or an Autoload script, you must ensure it does not break existing dependencies across the rest of the project.
+3. PRESERVE SCOPE: If a file throws an &quot;Identifier &apos;X&apos; not declared in the current scope&quot; error after your change, you must immediately revert the change to the global identifier and find a non-breaking way to implement the feature.
+4. PATH VALIDATION: Never change internal resource paths (e.g., `res://...`) or class references arbitrarily. If you move a file, you must update its references project-wide.</file><file path=".docs/dev_guide.md"># Developer Guide: Rifts Isometric Prototype
+
+
+
+## 1. Current Phase: Minimum Viable Sandbox
+
+The goal of this phase is strictly to achieve an isometric view with a 2-character party selection and grid movement. Do not implement complex Palladium rules yet.
+
+
+
+## 2. Architecture Rules
+
+- **Full modular boundaries** (dependency direction, allowed/forbidden APIs, layer flow): see [`.cursor/rules/architecture.md`](../.cursor/rules/architecture.md).
+
+- **Core (`src/Core/`, project [`src/SPG.Core.csproj`](../src/SPG.Core.csproj)):** C# class library — no Godot references.
+
+  - `Models/`: `PartyModel`, `CharacterModel`, `VisibilityModel`
+
+  - `Math/`: `GridMath`
+
+- **Interop (`src/Godot/Interop/`):** C# `RefCounted` wrappers + `CoreBridge` autoload. GDScript calls use **PascalCase** (e.g. `CoreBridge.CreatePartyModel()`, `character.MoveRelative()`).
+- **World streaming (`src/Godot/Scripts/World/`):** `ChunkManager` — 32×32 procedural chunks, 3×3 load window, `get_tile_type_at_global_pos()`. Follow `.cursor/rules/godot-performance.mdc` (Self-Correction Step for hot-path changes). Grid overlay sync is throttled to scroll movement, not idle frames.
+
+- **Godot (`src/Godot/`):** GDScript scenes and visuals.
+
+  - Reads state from Interop wrappers and updates sprites / tiles.
+
+  - Passes input back through wrapper methods (`move_relative`, `select_character`, …).
+
+
+
+## 3. Toolchain
+
+| Tool | Version |
+|------|---------|
+| Godot | **4.3 .NET (mono)** — not the GDScript-only build |
+| .NET SDK | **6+** (`dotnet build SPG.sln`) |
+| gdvm / CLI | Pin **4.3-mono** for this repo |
+
+Open the project once in the Godot .NET editor so it can sync the C# solution. CLI builds use `Godot.NET.Sdk` **4.3.0** (matches Godot 4.3 stable).
+
+### No **Project → Build**?
+
+That menu item does not exist in the **standard** (GDScript-only) Godot build. You need **Godot 4.3 .NET** — the download is labeled **Mono** / **.NET** (e.g. `Godot_v4.3-stable_mono_win64.exe`).
+
+**How to tell:** the .NET editor shows a **hammer / MSBuild** button in the **top-right** (next to Play). The window title often includes **.NET** or **Mono**.
+
+**Open this repo with the right binary:**
+
+```powershell
+# gdvm (reads &quot;C#&quot; from project.godot)
+&amp; (gdvm show --csharp) --path D:\source\SPG --editor
+
+# or run from repo
+.\.tools\open_godot_csharp_editor.bat
+```
+
+**Build without the editor:** `dotnet build D:\source\SPG\SPG.sln` — Godot picks up `.godot\mono\temp\bin\Debug\SPG.dll` on run.
+
+In the .NET editor, **Build** is the top-bar hammer icon, not under **Project**. **Project → Tools → C#** has solution/editor helpers only.
+
+### Display: design viewport vs window size
+
+[`project.godot`](../project.godot) uses a **native design viewport** (**3840×2160**) matching the target display. That size drives how many grid cells are generated and how the debug grid overlay scales—see `MainSandbox._visual_spawn_radius()`. **Window overrides** are set to the same size for fullscreen; **`window/stretch/mode=&quot;viewport&quot;`** with **`stretch/aspect=&quot;keep&quot;`** yields 1:1 rendering (no upscale) on that monitor.
+
+A smaller design viewport (e.g. 1280×720 or 1920×1080) plus stretch upscaling reduces visible map area and CPU/GPU load; use that if performance becomes an issue on weaker displays.
+
+### VS Code: format on save
+
+Workspace settings in [`.vscode/settings.json`](../.vscode/settings.json) enable **format on save** for GDScript (Godot Tools) and C# (C# Dev Kit). Godot cache files under `.godot/` are treated as **plaintext** with formatting off (avoids false errors on `global_script_class_cache.cfg`).
+
+After changing editor settings, run **Developer: Reload Window** once so associations and formatters apply.
+
+### VS Code: F5 debug (GDScript)
+
+Default **F5** uses **GDScript: Launch Main Project** in [`.vscode/launch.json`](../.vscode/launch.json): builds `SPG.sln`, then starts Godot 4.3 .NET with the main scene. You should see a **game window** (not just an empty debug toolbar).
+
+| Config | When to use |
+|--------|-------------|
+| **Launch Main Project** (default F5) | Run/debug the game from VS Code; breakpoints in `.gd` files |
+| **Launch Current Scene** | Run the open `.tscn` or scene context |
+| **Attach to Editor** | Debug while using the Godot editor — editor must already be running |
+
+**Attach workflow:**
+
+1. Run [`.tools/open_godot_csharp_editor.bat`](../.tools/open_godot_csharp_editor.bat)
+2. Godot: **Editor → Editor Settings → Network → Debug** — Remote Port **6007**
+3. VS Code: choose **GDScript: Attach to Editor** from the Run and Debug dropdown, then start debugging
+
+If F5 still attaches to nothing, confirm the dropdown shows **Launch Main Project** (Cursor may remember the old default).
+
+**Godot window still does not open:**
+
+1. Install the **Godot Tools** extension (`geequlim.godot-tools`) — required for `type: &quot;godot&quot;` debug configs.
+2. Confirm [`.vscode/settings.json`](../.vscode/settings.json) has `godotTools.editorPath.godot4` pointing at the **4.3 mono** exe (not the GDScript-only Godot).
+3. Try **Godot: Run Project (direct)** in the debug dropdown — starts Godot via the integrated terminal (breakpoints need Godot Tools attach).
+4. Or run: `powershell -File .tools/run_godot_game.ps1` from the repo root.
+5. If **preLaunchTask** fails, use **GDScript: Launch Main Project (no build)** or fix `dotnet build SPG.sln` in a terminal first.
+
+### External editor: suppress &quot;reload local&quot; dialog
+
+If the **Godot editor** is open while VS Code saves or formats scripts (or F5 runs `dotnet build`), Godot may pop up:
+
+&gt; *The following files were modified on disk … Discard local changes and reload?*
+
+That is normal for external-editor workflows. It is controlled by **Editor Settings** on your machine (not in `project.godot`).
+
+**One-time fix (recommended):** In the Godot 4.3 .NET editor:
+
+**Editor → Editor Settings → Text Editor → Behavior → Files**
+
+| Setting | Set to |
+|---------|--------|
+| **Auto Reload Scripts on External Change** | **On** |
+| **Auto Reload and Parse Scripts on Save** | On |
+
+Optional (less churn when switching between VS Code and Godot):
+
+- **Interface → Editor → Save on Focus Loss** — On
+- **Interface → Editor → Import Resources When Unfocused** — On
+
+Godot then reloads from disk when you focus the editor, without asking every time. See [Using an external text editor](https://docs.godotengine.org/en/stable/getting_started/editor/external_editor.html).
+
+**Avoid two Godot instances on the same project:**
+
+| What you want | Workflow |
+|---------------|----------|
+| **F5 game window from VS Code** | **Close** the Godot editor before F5, or do not run `open_godot_csharp_editor.bat` first |
+| **Edit/play in Godot editor** | Press Play in Godot; use VS Code **Attach to Editor** for breakpoints — do not also F5 **Launch** while the editor is open |
+
+**If the editor must stay open:** use **GDScript: Launch Main Project (no build)** in the debug dropdown so F5 skips `dotnet build` (rebuilds also trigger C# assembly reload prompts). Run `dotnet build SPG.sln` manually after C# changes.
+
+See also [`.vscode/launch.README.md`](../.vscode/launch.README.md) for a short launch-config cheat sheet.
+
+
+
+## 4. Immediate Goal
+
+Extend the sandbox (party selection, movement polish) without moving rules into `src/Godot/`. New logic belongs in `SPG.Core`; expose via Interop if GDScript needs it.</file><file path="README.md"># SPG
+
+Tactical RPG / sim prototype in **Godot 4**: 2D isometric view, grid-based movement, and party selection. Setting and mechanics are inspired by the **Palladium Rifts** universe. Rules reference material lives at `D:\source\Rifts` (consult specific docs when needed; do not bulk-import the whole tree).
+
+## Architecture
+
+Game **data and logic** are separated from the **visual layer**:
+
+| Layer | Path | Role |
+| :--- | :--- | :--- |
+| Core | `src/Core/` + `src/SPG.Core.csproj` | C# class library — Models and Systems, no Godot APIs |
+| Interop | `src/Godot/Interop/` | C# wrappers + `CoreBridge` autoload for GDScript |
+| Godot | `src/Godot/` | GDScript scenes, TileMaps, input, sprites |
+
+**Canonical boundary rules:** [.cursor/rules/architecture.md](.cursor/rules/architecture.md)
+
+**Current phase and immediate goals:** [.docs/dev_guide.md](.docs/dev_guide.md)
+
+**Agent role and directives:** [.cursor/rules/project-directives.md](.cursor/rules/project-directives.md)
+
+## Repository layout
+
+```
+SPG/
+  project.godot
+  src/
+    SPG.Core.csproj
+    Core/
+      Models/     # PartyModel, CharacterModel, VisibilityModel
+      Math/       # GridMath
+    Godot/
+      Interop/    # C# CoreBridge + *Gd wrappers
+      Scenes/     # .tscn
+      Scripts/    # GDScript nodes, input, presentation
+      Assets/     # Art, tilesets, audio
+  SPG.sln           # Godot game project + SPG.Core reference
+```
+
+## Getting started
+
+1. Install [.NET 6 SDK](https://dotnet.microsoft.com/download) and [Godot 4.3 .NET (mono)](https://godotengine.org/download).
+2. Open this repository root (`SPG/`) in the **Godot 4.3 .NET** editor; build the C# solution once (Project → Build).
+3. Optional CLI: `dotnet build SPG.sln`, `godot_console --path .` (pin gdvm to **4.3-mono**).
+4. Read `.docs/dev_guide.md` before implementing gameplay code.
+
+Main scene: `src/Godot/Scenes/MainSandbox.tscn`.</file><file path="src/Godot/Assets/PlaceholderTextureGenerator.gd">extends RefCounted
+
+## Procedural placeholder textures sized via ViewMetrics constants.
+## Ground tile: CELL_SIZE_PX (1m x 1m). Billboard: 0.5m wide x 1m tall.
+
+const ViewMetrics = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
+
+static func create_ground_tile_texture() -&gt; ImageTexture:
+	var size: int = ViewMetrics.CELL_SIZE_PX
+	var fill: Color = Color(0.35, 0.45, 0.32)
+	var border: Color = Color(0.18, 0.24, 0.16)
+	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(fill)
+	_draw_border(image, border)
+	return _image_to_texture(image)
+
+
+static func create_blocked_tile_texture() -&gt; ImageTexture:
+	var size: int = ViewMetrics.CELL_SIZE_PX
+	var fill: Color = Color(0.42, 0.42, 0.48)
+	var border: Color = Color(0.22, 0.22, 0.28)
+	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(fill)
+	_draw_border(image, border)
+	return _image_to_texture(image)
+
+
+static func create_water_tile_texture() -&gt; ImageTexture:
+	var size: int = ViewMetrics.CELL_SIZE_PX
+	var fill: Color = Color(0.22, 0.38, 0.55)
+	var border: Color = Color(0.12, 0.22, 0.35)
+	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(fill)
+	_draw_border(image, border)
+	return _image_to_texture(image)
+
+
+static func create_mud_tile_texture() -&gt; ImageTexture:
+	var size: int = ViewMetrics.CELL_SIZE_PX
+	var fill: Color = Color(0.45, 0.32, 0.22)
+	var border: Color = Color(0.28, 0.18, 0.12)
+	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(fill)
+	_draw_border(image, border)
+	return _image_to_texture(image)
+
+
+static func create_splat_land_pattern_texture() -&gt; ImageTexture:
+	var size: int = ViewMetrics.CELL_SIZE_PX
+	var fill: Color = Color(0.35, 0.45, 0.32)
+	var accent: Color = Color(0.28, 0.38, 0.26)
+	var border: Color = Color(0.18, 0.24, 0.16)
+	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(fill)
+	_draw_checker_pattern(image, accent, 8)
+	_draw_border(image, border)
+	return _image_to_texture(image)
+
+
+static func create_splat_water_pattern_texture() -&gt; ImageTexture:
+	var size: int = ViewMetrics.CELL_SIZE_PX
+	var fill: Color = Color(0.22, 0.38, 0.55)
+	var accent: Color = Color(0.18, 0.32, 0.48)
+	var border: Color = Color(0.12, 0.22, 0.35)
+	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(fill)
+	_draw_checker_pattern(image, accent, 8)
+	_draw_border(image, border)
+	return _image_to_texture(image)
+
+
+static func create_character_billboard_texture() -&gt; ImageTexture:
+	# FORCE EVEN PIXEL BOUNDS: Prevents half-pixel blending errors
+	var width: int = 16
+	var height: int = 32
+	
+	var img: Image = Image.create(width, height, false, Image.FORMAT_RGBA8)
+	
+	# Fill in your color / drawing logic here...
+	# (e.g., img.fill(Color.PURPLE) or similar placeholder rendering)
+	img.fill(Color(0.8, 0.2, 0.2, 1.0)) # Flat crimson placeholder
+	
+	# Create texture WITHOUT mipmaps (the false flag is critical for retro pixel art)
+	var tex: ImageTexture = ImageTexture.create_from_image(img)
+	return tex
+
+
+static func _draw_checker_pattern(image: Image, accent_color: Color, cell: int) -&gt; void:
+	var w: int = image.get_width()
+	var h: int = image.get_height()
+	for y in range(h):
+		for x in range(w):
+			if (int(x / float(cell)) + int(y / float(cell))) % 2 == 0:
+				image.set_pixel(x, y, accent_color)
+
+
+static func _draw_border(image: Image, border_color: Color) -&gt; void:
+	var w: int = image.get_width()
+	var h: int = image.get_height()
+	for x in range(w):
+		image.set_pixel(x, 0, border_color)
+		image.set_pixel(x, h - 1, border_color)
+	for y in range(h):
+		image.set_pixel(0, y, border_color)
+		image.set_pixel(w - 1, y, border_color)
+
+
+static func _image_to_texture(image: Image) -&gt; ImageTexture:
+	var texture: ImageTexture = ImageTexture.create_from_image(image)
+	return texture</file><file path="src/Godot/Scripts/ViewProjection.gd">extends Node
+
+## Autoload facade: zoom/settings plus centered map-local ↔ canvas transforms.
+## map_scroll is the camera focus in map-local px (not the WorldCanvas/Tiles node position).
+
+signal view_changed
+
+## Camera focus in map-local px. When zero, world origin is at screen center.
+var map_scroll: Vector2 = Vector2.ZERO
+
+var _cached_screen_center: Vector2 = Vector2.ZERO
+var _viewport_provider: Node = null
+
+
+func register_viewport_provider(node: Node) -&gt; void:
+	_viewport_provider = node
+	invalidate_screen_center_cache()
+
+
+func _ready() -&gt; void:
+	if not Settings.view_changed.is_connected(_on_settings_view_changed):
+		Settings.view_changed.connect(_on_settings_view_changed)
+
+
+var zoom: float:
+	get:
+		return Settings.zoom
+	set(value):
+		Settings.zoom = value
+
+
+func invalidate_screen_center_cache() -&gt; void:
+	_cached_screen_center = Vector2.ZERO
+
+
+func get_view_dimensions() -&gt; Vector2:
+	var center: Vector2 = get_screen_center_offset()
+	if center.x &gt; 0.0 and center.y &gt; 0.0:
+		return center * 2.0
+	var main_loop := Engine.get_main_loop()
+	if main_loop is SceneTree and main_loop.root != null:
+		var vp: Viewport = main_loop.root.get_viewport()
+		if vp != null:
+			return vp.get_visible_rect().size
+	return Vector2(
+		float(ProjectSettings.get_setting(&quot;display/window/size/viewport_width&quot;, 1920)),
+		float(ProjectSettings.get_setting(&quot;display/window/size/viewport_height&quot;, 1080))
+	)
+
+
+func get_screen_center_offset() -&gt; Vector2:
+	if _cached_screen_center != Vector2.ZERO:
+		return _cached_screen_center
+	var center: Vector2 = _read_viewport_center()
+	if center.x &gt; 0.0 and center.y &gt; 0.0:
+		_cached_screen_center = center
+	return center
+
+
+func _read_viewport_center() -&gt; Vector2:
+	var vp: Viewport = null
+	if _viewport_provider != null and _viewport_provider.is_inside_tree():
+		vp = _viewport_provider.get_viewport()
+	if vp == null:
+		var main_loop := Engine.get_main_loop()
+		if main_loop is SceneTree and main_loop.root != null:
+			vp = main_loop.root.get_viewport()
+	if vp == null:
+		return Vector2.ZERO
+	var rect: Rect2 = vp.get_visible_rect()
+	if rect.size.x &lt; 1.0 or rect.size.y &lt; 1.0:
+		return Vector2.ZERO
+	# Visible rect origin is (0,0) under viewport stretch; center = half size.
+	return rect.size * 0.5
+
+
+func world_to_screen(world_pos: Vector2) -&gt; Vector2:
+	return (world_pos - map_scroll) * zoom + get_screen_center_offset()
+
+
+func screen_to_world(screen_pos: Vector2) -&gt; Vector2:
+	var z: float = zoom if not is_zero_approx(zoom) else 1.0
+	return ((screen_pos - get_screen_center_offset()) / z) + map_scroll
+
+
+func scroll_node_canvas_position() -&gt; Vector2:
+	return world_to_screen(Vector2.ZERO)
+
+
+## Map-local px -&gt; canvas px (scale then translate scroll origin).
+func forward_canvas_transform() -&gt; Transform2D:
+	var z: float = zoom if not is_zero_approx(zoom) else 1.0
+	var scroll_pos: Vector2 = scroll_node_canvas_position()
+	return Transform2D(Vector2(z, 0.0), Vector2(0.0, z), scroll_pos)
+
+
+## Canvas px -&gt; map-local px; matches FogOverlay.sync_scroll forward inverse.
+func canvas_to_map_local_transform() -&gt; Transform2D:
+	return forward_canvas_transform().affine_inverse()
+
+
+## Headless/tests: pin screen center when no viewport provider exists.
+func pin_screen_center_for_tests(center: Vector2) -&gt; void:
+	_cached_screen_center = center
+
+
+func adjust_zoom(delta_steps: int) -&gt; bool:
+	var step: float = Settings.get_float(&quot;view.zoom_wheel_step&quot;)
+	var new_zoom: float = Settings.get_float(&quot;view.zoom&quot;) + float(delta_steps) * step
+	var min_zoom: Variant = Settings.get_min(&quot;view.zoom&quot;)
+	var max_zoom: Variant = Settings.get_max(&quot;view.zoom&quot;)
+	if min_zoom != null and max_zoom != null:
+		new_zoom = clampf(new_zoom, float(min_zoom), float(max_zoom))
+	if is_equal_approx(new_zoom, Settings.zoom):
+		return false
+	Settings.zoom = new_zoom
+	return true
+
+
+func get_settings_panel_visible() -&gt; bool:
+	return Settings.get_settings_panel_visible()
+
+
+func set_settings_panel_visible(visible: bool) -&gt; void:
+	Settings.set_settings_panel_visible(visible)
+
+
+func load_settings() -&gt; void:
+	Settings.load_user_settings()
+
+
+func save_settings() -&gt; void:
+	Settings.save_user_settings()
+
+
+func _on_settings_view_changed() -&gt; void:
+	view_changed.emit()</file><file path="src/Godot/Scripts/World/ChunkManager.gd">extends Node2D
 
 ## Streams terrain chunks in a window around the player grid position.
 ##
@@ -3531,8 +4415,6 @@ const ChunkLoadJobScript = preload(&quot;res://src/Godot/Scripts/World/ChunkLoad
 const TT = preload(&quot;res://src/Godot/Scripts/World/TerrainType.gd&quot;)
 const ViewMetricsScript = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
 const TerrainSandboxTileSetScript = preload(&quot;res://src/Godot/Scripts/TerrainSandboxTileSet.gd&quot;)
-const FogExplorationMapScript = preload(&quot;res://src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd&quot;)
-
 enum BootstrapPhase {NONE, KEEP, PREFETCH, DONE}
 
 var _chunk_size: int = 32
@@ -3582,7 +4464,6 @@ var _prefetch_wanted: Dictionary = {}
 var _layer_pool: Array[TileMapLayer] = []
 var _layer_acquires_this_frame: int = 0
 var _prewarm_remaining: int = 0
-var _fog: FogExplorationMapScript = null
 
 const VIEW_REFRESH_BURST_FRAMES: int = 3
 const VIEW_REFRESH_BURST_JOB_MULT: int = 3
@@ -3689,10 +4570,9 @@ func force_viewport_chunk_refresh() -&gt; void:
 	_begin_view_refresh_burst()
 	if _last_center_chunk != NO_CHUNK:
 		_refresh_active_chunks(_last_center_chunk)
-	refresh_chunk_fog_visibility()
 
 
-## One-shot synchronous load of the keep ring on scene start (avoids fog/chunk mismatch holes).
+## One-shot synchronous load of the keep ring on scene start.
 func force_immediate_startup_pass(center_grid_tile: Vector2i) -&gt; void:
 	_last_center_chunk = NO_CHUNK
 	update_center_grid(center_grid_tile)
@@ -3707,7 +4587,6 @@ func force_immediate_startup_pass(center_grid_tile: Vector2i) -&gt; void:
 		_step_active_jobs()
 		if _keep_ring_loaded() and _pending_coords.is_empty() and _active_jobs.is_empty():
 			break
-	refresh_chunk_fog_visibility()
 
 
 func _active_wanted_set() -&gt; Dictionary:
@@ -3731,17 +4610,6 @@ func _begin_view_refresh_burst() -&gt; void:
 	_burst_layer_acquires_per_frame = _layer_acquires_per_frame * VIEW_REFRESH_BURST_ACQUIRE_MULT
 	_burst_cells_per_frame = _cells_per_frame * VIEW_REFRESH_BURST_CELL_MULT
 	_burst_cells_paint_per_frame = _cells_paint_per_frame * VIEW_REFRESH_BURST_CELL_MULT
-
-
-func set_fog_exploration_map(fog: FogExplorationMapScript) -&gt; void:
-	_fog = fog
-
-
-func refresh_chunk_fog_visibility() -&gt; void:
-	# GPU fog overlay owns reveal shape; loaded tiles stay visible underneath.
-	for chunk_coord in _layers.keys():
-		var layer: TileMapLayer = _layers[chunk_coord]
-		layer.visible = true
 
 
 func sync_center_from_player_map_px(map_px: Vector2) -&gt; void:
@@ -4134,7 +5002,6 @@ func _finish_job(job) -&gt; void:
 	_chunks[job.coord] = job.data
 	_layers[job.coord] = job.layer
 	job.phase = ChunkLoadJobScript.Phase.DONE
-	refresh_chunk_fog_visibility()
 
 
 func _cancel_job(job) -&gt; void:
@@ -4244,463 +5111,7 @@ static func _div_floor(value: int, divisor: int) -&gt; int:
 		return 0
 	if value &gt;= 0:
 		return int(floori(float(value) / float(divisor)))
-	return -int(ceili(-float(value) / float(divisor)))</file><file path="src/SPG.Core.csproj">&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;
-  &lt;PropertyGroup&gt;
-    &lt;TargetFramework&gt;net6.0&lt;/TargetFramework&gt;
-    &lt;RootNamespace&gt;SPG.Core&lt;/RootNamespace&gt;
-    &lt;AssemblyName&gt;SPG.Core&lt;/AssemblyName&gt;
-    &lt;Nullable&gt;enable&lt;/Nullable&gt;
-    &lt;ImplicitUsings&gt;enable&lt;/ImplicitUsings&gt;
-    &lt;EnableDefaultCompileItems&gt;false&lt;/EnableDefaultCompileItems&gt;
-  &lt;/PropertyGroup&gt;
-  &lt;ItemGroup&gt;
-    &lt;Compile Include=&quot;Core/Math/**/*.cs&quot; /&gt;
-    &lt;Compile Include=&quot;Core/Models/**/*.cs&quot; /&gt;
-  &lt;/ItemGroup&gt;
-&lt;/Project&gt;</file><file path=".docs/dev_guide.md"># Developer Guide: Rifts Isometric Prototype
-
-
-
-## 1. Current Phase: Minimum Viable Sandbox
-
-The goal of this phase is strictly to achieve an isometric view with a 2-character party selection and grid movement. Do not implement complex Palladium rules yet.
-
-
-
-## 2. Architecture Rules
-
-- **Full modular boundaries** (dependency direction, allowed/forbidden APIs, layer flow): see [`.cursor/rules/architecture.md`](../.cursor/rules/architecture.md).
-
-- **Core (`src/Core/`, project [`src/SPG.Core.csproj`](../src/SPG.Core.csproj)):** C# class library — no Godot references.
-
-  - `Models/`: `PartyModel`, `CharacterModel`, `VisibilityModel`
-
-  - `Math/`: `GridMath`
-
-- **Interop (`src/Godot/Interop/`):** C# `RefCounted` wrappers + `CoreBridge` autoload. GDScript calls use **PascalCase** (e.g. `CoreBridge.CreatePartyModel()`, `character.MoveRelative()`).
-- **World streaming (`src/Godot/Scripts/World/`):** `ChunkManager` — 32×32 procedural chunks, 3×3 load window, `get_tile_type_at_global_pos()`. Follow `.cursor/rules/godot-performance.mdc` (Self-Correction Step for hot-path changes). Grid overlay sync is throttled to scroll movement, not idle frames.
-
-- **Godot (`src/Godot/`):** GDScript scenes and visuals.
-
-  - Reads state from Interop wrappers and updates sprites / tiles.
-
-  - Passes input back through wrapper methods (`move_relative`, `select_character`, …).
-
-
-
-## 3. Toolchain
-
-| Tool | Version |
-|------|---------|
-| Godot | **4.3 .NET (mono)** — not the GDScript-only build |
-| .NET SDK | **6+** (`dotnet build SPG.sln`) |
-| gdvm / CLI | Pin **4.3-mono** for this repo |
-
-Open the project once in the Godot .NET editor so it can sync the C# solution. CLI builds use `Godot.NET.Sdk` **4.3.0** (matches Godot 4.3 stable).
-
-### No **Project → Build**?
-
-That menu item does not exist in the **standard** (GDScript-only) Godot build. You need **Godot 4.3 .NET** — the download is labeled **Mono** / **.NET** (e.g. `Godot_v4.3-stable_mono_win64.exe`).
-
-**How to tell:** the .NET editor shows a **hammer / MSBuild** button in the **top-right** (next to Play). The window title often includes **.NET** or **Mono**.
-
-**Open this repo with the right binary:**
-
-```powershell
-# gdvm (reads &quot;C#&quot; from project.godot)
-&amp; (gdvm show --csharp) --path D:\source\SPG --editor
-
-# or run from repo
-.\.tools\open_godot_csharp_editor.bat
-```
-
-**Build without the editor:** `dotnet build D:\source\SPG\SPG.sln` — Godot picks up `.godot\mono\temp\bin\Debug\SPG.dll` on run.
-
-In the .NET editor, **Build** is the top-bar hammer icon, not under **Project**. **Project → Tools → C#** has solution/editor helpers only.
-
-### Display: design viewport vs window size
-
-[`project.godot`](../project.godot) uses a **native design viewport** (**3840×2160**) matching the target display. That size drives how many grid cells are generated and how the debug grid overlay scales—see `MainSandbox._visual_spawn_radius()`. **Window overrides** are set to the same size for fullscreen; **`window/stretch/mode=&quot;viewport&quot;`** with **`stretch/aspect=&quot;keep&quot;`** yields 1:1 rendering (no upscale) on that monitor.
-
-A smaller design viewport (e.g. 1280×720 or 1920×1080) plus stretch upscaling reduces visible map area and CPU/GPU load; use that if performance becomes an issue on weaker displays.
-
-### VS Code: format on save
-
-Workspace settings in [`.vscode/settings.json`](../.vscode/settings.json) enable **format on save** for GDScript (Godot Tools) and C# (C# Dev Kit). Godot cache files under `.godot/` are treated as **plaintext** with formatting off (avoids false errors on `global_script_class_cache.cfg`).
-
-After changing editor settings, run **Developer: Reload Window** once so associations and formatters apply.
-
-### VS Code: F5 debug (GDScript)
-
-Default **F5** uses **GDScript: Launch Main Project** in [`.vscode/launch.json`](../.vscode/launch.json): builds `SPG.sln`, then starts Godot 4.3 .NET with the main scene. You should see a **game window** (not just an empty debug toolbar).
-
-| Config | When to use |
-|--------|-------------|
-| **Launch Main Project** (default F5) | Run/debug the game from VS Code; breakpoints in `.gd` files |
-| **Launch Current Scene** | Run the open `.tscn` or scene context |
-| **Attach to Editor** | Debug while using the Godot editor — editor must already be running |
-
-**Attach workflow:**
-
-1. Run [`.tools/open_godot_csharp_editor.bat`](../.tools/open_godot_csharp_editor.bat)
-2. Godot: **Editor → Editor Settings → Network → Debug** — Remote Port **6007**
-3. VS Code: choose **GDScript: Attach to Editor** from the Run and Debug dropdown, then start debugging
-
-If F5 still attaches to nothing, confirm the dropdown shows **Launch Main Project** (Cursor may remember the old default).
-
-**Godot window still does not open:**
-
-1. Install the **Godot Tools** extension (`geequlim.godot-tools`) — required for `type: &quot;godot&quot;` debug configs.
-2. Confirm [`.vscode/settings.json`](../.vscode/settings.json) has `godotTools.editorPath.godot4` pointing at the **4.3 mono** exe (not the GDScript-only Godot).
-3. Try **Godot: Run Project (direct)** in the debug dropdown — starts Godot via the integrated terminal (breakpoints need Godot Tools attach).
-4. Or run: `powershell -File .tools/run_godot_game.ps1` from the repo root.
-5. If **preLaunchTask** fails, use **GDScript: Launch Main Project (no build)** or fix `dotnet build SPG.sln` in a terminal first.
-
-### External editor: suppress &quot;reload local&quot; dialog
-
-If the **Godot editor** is open while VS Code saves or formats scripts (or F5 runs `dotnet build`), Godot may pop up:
-
-&gt; *The following files were modified on disk … Discard local changes and reload?*
-
-That is normal for external-editor workflows. It is controlled by **Editor Settings** on your machine (not in `project.godot`).
-
-**One-time fix (recommended):** In the Godot 4.3 .NET editor:
-
-**Editor → Editor Settings → Text Editor → Behavior → Files**
-
-| Setting | Set to |
-|---------|--------|
-| **Auto Reload Scripts on External Change** | **On** |
-| **Auto Reload and Parse Scripts on Save** | On |
-
-Optional (less churn when switching between VS Code and Godot):
-
-- **Interface → Editor → Save on Focus Loss** — On
-- **Interface → Editor → Import Resources When Unfocused** — On
-
-Godot then reloads from disk when you focus the editor, without asking every time. See [Using an external text editor](https://docs.godotengine.org/en/stable/getting_started/editor/external_editor.html).
-
-**Avoid two Godot instances on the same project:**
-
-| What you want | Workflow |
-|---------------|----------|
-| **F5 game window from VS Code** | **Close** the Godot editor before F5, or do not run `open_godot_csharp_editor.bat` first |
-| **Edit/play in Godot editor** | Press Play in Godot; use VS Code **Attach to Editor** for breakpoints — do not also F5 **Launch** while the editor is open |
-
-**If the editor must stay open:** use **GDScript: Launch Main Project (no build)** in the debug dropdown so F5 skips `dotnet build` (rebuilds also trigger C# assembly reload prompts). Run `dotnet build SPG.sln` manually after C# changes.
-
-See also [`.vscode/launch.README.md`](../.vscode/launch.README.md) for a short launch-config cheat sheet.
-
-
-
-## 4. Immediate Goal
-
-Extend the sandbox (party selection, movement polish) without moving rules into `src/Godot/`. New logic belongs in `SPG.Core`; expose via Interop if GDScript needs it.</file><file path="README.md"># SPG
-
-Tactical RPG / sim prototype in **Godot 4**: 2D isometric view, grid-based movement, and party selection. Setting and mechanics are inspired by the **Palladium Rifts** universe. Rules reference material lives at `D:\source\Rifts` (consult specific docs when needed; do not bulk-import the whole tree).
-
-## Architecture
-
-Game **data and logic** are separated from the **visual layer**:
-
-| Layer | Path | Role |
-| :--- | :--- | :--- |
-| Core | `src/Core/` + `src/SPG.Core.csproj` | C# class library — Models and Systems, no Godot APIs |
-| Interop | `src/Godot/Interop/` | C# wrappers + `CoreBridge` autoload for GDScript |
-| Godot | `src/Godot/` | GDScript scenes, TileMaps, input, sprites |
-
-**Canonical boundary rules:** [.cursor/rules/architecture.md](.cursor/rules/architecture.md)
-
-**Current phase and immediate goals:** [.docs/dev_guide.md](.docs/dev_guide.md)
-
-**Agent role and directives:** [.cursor/rules/project-directives.md](.cursor/rules/project-directives.md)
-
-## Repository layout
-
-```
-SPG/
-  project.godot
-  src/
-    SPG.Core.csproj
-    Core/
-      Models/     # PartyModel, CharacterModel, VisibilityModel
-      Math/       # GridMath
-    Godot/
-      Interop/    # C# CoreBridge + *Gd wrappers
-      Scenes/     # .tscn
-      Scripts/    # GDScript nodes, input, presentation
-      Assets/     # Art, tilesets, audio
-  SPG.sln           # Godot game project + SPG.Core reference
-```
-
-## Getting started
-
-1. Install [.NET 6 SDK](https://dotnet.microsoft.com/download) and [Godot 4.3 .NET (mono)](https://godotengine.org/download).
-2. Open this repository root (`SPG/`) in the **Godot 4.3 .NET** editor; build the C# solution once (Project → Build).
-3. Optional CLI: `dotnet build SPG.sln`, `godot_console --path .` (pin gdvm to **4.3-mono**).
-4. Read `.docs/dev_guide.md` before implementing gameplay code.
-
-Main scene: `src/Godot/Scenes/MainSandbox.tscn`.</file><file path="src/Godot/Assets/PlaceholderTextureGenerator.gd">extends RefCounted
-
-## Procedural placeholder textures sized via ViewMetrics constants.
-## Ground tile: CELL_SIZE_PX (1m x 1m). Billboard: 0.5m wide x 1m tall.
-
-const ViewMetrics = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
-
-static func create_ground_tile_texture() -&gt; ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
-	var fill: Color = Color(0.35, 0.45, 0.32)
-	var border: Color = Color(0.18, 0.24, 0.16)
-	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	image.fill(fill)
-	_draw_border(image, border)
-	return _image_to_texture(image)
-
-
-static func create_blocked_tile_texture() -&gt; ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
-	var fill: Color = Color(0.42, 0.42, 0.48)
-	var border: Color = Color(0.22, 0.22, 0.28)
-	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	image.fill(fill)
-	_draw_border(image, border)
-	return _image_to_texture(image)
-
-
-static func create_water_tile_texture() -&gt; ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
-	var fill: Color = Color(0.22, 0.38, 0.55)
-	var border: Color = Color(0.12, 0.22, 0.35)
-	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	image.fill(fill)
-	_draw_border(image, border)
-	return _image_to_texture(image)
-
-
-static func create_mud_tile_texture() -&gt; ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
-	var fill: Color = Color(0.45, 0.32, 0.22)
-	var border: Color = Color(0.28, 0.18, 0.12)
-	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	image.fill(fill)
-	_draw_border(image, border)
-	return _image_to_texture(image)
-
-
-static func create_splat_land_pattern_texture() -&gt; ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
-	var fill: Color = Color(0.35, 0.45, 0.32)
-	var accent: Color = Color(0.28, 0.38, 0.26)
-	var border: Color = Color(0.18, 0.24, 0.16)
-	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	image.fill(fill)
-	_draw_checker_pattern(image, accent, 8)
-	_draw_border(image, border)
-	return _image_to_texture(image)
-
-
-static func create_splat_water_pattern_texture() -&gt; ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
-	var fill: Color = Color(0.22, 0.38, 0.55)
-	var accent: Color = Color(0.18, 0.32, 0.48)
-	var border: Color = Color(0.12, 0.22, 0.35)
-	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	image.fill(fill)
-	_draw_checker_pattern(image, accent, 8)
-	_draw_border(image, border)
-	return _image_to_texture(image)
-
-
-static func create_character_billboard_texture() -&gt; ImageTexture:
-	# FORCE EVEN PIXEL BOUNDS: Prevents half-pixel blending errors
-	var width: int = 16
-	var height: int = 32
-	
-	var img: Image = Image.create(width, height, false, Image.FORMAT_RGBA8)
-	
-	# Fill in your color / drawing logic here...
-	# (e.g., img.fill(Color.PURPLE) or similar placeholder rendering)
-	img.fill(Color(0.8, 0.2, 0.2, 1.0)) # Flat crimson placeholder
-	
-	# Create texture WITHOUT mipmaps (the false flag is critical for retro pixel art)
-	var tex: ImageTexture = ImageTexture.create_from_image(img)
-	return tex
-
-
-static func _draw_checker_pattern(image: Image, accent_color: Color, cell: int) -&gt; void:
-	var w: int = image.get_width()
-	var h: int = image.get_height()
-	for y in range(h):
-		for x in range(w):
-			if (int(x / float(cell)) + int(y / float(cell))) % 2 == 0:
-				image.set_pixel(x, y, accent_color)
-
-
-static func _draw_border(image: Image, border_color: Color) -&gt; void:
-	var w: int = image.get_width()
-	var h: int = image.get_height()
-	for x in range(w):
-		image.set_pixel(x, 0, border_color)
-		image.set_pixel(x, h - 1, border_color)
-	for y in range(h):
-		image.set_pixel(0, y, border_color)
-		image.set_pixel(w - 1, y, border_color)
-
-
-static func _image_to_texture(image: Image) -&gt; ImageTexture:
-	var texture: ImageTexture = ImageTexture.create_from_image(image)
-	return texture</file><file path="src/Godot/Scenes/FogOverlay.tscn">[gd_scene format=3 uid=&quot;uid://3fqp6ja8tdwe&quot;]
-
-[ext_resource type=&quot;Script&quot; uid=&quot;uid://de0pe5d3agf4l&quot; path=&quot;res://src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd&quot; id=&quot;1_fog_overlay&quot;]
-
-[node name=&quot;FogLayer&quot; type=&quot;CanvasLayer&quot; unique_id=628302375]
-follow_viewport_enabled = true
-
-[node name=&quot;FogRect&quot; type=&quot;ColorRect&quot; parent=&quot;.&quot; unique_id=108676876]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(0, 0, 0, 0)
-script = ExtResource(&quot;1_fog_overlay&quot;)</file><file path="src/Godot/Scripts/ViewProjection.gd">extends Node
-
-## Autoload facade: zoom/settings plus centered map-local ↔ canvas transforms.
-## map_scroll is the camera focus in map-local px (not the WorldCanvas/Tiles node position).
-
-signal view_changed
-
-## Camera focus in map-local px. When zero, world origin is at screen center.
-var map_scroll: Vector2 = Vector2.ZERO
-
-var _cached_screen_center: Vector2 = Vector2.ZERO
-var _viewport_provider: Node = null
-
-
-func register_viewport_provider(node: Node) -&gt; void:
-	_viewport_provider = node
-	invalidate_screen_center_cache()
-
-
-func _ready() -&gt; void:
-	if not Settings.view_changed.is_connected(_on_settings_view_changed):
-		Settings.view_changed.connect(_on_settings_view_changed)
-
-
-var zoom: float:
-	get:
-		return Settings.zoom
-	set(value):
-		Settings.zoom = value
-
-
-func invalidate_screen_center_cache() -&gt; void:
-	_cached_screen_center = Vector2.ZERO
-
-
-func get_view_dimensions() -&gt; Vector2:
-	var center: Vector2 = get_screen_center_offset()
-	if center.x &gt; 0.0 and center.y &gt; 0.0:
-		return center * 2.0
-	var main_loop := Engine.get_main_loop()
-	if main_loop is SceneTree and main_loop.root != null:
-		var vp: Viewport = main_loop.root.get_viewport()
-		if vp != null:
-			return vp.get_visible_rect().size
-	return Vector2(
-		float(ProjectSettings.get_setting(&quot;display/window/size/viewport_width&quot;, 1920)),
-		float(ProjectSettings.get_setting(&quot;display/window/size/viewport_height&quot;, 1080))
-	)
-
-
-func get_screen_center_offset() -&gt; Vector2:
-	if _cached_screen_center != Vector2.ZERO:
-		return _cached_screen_center
-	var center: Vector2 = _read_viewport_center()
-	if center.x &gt; 0.0 and center.y &gt; 0.0:
-		_cached_screen_center = center
-	return center
-
-
-func _read_viewport_center() -&gt; Vector2:
-	var vp: Viewport = null
-	if _viewport_provider != null and _viewport_provider.is_inside_tree():
-		vp = _viewport_provider.get_viewport()
-	if vp == null:
-		var main_loop := Engine.get_main_loop()
-		if main_loop is SceneTree and main_loop.root != null:
-			vp = main_loop.root.get_viewport()
-	if vp == null:
-		return Vector2.ZERO
-	var rect: Rect2 = vp.get_visible_rect()
-	if rect.size.x &lt; 1.0 or rect.size.y &lt; 1.0:
-		return Vector2.ZERO
-	# Visible rect origin is (0,0) under viewport stretch; center = half size.
-	return rect.size * 0.5
-
-
-func world_to_screen(world_pos: Vector2) -&gt; Vector2:
-	return (world_pos - map_scroll) * zoom + get_screen_center_offset()
-
-
-func screen_to_world(screen_pos: Vector2) -&gt; Vector2:
-	var z: float = zoom if not is_zero_approx(zoom) else 1.0
-	return ((screen_pos - get_screen_center_offset()) / z) + map_scroll
-
-
-func scroll_node_canvas_position() -&gt; Vector2:
-	return world_to_screen(Vector2.ZERO)
-
-
-## Map-local px -&gt; canvas px (scale then translate scroll origin).
-func forward_canvas_transform() -&gt; Transform2D:
-	var z: float = zoom if not is_zero_approx(zoom) else 1.0
-	var scroll_pos: Vector2 = scroll_node_canvas_position()
-	return Transform2D(Vector2(z, 0.0), Vector2(0.0, z), scroll_pos)
-
-
-## Canvas px -&gt; map-local px; matches FogOverlay.sync_scroll forward inverse.
-func canvas_to_map_local_transform() -&gt; Transform2D:
-	return forward_canvas_transform().affine_inverse()
-
-
-## Headless/tests: pin screen center when no viewport provider exists.
-func pin_screen_center_for_tests(center: Vector2) -&gt; void:
-	_cached_screen_center = center
-
-
-func adjust_zoom(delta_steps: int) -&gt; bool:
-	var step: float = Settings.get_float(&quot;view.zoom_wheel_step&quot;)
-	var new_zoom: float = Settings.get_float(&quot;view.zoom&quot;) + float(delta_steps) * step
-	var min_zoom: Variant = Settings.get_min(&quot;view.zoom&quot;)
-	var max_zoom: Variant = Settings.get_max(&quot;view.zoom&quot;)
-	if min_zoom != null and max_zoom != null:
-		new_zoom = clampf(new_zoom, float(min_zoom), float(max_zoom))
-	if is_equal_approx(new_zoom, Settings.zoom):
-		return false
-	Settings.zoom = new_zoom
-	return true
-
-
-func get_settings_panel_visible() -&gt; bool:
-	return Settings.get_settings_panel_visible()
-
-
-func set_settings_panel_visible(visible: bool) -&gt; void:
-	Settings.set_settings_panel_visible(visible)
-
-
-func load_settings() -&gt; void:
-	Settings.load_user_settings()
-
-
-func save_settings() -&gt; void:
-	Settings.save_user_settings()
-
-
-func _on_settings_view_changed() -&gt; void:
-	view_changed.emit()</file><file path=".cursor/rules/architecture.md">---
+	return -int(ceili(-float(value) / float(divisor)))</file><file path=".cursor/rules/architecture.md">---
 description: Core vs Godot layer boundaries, dependency rules, and allowed APIs
 alwaysApply: true
 ---
@@ -4739,63 +5150,85 @@ flowchart TB
   Scripts --&gt; Wrappers
   Scenes --&gt; Scripts
   core -.-&gt;|&quot;no imports&quot;| godot
-```
+```</file><file path="src/Godot/Scenes/FogOverlay.tscn">[gd_scene format=3 uid=&quot;uid://3fqp6ja8tdwe&quot;]
 
-## Enforced by convention (this phase) and by code shape (later)
+[ext_resource type=&quot;Script&quot; uid=&quot;uid://de0pe5d3agf4l&quot; path=&quot;res://src/Godot/Scripts/Systems/fog-of-war/FogOverlay.gd&quot; id=&quot;1_fog_overlay&quot;]
 
-### `src/Core/` (namespace `SPG.Core`)
+[node name=&quot;FogLayer&quot; type=&quot;Node2D&quot;]
+script = ExtResource(&quot;1_fog_overlay&quot;)
 
-| Allowed in Core | Forbidden in Core |
-| :--- | :--- |
-| Plain .NET types: `int`, `float`, `string`, `Dictionary`, enums | Godot types, `GodotSharp`, `Vector2`, nodes, resources |
-| Pure functions: movement, map generation, stat math | `get_tree()`, `Input`, scene paths |
-| Pure state machines (no engine deps) | Any `res://` or engine API |
+[node name=&quot;FogRect&quot; type=&quot;ColorRect&quot; parent=&quot;.&quot;]
+offset_right = 8192.0
+offset_bottom = 8192.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0)</file><file path="src/Godot/Scripts/ViewContext.gd">class_name ViewContext
+extends RefCounted
 
-### `src/Godot/Interop/`
+## Bundle of view/camera state passed to ViewTransforms conversion functions.
 
-| Allowed | Responsibility |
-| :--- | :--- |
-| `Godot.RefCounted` wrappers holding Core instances | Expose PascalCase methods/properties to GDScript (`GetCellPrimary`, `X`, `Y`, etc.) |
-| `CoreBridge` autoload (`Node`) | Factory methods only; no gameplay rules |
+## WorldCanvas/Tiles scroll node (canvas transform). Not ViewProjection.map_scroll (camera focus).
+var map_scroll: Node2D
+var zoom: float = 1.0
+var viewport_center: Vector2 = Vector2.ZERO
+var viewport_size: Vector2 = Vector2.ZERO
 
-### `src/Godot/` (GDScript)
+static var _cached: ViewContext = null
+static var _cached_zoom: float = -1.0
+static var _cached_scroll_pos: Vector2 = Vector2.INF
+static var _cached_viewport_size: Vector2 = Vector2.ZERO
 
-| Allowed in `src/Godot/` | Responsibility |
-| :--- | :--- |
-| Scenes, nodes, TileMaps, animations | Presentation and input |
-| Thin **adapter** scripts | Call Interop wrappers; never duplicate rules in the view layer |
-| `class_name` prefixed e.g. `RiftsGodot_*` (future) | Clear grep boundary vs Core types |
 
-**View metric scale (canonical):** `ViewMetrics.gd` / `ViewTransforms.gd` own pixel and canvas conversions. **32 pixels = 1 meter.** One logical Core grid cell = **2 meters** = **64 pixels** (`CELL_SIZE_PX`). `METERS_PER_CELL` must match `SPG.Core.GridMath.MetersPerCell`. All grid-to-screen, meter-to-pixel, and speed conversions must go through `ViewTransforms` (or `ObliqueBridge` facade)—do not hardcode `32` or `64` for positioning elsewhere in the Godot layer.
+static func invalidate_cache() -&gt; void:
+	_cached = null
+	_cached_zoom = -1.0
+	_cached_scroll_pos = Vector2.INF
+	_cached_viewport_size = Vector2.ZERO
 
-## Coordinate spaces
 
-| Space | Owner | Representation | Notes |
-| :--- | :--- | :--- | :--- |
-| **Grid** | Core (`GridMath`) | integer `(x, y)` cell indices | Game rules, movement, visibility |
-| **WorldM** | Core + Godot | continuous meters | Reveal radii; origin at grid (0,0) corner |
-| **MapLocalPx** | Godot (`ViewTransforms`) | unzoomed pixels | Tile/sprite placement before scroll/zoom |
-| **Canvas** | Godot | viewport pixels | Mouse, `get_viewport()` |
-| **View** | Godot | pixels relative to viewport center | Player-anchored HUD offsets |
-| **OverlayLocal** | Godot | CanvasLayer draw space | Grid overlay, debug rings |
+static func viewport_center_from(viewport: Viewport) -&gt; Vector2:
+	if viewport == null:
+		return Vector2.ZERO
+	# Visible rect matches FRAGCOORD / canvas space under stretch modes.
+	return viewport.get_visible_rect().get_center()
 
-- **Core** owns grid-index math and `MetersPerCell` (`src/Core/Math/GridMath.cs`).
-- **Godot** owns all pixel/canvas/view transforms (`ViewTransforms.gd`, `ViewContext.gd`).
-- **Generic 2D math** (lerp, AABB, angles): `Math2D.gd` — no coordinate-space semantics.
-- Prefer `ViewTransforms.grid_to_map_local_px` over legacy `ObliqueBridge.data_to_screen` in new code.
-- GDScript may read Core grid rules via `GridMathGd` / `CoreBridge.CreateGridMath()` when crossing layers (not per-frame hot paths).
 
-## Naming convention (future)
+static func from_viewport(
+	p_map_scroll: Node2D,
+	viewport: Viewport,
+	zoom_override: float = -1.0
+) -&gt; ViewContext:
+	var z: float
+	if zoom_override &gt;= 0.0:
+		z = zoom_override
+	elif p_map_scroll != null:
+		z = p_map_scroll.scale.x
+	else:
+		z = 1.0
+	if is_zero_approx(z):
+		z = 1.0
 
-- Core: namespace `SPG.Core`, types without Godot suffix
-- Interop: `*Gd` suffix on wrappers (`GridModelGd`)
-- Godot GDScript: `class_name` prefix `RiftsGodot_*` (future)
+	var vp_size: Vector2 = Vector2.ZERO
+	if viewport != null:
+		vp_size = viewport.get_visible_rect().size
 
-## Build requirements
+	var scroll_pos: Vector2 = Vector2.ZERO
+	if p_map_scroll != null:
+		scroll_pos = p_map_scroll.global_position
 
-- **Godot 4.3 .NET (mono)** editor — project `config/features` includes `&quot;C#&quot;`.
-- **.NET SDK** 6+ for `dotnet build SPG.sln`.
-- Pin CLI to **4.3-mono** (e.g. gdvm) so editor and `godot_console` match.</file><file path="src/Godot/Scripts/GridOverlay.gd">extends ColorRect
+	if _cached != null and is_equal_approx(z, _cached_zoom) and scroll_pos == _cached_scroll_pos and vp_size == _cached_viewport_size:
+		return _cached
+
+	var ctx := ViewContext.new()
+	ctx.map_scroll = p_map_scroll
+	ctx.zoom = z
+	ctx.viewport_size = vp_size
+	ctx.viewport_center = viewport_center_from(viewport)
+
+	_cached = ctx
+	_cached_zoom = z
+	_cached_scroll_pos = scroll_pos
+	_cached_viewport_size = vp_size
+	return ctx</file><file path="src/Godot/Scripts/GridOverlay.gd">extends ColorRect
 
 ## GPU grid overlay derived from world/map-local coordinates.
 
@@ -4914,121 +5347,7 @@ func _notification(what: int) -&gt; void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
 		ViewProjection.invalidate_screen_center_cache()
 		_invalidate_projection_cache()
-		sync_uniforms()</file><file path="src/Godot/Scripts/ViewContext.gd">class_name ViewContext
-extends RefCounted
-
-## Bundle of view/camera state passed to ViewTransforms conversion functions.
-
-## WorldCanvas/Tiles scroll node (canvas transform). Not ViewProjection.map_scroll (camera focus).
-var map_scroll: Node2D
-var zoom: float = 1.0
-var viewport_center: Vector2 = Vector2.ZERO
-var viewport_size: Vector2 = Vector2.ZERO
-
-static var _cached: ViewContext = null
-static var _cached_zoom: float = -1.0
-static var _cached_scroll_pos: Vector2 = Vector2.INF
-static var _cached_viewport_size: Vector2 = Vector2.ZERO
-
-
-static func invalidate_cache() -&gt; void:
-	_cached = null
-	_cached_zoom = -1.0
-	_cached_scroll_pos = Vector2.INF
-	_cached_viewport_size = Vector2.ZERO
-
-
-static func viewport_center_from(viewport: Viewport) -&gt; Vector2:
-	if viewport == null:
-		return Vector2.ZERO
-	# Visible rect matches FRAGCOORD / canvas space under stretch modes.
-	return viewport.get_visible_rect().get_center()
-
-
-static func from_viewport(
-	p_map_scroll: Node2D,
-	viewport: Viewport,
-	zoom_override: float = -1.0
-) -&gt; ViewContext:
-	var z: float
-	if zoom_override &gt;= 0.0:
-		z = zoom_override
-	elif p_map_scroll != null:
-		z = p_map_scroll.scale.x
-	else:
-		z = 1.0
-	if is_zero_approx(z):
-		z = 1.0
-
-	var vp_size: Vector2 = Vector2.ZERO
-	if viewport != null:
-		vp_size = viewport.get_visible_rect().size
-
-	var scroll_pos: Vector2 = Vector2.ZERO
-	if p_map_scroll != null:
-		scroll_pos = p_map_scroll.global_position
-
-	if _cached != null and is_equal_approx(z, _cached_zoom) and scroll_pos == _cached_scroll_pos and vp_size == _cached_viewport_size:
-		return _cached
-
-	var ctx := ViewContext.new()
-	ctx.map_scroll = p_map_scroll
-	ctx.zoom = z
-	ctx.viewport_size = vp_size
-	ctx.viewport_center = viewport_center_from(viewport)
-
-	_cached = ctx
-	_cached_zoom = z
-	_cached_scroll_pos = scroll_pos
-	_cached_viewport_size = vp_size
-	return ctx</file><file path="project.godot">; Engine configuration file.
-; It&apos;s best edited using the editor UI and not directly,
-; since the parameters that go here are not all obvious.
-;
-; Format:
-;   [section] ; section goes between []
-;   param=value ; assign values to parameters
-
-config_version=5
-
-[animation]
-
-compatibility/default_parent_skeleton_in_mesh_instance_3d=true
-
-[application]
-
-config/name=&quot;SPG&quot;
-run/main_scene=&quot;res://src/Godot/Scenes/MainSandbox.tscn&quot;
-config/features=PackedStringArray(&quot;4.6&quot;, &quot;C#&quot;, &quot;Forward Plus&quot;)
-
-[autoload]
-
-CoreBridge=&quot;*res://src/Godot/Interop/CoreBridge.cs&quot;
-Settings=&quot;*res://src/Godot/Scripts/Settings.gd&quot;
-ViewProjection=&quot;*res://src/Godot/Scripts/ViewProjection.gd&quot;
-
-[display]
-
-window/size/viewport_width=3840
-window/size/viewport_height=2160
-window/size/mode=3
-window/size/initial_position_type=3
-window/size/window_width_override=3840
-window/size/window_height_override=2160
-window/stretch/mode=&quot;viewport&quot;
-window/stretch/scale_mode=&quot;integer&quot;
-
-[dotnet]
-
-project/assembly_name=&quot;SPG&quot;
-project/solution_name=&quot;SPG&quot;
-
-[rendering]
-
-textures/canvas_textures/default_texture_filter=0
-environment/defaults/default_clear_color=Color(0, 0, 0, 1)
-2d/snap/snap_2d_transforms_to_pixel=false
-2d/snap/snap_2d_vertices_to_pixel=false</file><file path="src/Godot/Scenes/MainSandbox.tscn">[gd_scene format=3 uid=&quot;uid://bm7a58e68r7vt&quot;]
+		sync_uniforms()</file><file path="src/Godot/Scenes/MainSandbox.tscn">[gd_scene format=3 uid=&quot;uid://bm7a58e68r7vt&quot;]
 
 [ext_resource type=&quot;Script&quot; uid=&quot;uid://eu7juqc3bgem&quot; path=&quot;res://src/Godot/Scripts/MainSandbox.gd&quot; id=&quot;1_main_sandbox&quot;]
 [ext_resource type=&quot;PackedScene&quot; uid=&quot;uid://cp16cnfv02sc5&quot; path=&quot;res://src/Godot/Scenes/GridOverlay.tscn&quot; id=&quot;2_grid_overlay&quot;]
@@ -5052,10 +5371,10 @@ follow_viewport_enabled = true
 [node name=&quot;Player&quot; parent=&quot;WorldCanvas/Tiles&quot; unique_id=604040316 instance=ExtResource(&quot;6_player&quot;)]
 unique_name_in_owner = true
 
+[node name=&quot;FogOverlay&quot; parent=&quot;WorldCanvas/Tiles&quot; unique_id=1869907483 instance=ExtResource(&quot;8_fog_overlay&quot;)]
+
 [node name=&quot;FogExploration&quot; type=&quot;Node&quot; parent=&quot;.&quot; unique_id=1777612534]
 script = ExtResource(&quot;7_fog_exploration&quot;)
-
-[node name=&quot;FogOverlay&quot; parent=&quot;.&quot; unique_id=1869907483 instance=ExtResource(&quot;8_fog_overlay&quot;)]
 
 [node name=&quot;GridOverlay&quot; parent=&quot;.&quot; unique_id=316111383 instance=ExtResource(&quot;2_grid_overlay&quot;)]
 
@@ -5121,7 +5440,54 @@ static func grid_to_screen_centered(
 
 
 static func speed_meters_per_second_to_pixels(meters_per_second: float) -&gt; float:
-	return meters_to_pixels(meters_per_second)</file><file path="src/Godot/Scripts/MainSandbox.gd">extends Node2D
+	return meters_to_pixels(meters_per_second)</file><file path="project.godot">; Engine configuration file.
+; It&apos;s best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
+[application]
+
+config/name=&quot;SPG&quot;
+run/main_scene=&quot;res://src/Godot/Scenes/MainSandbox.tscn&quot;
+config/features=PackedStringArray(&quot;4.6&quot;, &quot;C#&quot;, &quot;Forward Plus&quot;)
+
+[autoload]
+
+CoreBridge=&quot;*res://src/Godot/Interop/CoreBridge.cs&quot;
+Settings=&quot;*res://src/Godot/Scripts/Settings.gd&quot;
+ViewProjection=&quot;*res://src/Godot/Scripts/ViewProjection.gd&quot;
+
+[display]
+
+window/size/viewport_width=3840
+window/size/viewport_height=2160
+window/size/mode=3
+window/size/initial_position_type=3
+window/size/window_width_override=3840
+window/size/window_height_override=2160
+window/stretch/mode=&quot;viewport&quot;
+window/stretch/scale_mode=&quot;integer&quot;
+
+[dotnet]
+
+project/assembly_name=&quot;SPG&quot;
+project/solution_name=&quot;SPG&quot;
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+environment/defaults/default_clear_color=Color(0, 0, 0, 1)
+2d/snap/snap_2d_transforms_to_pixel=false
+2d/snap/snap_2d_vertices_to_pixel=false</file><file path="src/Godot/Scripts/MainSandbox.gd">extends Node2D
 
 const ViewTransformsScript = preload(&quot;res://src/Godot/Scripts/ViewTransforms.gd&quot;)
 const ViewMetricsRes = preload(&quot;res://src/Godot/Scripts/ViewMetrics.gd&quot;)
@@ -5133,7 +5499,7 @@ const FogOverlayScript = preload(&quot;res://src/Godot/Scripts/Systems/fog-of-wa
 @onready var _map_scroll: Node2D = $WorldCanvas/Tiles
 @onready var _chunk_manager: Node2D = $WorldCanvas/Tiles/ChunkManager
 @onready var _fog: FogExplorationMapScript = $FogExploration
-@onready var _fog_overlay: FogOverlayScript = $FogOverlay/FogRect
+@onready var _fog_overlay: FogOverlayScript = $WorldCanvas/Tiles/FogOverlay
 @onready var _grid_overlay: ColorRect = $GridOverlay/GridRect
 @onready var _settings_ui: CanvasLayer = $SettingsUi
 @onready var _player: PlayerControllerScript = %Player
@@ -5161,6 +5527,7 @@ func _ready() -&gt; void:
 	y_sort_enabled = false
 	_map_scroll.y_sort_enabled = false
 	_snap_scroll_to_pixel = ProjectSettings.get_setting(&quot;rendering/2d/snap/snap_2d_transforms_to_pixel&quot;)
+	_mount_fog_overlay_to_screen_space()
 
 	if not ViewProjection.view_changed.is_connected(_on_view_changed):
 		ViewProjection.view_changed.connect(_on_view_changed)
@@ -5211,8 +5578,6 @@ func _finish_ready_viewport_dependent() -&gt; void:
 	_apply_map_scroll_for_player()
 	_setup_fog()
 	_sync_spawn_tracking_from_player()
-	if _fog_overlay != null:
-		_fog_overlay.sync_uniforms()
 	_sync_view_scroll_and_overlays(true)
 	_grid_overlay.sync_uniforms()
 
@@ -5265,6 +5630,8 @@ func _on_player_grid_cell_changed(cell: Vector2i) -&gt; void:
 	_chunk_manager.sync_center_from_player_map_px(_player.position)
 	_last_tracked_x = cell.x
 	_last_tracked_y = cell.y
+	if _fog != null:
+		_fog.on_player_cell_changed(cell)
 
 
 func _bootstrap_after_frame() -&gt; void:
@@ -5284,45 +5651,33 @@ func _on_settings_changed() -&gt; void:
 func _setup_fog() -&gt; void:
 	if _fog == null or _fog_overlay == null or _player == null:
 		return
-	_fog.configure_world_anchor(_player.position)
-	_fog.setup(_player)
-	var fog_mat: ShaderMaterial = _fog_overlay.get_shader_material()
-	_fog.bind_shader_material(fog_mat)
-	_fog_overlay.set_player(_player)
-	_fog_overlay.set_map_scroll(_map_scroll)
-	_fog_overlay.configure(_fog.enabled, Color(0.0, 0.0, 0.0, 0.85))
-	_chunk_manager.set_fog_exploration_map(_fog)
+	_fog.setup(_player, _fog_overlay)
 	_chunk_manager.sync_center_from_player_map_px(_player.position)
 	var spawn_grid: Vector2i = _chunk_manager.world_px_to_grid_tile(_player.position)
+	_fog.bootstrap_exploration(spawn_grid)
+	_fog_overlay.set_enabled_visible(_fog.enabled)
 	_chunk_manager.force_immediate_startup_pass(spawn_grid)
-	_fog.force_stamp_now()
-	if _fog_overlay.has_method(&quot;update_fog_vision_metrics&quot;):
-		var cell_px: float = float(ViewMetricsRes.CELL_SIZE_PX)
-		_fog_overlay.update_fog_vision_metrics(
-			_fog.get_reveal_radius_map_px() / cell_px,
-			_fog.get_reveal_feather_map_px() / cell_px
-		)
-	_fog_overlay.sync_player_position()
-	_fog_overlay.sync_uniforms()
+
+
+func _mount_fog_overlay_to_screen_space() -&gt; void:
+	if _fog_overlay == null:
+		return
+	var parent: Node = _fog_overlay.get_parent()
+	if parent == self:
+		return
+	if parent != null:
+		parent.remove_child(_fog_overlay)
+	add_child(_fog_overlay)
 
 
 func _sync_spawn_tracking_from_player() -&gt; void:
 	if _player == null:
 		return
 	var spawn_map_px: Vector2 = _player.position
-	_fog.configure_world_anchor(spawn_map_px)
 	_chunk_manager.sync_center_from_player_map_px(spawn_map_px)
 	var spawn_grid: Vector2i = _chunk_manager.world_px_to_grid_tile(spawn_map_px)
 	_last_tracked_x = spawn_grid.x
 	_last_tracked_y = spawn_grid.y
-
-
-func _on_fog_texture_uploaded() -&gt; void:
-	pass
-
-
-func _on_fog_exploration_stamped() -&gt; void:
-	pass
 
 
 func _schedule_zoom_deferred_rebuild() -&gt; void:
@@ -5372,6 +5727,8 @@ func _sync_view_scroll_and_overlays(force: bool = false) -&gt; void:
 	if scroll_changed or zoom_changed:
 		_grid_overlay.sync_canvas_transform(_map_scroll)
 		_refresh_overlays()
+		if scroll_changed or zoom_changed:
+			_sync_fog_view_transform()
 		if scroll_changed:
 			_verify_projection_canvas_parity()
 
@@ -5387,6 +5744,16 @@ func _viewport_grid_center() -&gt; Vector2i:
 func _refresh_overlays() -&gt; void:
 	var center: Vector2i = _viewport_grid_center()
 	_grid_overlay.update_region(center.x, center.y, _visual_spawn_radius())
+
+
+func _sync_fog_view_transform() -&gt; void:
+	if _fog_overlay == null or _player == null or not _fog_overlay.has_method(&quot;sync_view_transform&quot;):
+		return
+	var viewport: Viewport = get_viewport()
+	if viewport == null:
+		return
+	var player_cell: Vector2i = _chunk_manager.world_px_to_grid_tile(_player.position)
+	_fog_overlay.sync_view_transform(viewport.get_visible_rect().size, ViewProjection.zoom, player_cell)
 
 
 func _refresh_viewport_metrics() -&gt; void:

@@ -14,6 +14,9 @@ const PV: String = (
 )
 const STATS_GRID: String = PV + "/StatsBlock/StatsMargin/StatsGrid"
 const MOVEMENT_GRID: String = PV + "/MovementBlock/MovementMargin/MovementVBox/MovementGrid"
+const FOG_GRID: String = PV + "/FogBlock/FogMargin/FogVBox/FogGrid"
+const PATH_INITIAL_REVEAL: String = "fog.initial_reveal_radius"
+const PATH_PLAYER_REVEAL: String = "fog.player_reveal_radius"
 const MOUSE_SCREEN_UNSET: Vector2 = Vector2(-1, -1)
 
 const TOOLTIP_TPS: String = "Tiles per second — grid cells traversed per second"
@@ -41,11 +44,16 @@ enum SpeedUnit { TPS, MPS }
 @onready var _accel_value: Label = get_node(MOVEMENT_GRID + "/AccelValue") as Label
 @onready var _friction_slider: HSlider = get_node(MOVEMENT_GRID + "/FrictionSlider") as HSlider
 @onready var _friction_value: Label = get_node(MOVEMENT_GRID + "/FrictionValue") as Label
+@onready var _initial_reveal_slider: HSlider = get_node(FOG_GRID + "/InitialRevealSlider") as HSlider
+@onready var _initial_reveal_value: Label = get_node(FOG_GRID + "/InitialRevealValue") as Label
+@onready var _player_reveal_slider: HSlider = get_node(FOG_GRID + "/PlayerRevealSlider") as HSlider
+@onready var _player_reveal_value: Label = get_node(FOG_GRID + "/PlayerRevealValue") as Label
 
 var _party = null
 var _player: CharacterBody2D = null
 var _speed_unit: SpeedUnit = SpeedUnit.TPS
 var _movement_sliders_bound: bool = false
+var _fog_sliders_bound: bool = false
 var _mouse_inside_window: bool = true
 var _last_mouse_screen: Vector2 = MOUSE_SCREEN_UNSET
 var _cached_mouse_pos_text: String = "--"
@@ -60,6 +68,8 @@ func _ready() -> void:
 		ViewProjection.view_changed.connect(_on_view_changed)
 	if not Settings.movement_changed.is_connected(_on_movement_settings_changed):
 		Settings.movement_changed.connect(_on_movement_settings_changed)
+	if not Settings.fog_changed.is_connected(_on_fog_settings_changed):
+		Settings.fog_changed.connect(_on_fog_settings_changed)
 	call_deferred("_update_hud_layout")
 
 
@@ -79,6 +89,7 @@ func setup(
 	_party = party
 	_player = player
 	_bind_movement_sliders()
+	_bind_fog_sliders()
 	_apply_panel_visibility(ViewProjection.get_settings_panel_visible())
 	call_deferred("_update_hud_layout")
 
@@ -94,7 +105,7 @@ func _apply_hud_theme() -> void:
 	var base_font: Font = ThemeDB.fallback_font
 	if base_font != null:
 		hud_theme.default_font = base_font
-	hud_theme.default_font_size = Settings.get_int("hud.font_size")
+	hud_theme.default_font_size = Settings.get_int("hud.font_size") * 2
 	_apply_compact_slider_theme(hud_theme)
 	_panel_root.theme = hud_theme
 
@@ -102,16 +113,16 @@ func _apply_hud_theme() -> void:
 func _apply_compact_slider_theme(hud_theme: Theme) -> void:
 	var track := StyleBoxFlat.new()
 	track.bg_color = Color(0.22, 0.24, 0.28)
-	track.set_content_margin(SIDE_TOP, 5)
-	track.set_content_margin(SIDE_BOTTOM, 5)
+	track.set_content_margin(SIDE_TOP, 10)
+	track.set_content_margin(SIDE_BOTTOM, 10)
 
 	var grabber := StyleBoxFlat.new()
 	grabber.bg_color = Color(0.88, 0.9, 0.94)
-	grabber.set_corner_radius_all(4)
-	grabber.set_content_margin(SIDE_LEFT, 3)
-	grabber.set_content_margin(SIDE_RIGHT, 3)
-	grabber.set_content_margin(SIDE_TOP, 3)
-	grabber.set_content_margin(SIDE_BOTTOM, 3)
+	grabber.set_corner_radius_all(8)
+	grabber.set_content_margin(SIDE_LEFT, 6)
+	grabber.set_content_margin(SIDE_RIGHT, 6)
+	grabber.set_content_margin(SIDE_TOP, 6)
+	grabber.set_content_margin(SIDE_BOTTOM, 6)
 
 	var grabber_area := StyleBoxFlat.new()
 	grabber_area.bg_color = Color(0, 0, 0, 0)
@@ -173,6 +184,48 @@ func _on_friction_slider_changed(value: float) -> void:
 func _on_movement_settings_changed() -> void:
 	if _movement_sliders_bound:
 		_sync_movement_sliders_from_settings()
+
+
+func _bind_fog_sliders() -> void:
+	if _fog_sliders_bound:
+		_sync_fog_sliders_from_settings()
+		return
+
+	_initial_reveal_slider.min_value = float(Settings.get_min(PATH_INITIAL_REVEAL))
+	_initial_reveal_slider.max_value = float(Settings.get_max(PATH_INITIAL_REVEAL))
+	_initial_reveal_slider.step = 1.0
+	_player_reveal_slider.min_value = float(Settings.get_min(PATH_PLAYER_REVEAL))
+	_player_reveal_slider.max_value = float(Settings.get_max(PATH_PLAYER_REVEAL))
+	_player_reveal_slider.step = 1.0
+
+	_initial_reveal_slider.value_changed.connect(_on_initial_reveal_slider_changed)
+	_player_reveal_slider.value_changed.connect(_on_player_reveal_slider_changed)
+	_fog_sliders_bound = true
+	_sync_fog_sliders_from_settings()
+
+
+func _sync_fog_sliders_from_settings() -> void:
+	_initial_reveal_slider.set_value_no_signal(float(Settings.initial_reveal_radius))
+	_initial_reveal_value.text = "%d" % Settings.initial_reveal_radius
+	_player_reveal_slider.set_value_no_signal(float(Settings.player_reveal_radius))
+	_player_reveal_value.text = "%d" % Settings.player_reveal_radius
+
+
+func _on_initial_reveal_slider_changed(value: float) -> void:
+	var cells: int = int(round(value))
+	_initial_reveal_value.text = "%d" % cells
+	Settings.initial_reveal_radius = cells
+
+
+func _on_player_reveal_slider_changed(value: float) -> void:
+	var cells: int = int(round(value))
+	_player_reveal_value.text = "%d" % cells
+	Settings.player_reveal_radius = cells
+
+
+func _on_fog_settings_changed() -> void:
+	if _fog_sliders_bound:
+		_sync_fog_sliders_from_settings()
 
 
 func _sync_collapse_button(btn: Button, expanded: bool) -> void:
