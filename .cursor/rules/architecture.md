@@ -46,7 +46,7 @@ To preserve visual consistency, performance, and coordinate mapping stability, t
 1. **Ground/Map Layer (TileMaps)** — Base terrain, grass, obstacles, and world layout (`WorldCanvas/Tiles/ChunkManager` and tile content).
 2. **Entity Layer (Node2D)** — Player characters, enemies, units, and interactive world objects (siblings under `WorldCanvas/Tiles`, e.g. `Player`).
 3. **Fog of War Layer (CanvasItem/Shader)** — Screen-space fullscreen quad on a `CanvasLayer` (`FogOverlay` → `FogRect` + `FogOverlay.gdshader`). Shader projects canvas px to map-local via `ViewProjection` uniforms; buffer data stays map-local px.
-4. **Heads-Up Display / HUD Layer (CanvasLayer)** — Screen-space user interfaces, health bars, menus, and control widgets (`GridOverlay`, `SettingsUi`, `GameEntitiesLayer` for entity chrome that must stay screen-aligned).
+4. **Heads-Up Display / HUD Layer (CanvasLayer)** — Screen-space user interfaces, health bars, menus, and control widgets (`GridOverlay`, `SettingsUi`).
 
 Fog buffer uniforms (`world_buffer_origin_px`, `cell_size_px`) use map-local pixels aligned with `ViewProjection.map_scroll`. The fog quad is screen-space; it does not live under `_map_scroll`.
 
@@ -68,7 +68,7 @@ Fog buffer uniforms (`world_buffer_origin_px`, `cell_size_px`) use map-local pix
 ### SYSTEM ARCHITECTURE DIRECTIVE: Fog of War System
 
 1. **Scene Tree Hierarchy:** `FogOverlay` is a sibling of `GridOverlay` under `MainSandbox` root — screen-space, above world content (`layer = 4`).
-2. **Transform Constancy:** `FogRect` never moves; camera scroll/zoom are shader uniforms updated from `MainSandbox._sync_fog_view_transform`. Buffer recenters on grid thresholds only.
+2. **Transform Constancy:** `FogRect` never moves; camera scroll/zoom are shader uniforms updated from `MainSandbox._apply_view_frame()` via `ViewFrame`. Buffer recenters on grid thresholds only. Overlays must not self-sync on `view_changed`.
 3. **Shader Coordinate Mapping:** Map-local px from screen projection; buffer UV from offset against `world_buffer_origin_px`.
 4. **Boundary Failure Guard:** The out-of-bounds fallback code block inside the shader must return an alpha mask value of `1.0` (opaque black fog) under all conditions. It must never fall back to `0.0`.
 
@@ -76,4 +76,4 @@ Fog buffer uniforms (`world_buffer_origin_px`, `cell_size_px`) use map-local pix
 
 1. **Never Assume Frame-Zero Core Data is Ready:** On the very first frame, the active player node may not yet have updated the global `ViewProjection` singleton with its true position. Querying `ViewProjection.map_scroll` at startup can return `(0,0)` even when the player scene node already has a valid map-local position.
 2. **Dynamic Fallback Target:** When resolving fog or overlay camera focus, use `ViewProjection.resolve_camera_focus_map_px(fallback_player)` — player node position first, then `map_scroll`, then Settings spawn (`world.spawn_safe_zone_x/y`). `(0,0)` is a **valid** coordinate; never use `!= Vector2.ZERO` as a readiness test.
-3. **Input Wakes Stale Caches:** WASD movement must mark the view dirty (force sync) so `ViewProjection` and `FogOverlay` recenter on the next flush. Sub-cell motion must not rely solely on grid-cell boundary signals.
+3. **Single View Apply:** `MainSandbox._apply_view_frame()` builds one `ViewFrame` per frame (after `PlayerController` updates `set_camera_focus`) and applies it to terrain scroll, `GridOverlay`, and `FogOverlay`. No duplicate sync paths.

@@ -29,9 +29,4 @@ script = ExtResource("7_fog_exploration")
 
 [node name="FogOverlay" parent="." unique_id=1869907483 instance=ExtResource("8_fog_overlay")]
 
-[node name="GameEntitiesLayer" type="CanvasLayer" parent="." unique_id=129791858]
-layer = 16
-
-[node name="Characters" type="Node2D" parent="GameEntitiesLayer" unique_id=118185644]
-
 [node name="SettingsUi" parent="." unique_id=16521539 instance=ExtResource("4_settings_panel")]

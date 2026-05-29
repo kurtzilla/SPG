@@ -22,9 +22,9 @@ public sealed class VisibilityModel
 	public const int RadiusMin = 1;
 	public const int RadiusMax = 256;
 	// Must match game_settings.json fog.initial_reveal_radius default.
-	public const int DefaultInitialRevealRadius = 48;
+	public const int DefaultInitialRevealRadius = 19;
 	// Must match game_settings.json fog.player_reveal_radius default.
-	public const int DefaultMovementRevealRadius = 24;
+	public const int DefaultMovementRevealRadius = 13;
 
 	private const float RevealRadiusScaleMin = 0.25f;
 	private const float RevealRadiusScaleMax = 4f;

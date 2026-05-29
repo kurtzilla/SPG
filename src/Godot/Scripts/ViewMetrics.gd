@@ -3,7 +3,7 @@ extends RefCounted
 
 ## Shared view-layer metric constants (no script dependencies).
 ## Values are snapshotted from Settings at startup; scale changes require restart.
-## Must match SPG.Core.GridMath.MetersPerCell (1.0). ObliqueBridge/ViewTransforms re-export these.
+## Must match SPG.Core.GridMath.MetersPerCell (1.0).
 
 static var PIXELS_PER_METER: int = 64
 static var METERS_PER_CELL: float = 1.0
