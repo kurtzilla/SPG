@@ -168,6 +168,8 @@ func _sync_movement_sliders_from_settings() -> void:
 func _on_max_speed_slider_changed(value: float) -> void:
 	_max_speed_value.text = "%.0f" % value
 	Settings.set_max_speed(value)
+	if _player != null and _player.has_method("apply_movement_settings"):
+		_player.apply_movement_settings()
 
 
 func _on_accel_slider_changed(value: float) -> void:

@@ -1,36 +1,34 @@
 shader_type canvas_item;
 render_mode blend_mix;
 
-uniform sampler2D fog_data_texture : filter_linear, repeat_disable;
 uniform vec2 viewport_center_px;
 uniform vec2 camera_focus_map_px;
 uniform float zoom = 1.0;
-uniform vec2 world_buffer_center_px;
-uniform float buffer_size_cells;
-uniform float cell_size_px = 64.0;
-uniform vec4 fog_color : source_color = vec4(0.0, 0.0, 0.0, 0.85);
-
-vec2 fragcoord_to_map_local(vec2 fragcoord) {
-	float safe_zoom = max(zoom, 0.0001);
-	return (fragcoord - viewport_center_px) / safe_zoom + camera_focus_map_px;
-}
+uniform vec2 player_world_pos;
+uniform vec2 world_buffer_origin_px;
+uniform vec2 buffer_size_cells;
+uniform float cell_size_px;
+uniform float fog_opacity : hint_range(0.0, 1.0) = 1.0;
+uniform sampler2D fog_texture : filter_nearest;
 
 void fragment() {
-	vec2 world_px = fragcoord_to_map_local(FRAGCOORD.xy);
-	vec2 offset_from_center_px = world_px - world_buffer_center_px;
-	float data_window_size_px = buffer_size_cells * cell_size_px;
-	vec2 texture_sample_uv = (offset_from_center_px / data_window_size_px) + vec2(0.5);
+	float safe_zoom = max(zoom, 0.0001);
+	vec2 screen_offset = FRAGCOORD.xy - viewport_center_px;
+	vec2 fragment_world_pos = camera_focus_map_px + (screen_offset / safe_zoom);
+	vec2 local_offset_px = fragment_world_pos - world_buffer_origin_px;
+	vec2 total_buffer_size_px = buffer_size_cells * cell_size_px;
+	vec2 tex_uv = local_offset_px / total_buffer_size_px;
 	vec2 cell_uv_size = vec2(1.0 / buffer_size_cells);
 
 	float alpha_mask = 0.0;
 	for (float y = -1.0; y <= 1.0; y += 1.0) {
 		for (float x = -1.0; x <= 1.0; x += 1.0) {
-			vec2 tap_uv = texture_sample_uv + vec2(x, y) * cell_uv_size;
+			vec2 tap_uv = tex_uv + vec2(x, y) * cell_uv_size;
 			if (
 				tap_uv.x >= 0.0 && tap_uv.x <= 1.0
 				&& tap_uv.y >= 0.0 && tap_uv.y <= 1.0
 			) {
-				alpha_mask += 1.0 - texture(fog_data_texture, tap_uv).r;
+				alpha_mask += 1.0 - texture(fog_texture, tap_uv).r;
 			} else {
 				alpha_mask += 1.0;
 			}
@@ -39,5 +37,5 @@ void fragment() {
 	alpha_mask /= 9.0;
 
 	float smooth_edge = smoothstep(0.2, 0.8, alpha_mask);
-	COLOR = vec4(fog_color.rgb, smooth_edge * fog_color.a);
+	COLOR = vec4(0.0, 0.0, 0.0, smooth_edge * fog_opacity);
 }

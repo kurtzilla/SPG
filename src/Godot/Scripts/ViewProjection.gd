@@ -107,11 +107,16 @@ func _update_projection() -> void:
 	var size: Vector2 = Vector2.ZERO
 	var vp: Viewport = _resolve_viewport()
 	if vp != null:
-		size = vp.get_visible_rect().size
+		var visible_rect: Rect2 = vp.get_visible_rect()
+		size = visible_rect.size
+		_cached_screen_center = visible_rect.get_center()
+	else:
+		_cached_screen_center = Vector2.ZERO
 	if size.x < 1.0 or size.y < 1.0:
 		size = _project_settings_viewport_size()
+		if _cached_screen_center.x < 1.0 or _cached_screen_center.y < 1.0:
+			_cached_screen_center = size * 0.5
 	_viewport_size = size
-	_cached_screen_center = size * 0.5
 	_screen_center_cached = true
 	_cached_visual_radius = -1
 	_cached_metrics_zoom = -1.0
@@ -365,6 +370,44 @@ func canvas_to_map_local_transform() -> Transform2D:
 	return forward_canvas_transform().affine_inverse()
 
 
+func safe_zoom(zoom_override: float = -1.0) -> float:
+	var z: float = zoom_override if zoom_override > 0.0 and not is_zero_approx(zoom_override) else zoom
+	return z if not is_zero_approx(z) else 1.0
+
+
+## Debug: FRAGCOORD projection must match screen_to_world for fullscreen fog rect.
+func verify_fog_projection_parity(
+	viewport_center_px: Vector2,
+	camera_focus_map_px: Vector2,
+	zoom_override: float = -1.0,
+	margin_px: float = 1.0
+) -> bool:
+	var vp_size: Vector2 = get_viewport_size()
+	if vp_size.x < 1.0 or vp_size.y < 1.0:
+		return true
+	var z: float = safe_zoom(zoom_override)
+	var sample_points: Array[Vector2] = [
+		Vector2.ZERO,
+		Vector2(vp_size.x, 0.0),
+		vp_size,
+		Vector2(0.0, vp_size.y),
+		viewport_center_px,
+	]
+	for fragcoord: Vector2 in sample_points:
+		var from_screen: Vector2 = screen_to_world(fragcoord)
+		var from_fragcoord: Vector2 = camera_focus_map_px + ((fragcoord - viewport_center_px) / z)
+		if (
+			not from_screen.is_equal_approx(from_fragcoord)
+			and from_screen.distance_to(from_fragcoord) > margin_px
+		):
+			push_warning(
+				"[ViewProjection] fog projection parity mismatch fragcoord=%s screen=%s frag_path=%s zoom=%s"
+				% [fragcoord, from_screen, from_fragcoord, z]
+			)
+			return false
+	return true
+
+
 ## Headless/tests: pin screen center when no viewport provider exists.
 func pin_screen_center_for_tests(center: Vector2) -> void:
 	_cached_screen_center = center
@@ -377,7 +420,9 @@ func adjust_zoom(delta_steps: int) -> bool:
 		new_zoom = clampf(new_zoom, _zoom_min, _zoom_max)
 	if is_equal_approx(new_zoom, Settings.zoom):
 		return false
+	invalidate_viewport_metrics()
 	Settings.zoom = new_zoom
+	view_changed.emit()
 	return true
 
 

@@ -34,7 +34,8 @@ var _view_dirty: bool = false
 var _view_force_sync: bool = false
 var _debug_flush_log_remaining: int = 3
 var _debug_process_ticks: int = 0
-var _debug_skip_flush_logs: int = 8
+var _last_fog_parity_zoom: float = -1.0
+var _fog_parity_checked_once: bool = false
 
 
 func _ready() -> void:
@@ -45,6 +46,7 @@ func _ready() -> void:
 	_flush_view_if_dirty()
 
 	set_process(true)
+	process_priority = 15
 	y_sort_enabled = false
 	_map_scroll.y_sort_enabled = false
 	_snap_scroll_to_pixel = ProjectSettings.get_setting("rendering/2d/snap/snap_2d_transforms_to_pixel")
@@ -299,11 +301,30 @@ func _sync_view_scroll_and_overlays(force: bool = false) -> void:
 func _sync_fog_view_transform() -> void:
 	if _fog_overlay == null or _player == null or not is_instance_valid(_player):
 		return
-	var center_grid: Vector2i = _resolve_authoritative_map_center()
-	var focus_px: Vector2 = ViewProjection.resolve_camera_focus_map_px(_player)
-	var vp_center: Vector2 = ViewProjection.get_screen_center_offset()
-	var current_zoom: float = ViewProjection.zoom if ViewProjection.zoom > 0.0 else 1.0
-	_fog_overlay.sync_view_transform(center_grid, focus_px, current_zoom, vp_center)
+	var viewport_center_px: Vector2 = ViewProjection.get_screen_center_offset()
+	var camera_focus_map_px: Vector2 = ViewProjection.resolve_camera_focus_map_px(_player)
+	var zoom_val: float = ViewProjection.zoom if not is_zero_approx(ViewProjection.zoom) else 1.0
+	_fog_overlay.sync_view_transform(
+		viewport_center_px,
+		camera_focus_map_px,
+		zoom_val,
+		_player.position
+	)
+	if OS.is_debug_build():
+		if not _fog_parity_checked_once:
+			_fog_parity_checked_once = true
+			ViewProjection.verify_fog_projection_parity(
+				viewport_center_px,
+				camera_focus_map_px,
+				zoom_val
+			)
+		elif not is_equal_approx(zoom_val, _last_fog_parity_zoom):
+			_last_fog_parity_zoom = zoom_val
+			ViewProjection.verify_fog_projection_parity(
+				viewport_center_px,
+				camera_focus_map_px,
+				zoom_val
+			)
 
 
 func _resolve_authoritative_map_center() -> Vector2i:
@@ -420,8 +441,14 @@ func _unhandled_input(event: InputEvent) -> void:
 				_mark_view_dirty(true)
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			ViewProjection.adjust_zoom(1)
+			if ViewProjection.adjust_zoom(1):
+				_sync_view_scroll_and_overlays(true)
+				_sync_fog_view_transform()
+				_mark_view_dirty(true)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			ViewProjection.adjust_zoom(-1)
+			if ViewProjection.adjust_zoom(-1):
+				_sync_view_scroll_and_overlays(true)
+				_sync_fog_view_transform()
+				_mark_view_dirty(true)
 	if event.is_action_pressed("ui_cancel") or (event is InputEventKey and event.keycode == KEY_ESCAPE):
 		get_tree().quit()

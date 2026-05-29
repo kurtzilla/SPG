@@ -48,7 +48,7 @@ To preserve visual consistency, performance, and coordinate mapping stability, t
 3. **Fog of War Layer (CanvasItem/Shader)** — Screen-space fullscreen quad on a `CanvasLayer` (`FogOverlay` → `FogRect` + `FogOverlay.gdshader`). Shader projects canvas px to map-local via `ViewProjection` uniforms; buffer data stays map-local px.
 4. **Heads-Up Display / HUD Layer (CanvasLayer)** — Screen-space user interfaces, health bars, menus, and control widgets (`GridOverlay`, `SettingsUi`, `GameEntitiesLayer` for entity chrome that must stay screen-aligned).
 
-Fog buffer uniforms (`world_buffer_center_px`, `cell_size_px`) use map-local pixels aligned with `ViewProjection.map_scroll`. The fog quad is screen-space; it does not live under `_map_scroll`.
+Fog buffer uniforms (`world_buffer_origin_px`, `cell_size_px`) use map-local pixels aligned with `ViewProjection.map_scroll`. The fog quad is screen-space; it does not live under `_map_scroll`.
 
 ### Architectural Rules for the Fog of War System
 
@@ -62,14 +62,14 @@ Fog buffer uniforms (`world_buffer_center_px`, `cell_size_px`) use map-local pix
 - The `FogOverlay` root is a `CanvasLayer` with a fullscreen `FogRect` child (anchors full rect; no per-frame GDScript sizing).
 - The shader reconstructs map-local coordinates per fragment:
   `vec2 world_px = (FRAGCOORD - viewport_center_px) / zoom + camera_focus_map_px;`
-- Sample the sliding buffer relative to `world_buffer_center_px` and `buffer_size_cells * cell_size_px`.
+- Sample the sliding buffer relative to `world_buffer_origin_px` and `buffer_size_cells * cell_size_px`.
 - The out-of-bounds fallback inside the fragment shader must remain strictly `alpha_mask = 1.0`.
 
 ### SYSTEM ARCHITECTURE DIRECTIVE: Fog of War System
 
 1. **Scene Tree Hierarchy:** `FogOverlay` is a sibling of `GridOverlay` under `MainSandbox` root — screen-space, above world content (`layer = 4`).
 2. **Transform Constancy:** `FogRect` never moves; camera scroll/zoom are shader uniforms updated from `MainSandbox._sync_fog_view_transform`. Buffer recenters on grid thresholds only.
-3. **Shader Coordinate Mapping:** Map-local px from screen projection; buffer UV from offset against `world_buffer_center_px`.
+3. **Shader Coordinate Mapping:** Map-local px from screen projection; buffer UV from offset against `world_buffer_origin_px`.
 4. **Boundary Failure Guard:** The out-of-bounds fallback code block inside the shader must return an alpha mask value of `1.0` (opaque black fog) under all conditions. It must never fall back to `0.0`.
 
 ### FOG & VIEW CONVERSIONS (Frame-Zero)

@@ -145,6 +145,35 @@ public sealed class VisibilityModel
 		return count;
 	}
 
+	public int RevealSquare(int centerX, int centerY, int radius) =>
+		RevealSquare(centerX, centerY, radius, null);
+
+	/// <summary>
+	/// Reveals cells inside an axis-aligned square. Returns count of newly revealed cells.
+	/// </summary>
+	public int RevealSquare(int centerX, int centerY, int radius, List<(int X, int Y)>? newlyRevealed)
+	{
+		int clampedRadius = ClampRadius(radius);
+		int minX = centerX - clampedRadius;
+		int maxX = centerX + clampedRadius;
+		int minY = centerY - clampedRadius;
+		int maxY = centerY + clampedRadius;
+		int count = 0;
+
+		for (int gx = minX; gx <= maxX; gx++)
+		{
+			for (int gy = minY; gy <= maxY; gy++)
+			{
+				if (RevealCell(gx, gy, newlyRevealed))
+				{
+					count++;
+				}
+			}
+		}
+
+		return count;
+	}
+
 	/// <summary>
 	/// Reveals an ellipse and stamps 255 into <paramref name="outMask"/> for cells inside the window.
 	/// Avoids allocating a newly-revealed cell list for presentation updates.
@@ -222,12 +251,15 @@ public sealed class VisibilityModel
 			return;
 		}
 
-		int index = 0;
-		for (int gy = originY; gy < originY + height; gy++)
+		for (int localY = 0; localY < height; localY++)
 		{
-			for (int gx = originX; gx < originX + width; gx++)
+			int gy = originY + localY;
+			int rowOffset = localY * width;
+
+			for (int localX = 0; localX < width; localX++)
 			{
-				outMask[index++] = IsRevealed(gx, gy) ? (byte)255 : (byte)0;
+				int gx = originX + localX;
+				outMask[rowOffset + localX] = IsRevealed(gx, gy) ? (byte)255 : (byte)0;
 			}
 		}
 	}
@@ -249,6 +281,48 @@ public sealed class VisibilityModel
 			int localY = gy - originY;
 			outMask[localY * width + localX] = 255;
 		}
+	}
+
+	/// <summary>
+	/// Allocates and fills a row-major R8 mask: 255 = revealed, 0 = hidden.
+	/// Returns a native C# byte[] for Godot interop (avoids Span/caller-buffer marshalling).
+	/// </summary>
+	public byte[] FillRevealedMaskNative(int originX, int originY, int width, int height)
+	{
+		int area = width * height;
+		byte[] outMask = new byte[area];
+
+		if (_revealed.Count < area / 4)
+		{
+			int maxX = originX + width - 1;
+			int maxY = originY + height - 1;
+			foreach (long key in _revealed)
+			{
+				DecodeKey(key, out int gx, out int gy);
+				if (gx >= originX && gx <= maxX && gy >= originY && gy <= maxY)
+				{
+					int localX = gx - originX;
+					int localY = gy - originY;
+					outMask[localY * width + localX] = 255;
+				}
+			}
+
+			return outMask;
+		}
+
+		for (int localY = 0; localY < height; localY++)
+		{
+			int gy = originY + localY;
+			int rowOffset = localY * width;
+
+			for (int localX = 0; localX < width; localX++)
+			{
+				int gx = originX + localX;
+				outMask[rowOffset + localX] = IsRevealed(gx, gy) ? (byte)255 : (byte)0;
+			}
+		}
+
+		return outMask;
 	}
 
 	public void ClearAll()

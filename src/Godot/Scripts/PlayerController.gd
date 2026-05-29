@@ -13,19 +13,19 @@ signal grid_cell_changed(cell: Vector2i)
 signal map_position_changed(map_px: Vector2)
 
 @export_group("Zoom speed")
-@export var min_zoom_speed: float = 50.0
-@export var max_zoom_speed: float = 800.0
+@export var min_zoom_speed: float = 68.0
+@export var max_zoom_speed: float = 1080.0
 @export var min_zoom_level: float = 0.2
 @export var max_zoom_level: float = 2.0
 @export var zoom_curve_exponent: float = 2.0
 
-var _max_speed: float = 250.0
 var _acceleration: float = 25.0
 var _friction: float = 45.0
 var _velocity_snap_threshold_sq: float = 0.01
 var _last_grid_cell: Vector2i = Vector2i.ZERO
 var _cached_zoom: float = -1.0
-var _cached_max_speed: float = 250.0
+var _cached_base_max_speed: float = -1.0
+var _cached_max_speed: float = 650.0
 
 @onready var _sprite: Sprite2D = $Sprite2D
 
@@ -47,30 +47,33 @@ func _ready() -> void:
 	_invalidate_zoom_speed_cache()
 
 
+func apply_movement_settings() -> void:
+	_apply_movement_settings()
+
+
 func _apply_movement_settings() -> void:
-	_max_speed = Settings.max_speed
 	_acceleration = Settings.acceleration
 	_friction = Settings.friction
 	_velocity_snap_threshold_sq = Settings.velocity_snap_threshold_sq
+	_invalidate_zoom_speed_cache()
 
 
 func _invalidate_zoom_speed_cache() -> void:
 	_cached_zoom = -1.0
+	_cached_base_max_speed = -1.0
 
 
 func _process(delta: float) -> void:
 	var zoom: float = ViewProjection.zoom
-	var max_speed: float = _max_speed_for_zoom_cached(zoom)
-	var steer_scale: float = max_speed / _max_speed if _max_speed > 0.0 else 1.0
-	var acceleration: float = _acceleration * steer_scale
-	var friction: float = _friction * steer_scale
+	var base_max_speed: float = Settings.max_speed
+	var max_speed: float = _max_speed_for_zoom_cached(zoom, base_max_speed)
 
 	var input_dir := _read_input_direction()
 	if input_dir != ZERO:
 		var target := input_dir * max_speed
-		velocity = velocity.lerp(target, minf(acceleration * delta, 1.0))
+		velocity = velocity.lerp(target, minf(_acceleration * delta, 1.0))
 	else:
-		velocity = velocity.lerp(ZERO, minf(friction * delta, 1.0))
+		velocity = velocity.lerp(ZERO, minf(_friction * delta, 1.0))
 
 	if velocity.length_squared() < _velocity_snap_threshold_sq:
 		velocity = ZERO
@@ -83,21 +86,26 @@ func _process(delta: float) -> void:
 	_emit_grid_cell_if_changed()
 
 
-func _max_speed_for_zoom_cached(zoom: float) -> float:
-	if is_equal_approx(zoom, _cached_zoom):
+func _max_speed_for_zoom_cached(zoom: float, base_max_speed: float) -> float:
+	if (
+		is_equal_approx(zoom, _cached_zoom)
+		and is_equal_approx(base_max_speed, _cached_base_max_speed)
+	):
 		return _cached_max_speed
 	_cached_zoom = zoom
-	_cached_max_speed = _max_speed_for_zoom(zoom)
+	_cached_base_max_speed = base_max_speed
+	_cached_max_speed = _max_speed_for_zoom(zoom, base_max_speed)
 	return _cached_max_speed
 
 
-func _max_speed_for_zoom(zoom: float) -> float:
+func _max_speed_for_zoom(zoom: float, base_max_speed: float) -> float:
 	var span: float = max_zoom_level - min_zoom_level
 	if is_zero_approx(span):
-		return lerpf(min_zoom_speed, max_zoom_speed, 0.5)
+		return base_max_speed
 	var t: float = clampf((zoom - min_zoom_level) / span, 0.0, 1.0)
 	var t_curved: float = pow(t, zoom_curve_exponent)
-	return lerpf(min_zoom_speed, max_zoom_speed, t_curved)
+	var floor_speed: float = base_max_speed * (min_zoom_speed / max_zoom_speed)
+	return lerpf(floor_speed, base_max_speed, t_curved)
 
 
 func _setup_sprite() -> void:

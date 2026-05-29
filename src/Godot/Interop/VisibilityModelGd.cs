@@ -51,6 +51,23 @@ public partial class VisibilityModelGd : RefCounted
 		return result;
 	}
 
+	public int RevealSquare(int centerX, int centerY, int radius) =>
+		_model.RevealSquare(centerX, centerY, radius);
+
+	/// <summary>Reveals square in Core and returns newly revealed grid cells.</summary>
+	public Array<Vector2I> RevealSquareCollect(int centerX, int centerY, int radius)
+	{
+		var newly = new System.Collections.Generic.List<(int X, int Y)>();
+		_model.RevealSquare(centerX, centerY, radius, newly);
+		var result = new Array<Vector2I>();
+		foreach (var (x, y) in newly)
+		{
+			result.Add(new Vector2I(x, y));
+		}
+
+		return result;
+	}
+
 	public void ClearAll() => _model.ClearAll();
 
 	public byte[] FillRevealedMask(int originX, int originY, int width, int height)
@@ -59,6 +76,9 @@ public partial class VisibilityModelGd : RefCounted
 		_model.FillRevealedMask(originX, originY, width, height, mask);
 		return mask;
 	}
+
+	public byte[] FillRevealedMaskNative(int originX, int originY, int width, int height) =>
+		_model.FillRevealedMaskNative(originX, originY, width, height);
 
 	/// <summary>Writes row-major R8 mask into caller buffer (no allocation).</summary>
 	public void FillRevealedMaskInto(int originX, int originY, int width, int height, byte[] buffer)

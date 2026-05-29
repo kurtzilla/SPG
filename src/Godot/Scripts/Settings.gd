@@ -12,7 +12,7 @@ signal view_changed
 
 const DEFAULTS_PATH: String = "res://src/Godot/Config/game_settings.json"
 ## Dev stage: false = only game_settings.json; true = load/save user://settings.cfg for persist keys.
-const USE_USER_SETTINGS_FILE: bool = false
+const USE_USER_SETTINGS_FILE: bool = true
 const USER_PATH: String = "user://settings.cfg"
 const LEGACY_MOVEMENT_PATH: String = "user://player_movement.cfg"
 const LEGACY_VIEW_PATH: String = "user://view_settings.cfg"

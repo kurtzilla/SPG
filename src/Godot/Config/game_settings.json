@@ -116,11 +116,11 @@
 		},
 		"max_speed": {
 			"context": "game",
-			"max": 500.0,
-			"min": 50.0,
-			"persist": false,
+			"max": 675.0,
+			"min": 68.0,
+			"persist": true,
 			"step": 10.0,
-			"value": 250.0
+			"value": 650.0
 		},
 		"velocity_snap_threshold_sq": {
 			"context": "game",
