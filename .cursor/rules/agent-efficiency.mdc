@@ -6,6 +6,8 @@ alwaysApply: true
 
 # Agent Execution & Token Efficiency Rules
 
+- **HARD OVERRIDE:** [coding-safety.mdc](coding-safety.mdc) is mandatory on every coding task. Never skip reads or the Self-Correction Step (regression + perf) to save tokens. Regression gates and godot-performance hot-path rules override "skip recaps" below.
+
 - **Strict Conciseness**: Skip long internal self-contradictory debates, pre-plan recaps, or repetitive summaries. Think quietly.
 - **Action-Oriented Planning**: When working in Agent/Composer mode, limit structural plan proposals to a maximum of 3-5 concise bullet points before executing file changes.
 - **No Redundant Snippets**: Never print out entire unchanged code blocks or files in the chat panel. Only show or discuss targeted lines being modified.

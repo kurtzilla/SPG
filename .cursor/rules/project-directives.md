@@ -6,6 +6,8 @@ You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated fr
 
 # Core Directive: Read Before Coding
 
+- **FIRST:** Follow [coding-safety.mdc](coding-safety.mdc) on every task — STOP, read working code, post **Self-Correction Step** (including perf implications) in chat, then edit. No exceptions.
+
 - Before writing, modifying, or planning ANY code, you MUST read:
   - `.cursor/rules/architecture.md` — layer boundaries, allowed/forbidden APIs, dependency direction, **holistic performance architecture**
 
@@ -46,6 +48,7 @@ You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated fr
 - Default map zoom on start is **0.5** (`view.zoom` in `src/Godot/Config/game_settings.json`).
 - `view.zoom` has `persist: true`; `user://settings.cfg` overrides JSON after the first run. Delete that file to reset to 0.5.
 - Fractional zoom must not use pixel-snapped map scroll (see `MainSandbox._should_snap_scroll_to_pixel`).
+- Pixel-aligned **camera focus** snap runs on movement frames only, not on zoom wheel (`MainSandbox._apply_view_frame` zoom-only guard).
 
 # Unit tests — prohibited unless explicitly requested
 

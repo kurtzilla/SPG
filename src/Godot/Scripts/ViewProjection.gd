@@ -342,9 +342,7 @@ func adjust_zoom(delta_steps: int) -> bool:
 	var new_zoom: float = Settings.zoom
 	var steps: int = absi(delta_steps)
 	for _step: int in range(steps):
-		new_zoom = ViewTransformsScript.adjacent_pixel_aligned_zoom(
-			new_zoom, direction, min_z, max_z
-		)
+		new_zoom = ViewTransformsScript.adjacent_zoom_level(new_zoom, direction, min_z, max_z)
 	if is_equal_approx(new_zoom, Settings.zoom):
 		return false
 	invalidate_viewport_metrics()
@@ -355,8 +353,8 @@ func adjust_zoom(delta_steps: int) -> bool:
 
 func _snap_zoom_for_settings(value: float) -> float:
 	if _zoom_has_limits:
-		return ViewTransformsScript.snap_zoom_pixel_aligned_clamped(value, _zoom_min, _zoom_max)
-	return ViewTransformsScript.snap_zoom_pixel_aligned(value)
+		return ViewTransformsScript.snap_zoom_to_level_ladder(value, _zoom_min, _zoom_max)
+	return ViewTransformsScript.snap_zoom_to_level_ladder(value, 0.01, 100.0)
 
 
 func _cache_view_settings() -> void:

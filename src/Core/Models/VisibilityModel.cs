@@ -762,7 +762,25 @@ public sealed class VisibilityModel
 		int maxX = originX + width - 1;
 		int maxY = originY + height - 1;
 		bool stripMode = shiftDeltaX != 0 || shiftDeltaY != 0;
+
+		if (stripMode)
+		{
+			return FillRevealedHolesStripMode(
+				originX,
+				originY,
+				width,
+				height,
+				outMask,
+				shiftDeltaX,
+				shiftDeltaY,
+				edgeBandCells);
+		}
+
 		int count = 0;
+		if (!RevealedBoundsIntersectsWindow(originX, originY, maxX, maxY))
+		{
+			return 0;
+		}
 
 		foreach (long key in _revealed)
 		{
@@ -780,23 +798,116 @@ public sealed class VisibilityModel
 				continue;
 			}
 
-			if (stripMode
-				&& !IsInHoleRestoreRegion(
-					gx,
-					gy,
-					originX,
-					originY,
-					width,
-					height,
-					shiftDeltaX,
-					shiftDeltaY,
-					edgeBandCells))
+			StampMaskMax(outMask, idx, ComputeExploredRestoreStrength(gx, gy, _revealStampFeatherCells));
+			count++;
+		}
+
+		return count;
+	}
+
+	private bool RevealedBoundsIntersectsWindow(int originX, int originY, int maxX, int maxY)
+	{
+		if (_revealed.Count == 0)
+		{
+			return false;
+		}
+
+		return _revealedMaxX >= originX
+			&& _revealedMinX <= maxX
+			&& _revealedMaxY >= originY
+			&& _revealedMinY <= maxY;
+	}
+
+	/// <summary>
+	/// After a buffer shift, scan only strip + edge-band cells (O(region)) instead of all revealed keys.
+	/// </summary>
+	private int FillRevealedHolesStripMode(
+		int originX,
+		int originY,
+		int width,
+		int height,
+		Span<byte> outMask,
+		int shiftDeltaX,
+		int shiftDeltaY,
+		int edgeBandCells)
+	{
+		int maxX = originX + width - 1;
+		int maxY = originY + height - 1;
+		int scanMinGx = originX;
+		int scanMaxGx = maxX;
+		int scanMinGy = originY;
+		int scanMaxGy = maxY;
+
+		if (shiftDeltaX > 0)
+		{
+			scanMinGx = originX + width - shiftDeltaX;
+		}
+		else if (shiftDeltaX < 0)
+		{
+			scanMaxGx = originX + (-shiftDeltaX) - 1;
+		}
+
+		if (shiftDeltaY > 0)
+		{
+			scanMinGy = originY + height - shiftDeltaY;
+		}
+		else if (shiftDeltaY < 0)
+		{
+			scanMaxGy = originY + (-shiftDeltaY) - 1;
+		}
+
+		if (edgeBandCells > 0)
+		{
+			if (shiftDeltaX != 0)
 			{
-				continue;
+				scanMinGy = originY;
+				scanMaxGy = maxY;
 			}
 
-			if (stripMode)
+			if (shiftDeltaY != 0)
 			{
+				scanMinGx = originX;
+				scanMaxGx = maxX;
+			}
+		}
+
+		scanMinGx = Math.Max(scanMinGx, originX);
+		scanMaxGx = Math.Min(scanMaxGx, maxX);
+		scanMinGy = Math.Max(scanMinGy, originY);
+		scanMaxGy = Math.Min(scanMaxGy, maxY);
+
+		int count = 0;
+		for (int gy = scanMinGy; gy <= scanMaxGy; gy++)
+		{
+			for (int gx = scanMinGx; gx <= scanMaxGx; gx++)
+			{
+				if (!IsInHoleRestoreRegion(
+						gx,
+						gy,
+						originX,
+						originY,
+						width,
+						height,
+						shiftDeltaX,
+						shiftDeltaY,
+						edgeBandCells))
+				{
+					continue;
+				}
+
+				if (!IsRevealed(gx, gy))
+				{
+					continue;
+				}
+
+				int localX = gx - originX;
+				int localY = gy - originY;
+				int idx = localY * width + localX;
+				if (outMask[idx] != 0)
+				{
+					continue;
+				}
+
 				if (IsInIncomingShiftStrip(gx, gy, originX, originY, width, height, shiftDeltaX, shiftDeltaY))
 				{
 					outMask[idx] = 255;
@@ -805,13 +916,9 @@ public sealed class VisibilityModel
 				{
 					StampMaskMax(outMask, idx, ComputeExploredRestoreStrength(gx, gy, _revealStampFeatherCells));
 				}
-			}
-			else
-			{
-				StampMaskMax(outMask, idx, ComputeExploredRestoreStrength(gx, gy, _revealStampFeatherCells));
-			}
 
-			count++;
+				count++;
+			}
 		}
 
 		return count;
@@ -885,6 +992,40 @@ public sealed class VisibilityModel
 
 		int maxX = originX + width - 1;
 		int maxY = originY + height - 1;
+
+		if (shiftDeltaX > 0)
+		{
+			int overlapMaxGx = originX + width - shiftDeltaX - 1;
+			if (gx >= originX && gx <= overlapMaxGx && gy >= originY && gy <= maxY)
+			{
+				return true;
+			}
+		}
+		else if (shiftDeltaX < 0)
+		{
+			int overlapMinGx = originX + (-shiftDeltaX);
+			if (gx >= overlapMinGx && gx <= maxX && gy >= originY && gy <= maxY)
+			{
+				return true;
+			}
+		}
+
+		if (shiftDeltaY > 0)
+		{
+			int overlapMaxGy = originY + height - shiftDeltaY - 1;
+			if (gy >= originY && gy <= overlapMaxGy && gx >= originX && gx <= maxX)
+			{
+				return true;
+			}
+		}
+		else if (shiftDeltaY < 0)
+		{
+			int overlapMinGy = originY + (-shiftDeltaY);
+			if (gy >= overlapMinGy && gy <= maxY && gx >= originX && gx <= maxX)
+			{
+				return true;
+			}
+		}
 
 		if (edgeBandCells > 0)
 		{

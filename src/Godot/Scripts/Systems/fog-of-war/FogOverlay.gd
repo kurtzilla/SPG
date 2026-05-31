@@ -34,8 +34,10 @@ const FULL_MASK_UPLOAD_AREA_FRAC: float = 0.8
 const DEFAULT_GPU_COMMIT_MIN_INTERVAL_SEC: float = 1.0 / 60.0
 const PATH_STAMP_SINGLE_DISC_MAX_CHEBYSHEV: int = 2
 const UNINITIALIZED_STAMP_CELL: int = 900000
+const QUEUED_CELL_RECENTER_NONE: Vector2i = Vector2i(900001, 900001)
 const UNINITIALIZED_STAMP_MAP_PX: float = -900000.0
 const MOVING_STAMP_MIN_VELOCITY_SQ: float = 1.0
+const MOTION_DISC_STAMP_MIN_DISTANCE_PX: float = 4.0
 const FOG_SETTINGS_REFRESH_DEBOUNCE_SEC: float = 0.12
 ## Sentinel: full-window graded hole restore (settings refresh), not strip-scoped shift restore.
 const NO_SHIFT_ORIGIN: Vector2i = Vector2i(2147483647, 2147483647)
@@ -132,11 +134,13 @@ var _is_first_draw: bool = true
 var _was_moving_for_stamp: bool = false
 var _last_motion_bake_map_px: Vector2 = Vector2(UNINITIALIZED_STAMP_MAP_PX, UNINITIALIZED_STAMP_MAP_PX)
 var _last_motion_bake_sec: float = -999999.0
+var _last_motion_disc_stamp_map_px: Vector2 = Vector2(UNINITIALIZED_STAMP_MAP_PX, UNINITIALIZED_STAMP_MAP_PX)
 var _configured: bool = false
 var _fog_enabled: bool = false
 
 var _cached_canvas_to_map: Transform2D = Transform2D.IDENTITY
 var _canvas_to_map_cached: bool = false
+var _cached_projection_zoom: float = -1.0
 var _shutting_down: bool = false
 var _gpu_commit_suppressed: bool = false
 var _mask_commit_pending: bool = false
@@ -152,11 +156,14 @@ var _cached_live_disc_enabled: bool = false
 var _cached_live_disc_radius_cells: float = -1.0
 var _cached_live_disc_feather_cells: float = -1.0
 
-var _recenter_pending: bool = false
 var _recenter_trigger: StringName = &"cell"
 var _pending_recenter_center: Vector2i = Vector2i.ZERO
 var _recenter_old_origin_grid: Vector2i = Vector2i.ZERO
 var _recenter_old_mask_bytes: PackedByteArray = PackedByteArray()
+var _view_settling: bool = false
+var _queued_cell_recenter_center: Vector2i = QUEUED_CELL_RECENTER_NONE
+var _buffer_viewport_pass_running: bool = false
+var _ensure_buffer_player_map_px: Vector2 = Vector2(-999999.0, -999999.0)
 
 
 func _ready() -> void:
@@ -243,6 +250,19 @@ func is_configured() -> bool:
 	return _configured
 
 
+func begin_view_transition() -> void:
+	_view_settling = true
+	if _has_cached_player_map_px():
+		_sync_live_disc_uniforms(_cached_player_map_px)
+
+
+func end_view_transition() -> void:
+	_view_settling = false
+	_reset_motion_disc_stamp_anchor()
+	if _has_cached_player_map_px():
+		_sync_live_disc_uniforms(_cached_player_map_px)
+
+
 func tick_presentation(delta: float) -> void:
 	if not _fog_enabled:
 		return
@@ -279,14 +299,10 @@ func apply_canvas_transform(canvas_to_map: Transform2D) -> void:
 func apply_view_frame(frame: ViewFrameScript) -> void:
 	if not _fog_enabled:
 		return
-	if _configured:
-		ensure_buffer_for_current_zoom()
 	apply_overlay_projection(frame)
 
 
 func flush_pending_on_view_changed() -> void:
-	_invalidate_projection_cache()
-	_push_projection_fallback()
 	try_flush_presentation_commits(true)
 
 
@@ -298,15 +314,17 @@ func update_player_reveal(map_px: Vector2, velocity_map_px: Vector2 = Vector2.ZE
 	if moving:
 		if not _was_moving_for_stamp:
 			_reset_motion_bake_anchor(map_px)
+			_reset_motion_disc_stamp_anchor()
+		_stamp_motion_disc_if_moved(map_px)
 	elif _was_moving_for_stamp:
-		# Close trail gap on stop; live shader disc hid it while moving.
 		if _has_last_motion_bake_map_px() and not _last_motion_bake_map_px.is_equal_approx(map_px):
 			if _should_bake_motion_reveal_segment(_last_motion_bake_map_px, map_px):
 				_bake_motion_reveal_segment(_last_motion_bake_map_px, map_px)
 		_stamp_disc_at_map_px(map_px)
 		_schedule_mask_commit(_mask_bounds_for_disc_at_map_px(map_px), true)
 		_reset_motion_bake_anchor(map_px)
-	_sync_live_disc_uniforms(map_px, moving)
+		_reset_motion_disc_stamp_anchor(map_px)
+	_sync_live_disc_uniforms(map_px)
 	_was_moving_for_stamp = moving
 
 
@@ -322,12 +340,13 @@ func apply_overlay_projection(frame: ViewFrameScript) -> void:
 	FogPerfProfileRes.end(&"apply_overlay_projection", t0)
 
 
-## Live shader disc position; mask stamps happen on cell cross (on_player_cell_changed).
+## Recenter-only live disc position; movement reveal uses native mask stamps.
 func sync_player_disc_position(map_px: Vector2) -> void:
 	if _shutting_down or not _configured:
 		return
 	_cached_player_map_px = map_px
-	_sync_live_disc_uniforms(map_px, _was_moving_for_stamp)
+	if _view_settling:
+		_sync_live_disc_uniforms(map_px)
 
 
 func on_player_cell_changed(cell: Vector2i) -> void:
@@ -357,40 +376,48 @@ func on_player_cell_changed(cell: Vector2i) -> void:
 	_sync_initial_square_if_at_anchor(cell)
 
 
-func ensure_buffer_for_viewport() -> void:
-	ensure_buffer_for_current_zoom()
-
-
-func ensure_buffer_for_current_zoom() -> void:
-	if not _configured:
+## Grow-only: sized for min zoom at current viewport. Zoom changes update projection only.
+func ensure_buffer_for_viewport(player_map_px: Vector2 = Vector2(-999999.0, -999999.0)) -> void:
+	if not _configured or _buffer_viewport_pass_running:
 		return
+	var required: int = _required_buffer_size_for_min_zoom()
+	if required <= _buffer_size_cells:
+		return
+	_ensure_buffer_player_map_px = player_map_px
+	_run_ensure_buffer_viewport_grow_pass()
+	_ensure_buffer_player_map_px = Vector2(-999999.0, -999999.0)
+
+
+func _run_ensure_buffer_viewport_grow_pass() -> void:
+	_buffer_viewport_pass_running = true
 	var player_cell: Vector2i = _player_grid_cell()
-	var required: int = _required_buffer_size_for_current_zoom()
-	var needs_resize: bool = required != _buffer_size_cells
-	var needs_recenter: bool = _needs_recenter(player_cell)
-	if not needs_resize and not needs_recenter:
+	var required: int = _required_buffer_size_for_min_zoom()
+	if required <= _buffer_size_cells:
+		_buffer_viewport_pass_running = false
 		return
-	if needs_resize:
-		var old_size: int = _buffer_size_cells
-		var old_origin: Vector2i = _buffer_origin_grid
-		var old_mask: PackedByteArray = _mask_bytes.duplicate()
-		_current_buffer_center_grid = player_cell
-		_rebuild_buffer_storage(required)
-		_recompute_buffer_origin()
-		if old_mask.size() == old_size * old_size:
-			_shift_mask_bytes_from(old_origin, old_mask, old_size)
-		else:
-			_clear_mask_bytes()
-		_restore_presentation_mask(NO_SHIFT_ORIGIN)
-		_upload_full_mask()
-		_bind_buffer_layout_uniforms()
-		_invalidate_projection_cache()
-		_push_projection_fallback()
-	elif needs_recenter:
-		_schedule_recenter_buffer(player_cell, &"zoom")
+	begin_view_transition()
+	var old_size: int = _buffer_size_cells
+	var old_origin: Vector2i = _buffer_origin_grid
+	var old_mask: PackedByteArray = _mask_bytes.duplicate()
+	_current_buffer_center_grid = player_cell
+	_rebuild_buffer_storage(required)
+	_recompute_buffer_origin()
+	if old_mask.size() == old_size * old_size:
+		_shift_mask_bytes_from(old_origin, old_mask, old_size)
+	else:
+		_clear_mask_bytes()
+	_restore_presentation_mask(NO_SHIFT_ORIGIN)
+	_upload_full_mask()
+	_bind_buffer_layout_uniforms()
+	end_view_transition()
+	_invalidate_projection_cache()
+	_push_projection_fallback()
+	_buffer_viewport_pass_running = false
 
 
 func _player_grid_cell() -> Vector2i:
+	if _ensure_buffer_player_map_px.x > -999000.0:
+		return ViewProjection.map_local_px_to_grid_cell(_ensure_buffer_player_map_px)
 	if _has_cached_player_map_px():
 		return ViewProjection.map_local_px_to_grid_cell(_cached_player_map_px)
 	return _current_buffer_center_grid
@@ -403,7 +430,7 @@ func setup(visibility: Object, start_cell: Vector2i) -> void:
 
 	_initial_reveal_anchor_cell = start_cell
 	_current_buffer_center_grid = start_cell
-	_rebuild_buffer_storage(_required_buffer_size_for_current_zoom())
+	_rebuild_buffer_storage(_required_buffer_size_for_min_zoom())
 	_recompute_buffer_origin()
 	_bind_buffer_layout_uniforms()
 
@@ -413,6 +440,7 @@ func setup(visibility: Object, start_cell: Vector2i) -> void:
 	_was_moving_for_stamp = false
 	_last_motion_bake_map_px = Vector2(UNINITIALIZED_STAMP_MAP_PX, UNINITIALIZED_STAMP_MAP_PX)
 	_last_motion_bake_sec = -999999.0
+	_reset_motion_disc_stamp_anchor()
 	_last_reveal_cell = Vector2i(999999, 999999)
 	_last_stamp_cell = Vector2i(999999, 999999)
 	_cached_player_map_px = Vector2.ZERO
@@ -468,7 +496,12 @@ func _needs_recenter(cell: Vector2i) -> bool:
 	var reveal_pad: int = maxi(maxi(PLAYER_REVEAL_RADIUS_CELLS, _initial_reveal_radius), 2) + 2
 	var buffer_half: int = _buffer_size_cells >> 1
 	var max_margin: int = maxi(1, buffer_half - reveal_pad - 1)
-	var dynamic_margin: int = mini(maxi(reveal_pad, view_half), max_margin)
+	var at_buffer_center: bool = cell == _current_buffer_center_grid
+	var dynamic_margin: int
+	if at_buffer_center:
+		dynamic_margin = mini(reveal_pad, max_margin)
+	else:
+		dynamic_margin = mini(maxi(reveal_pad, view_half), max_margin)
 	return (
 		local.x < dynamic_margin
 		or local.y < dynamic_margin
@@ -479,7 +512,9 @@ func _needs_recenter(cell: Vector2i) -> bool:
 
 func _schedule_recenter_buffer(new_center: Vector2i, trigger: StringName = &"cell") -> void:
 	_pending_recenter_center = new_center
-	if _recenter_pending:
+	if _view_settling:
+		if trigger == &"cell":
+			_queued_cell_recenter_center = new_center
 		return
 	var old_origin: Vector2i = _buffer_origin_grid
 	var t_dup: int = FogPerfProfileRes.begin(&"recenter_duplicate")
@@ -487,36 +522,21 @@ func _schedule_recenter_buffer(new_center: Vector2i, trigger: StringName = &"cel
 	_recenter_old_mask_bytes = _mask_bytes.duplicate()
 	FogPerfProfileRes.end(&"recenter_duplicate", t_dup)
 	_recenter_trigger = trigger
-	_current_buffer_center_grid = new_center
-	_recompute_buffer_origin()
-	# F6/A4: shader origin must match shifted/uploaded mask — bind after recenter body completes.
 	if trigger == &"zoom":
-		_recenter_pending = true
-		if _has_cached_player_map_px():
-			_sync_live_disc_uniforms(_cached_player_map_px, _was_moving_for_stamp)
-		call_deferred("_run_deferred_recenter_buffer")
-	else:
-		_recenter_buffer_body(old_origin, _recenter_old_mask_bytes)
-
-
-func _run_deferred_recenter_buffer() -> void:
-	if not _recenter_pending:
-		return
-	_recenter_pending = false
-	_recenter_buffer_body(_recenter_old_origin_grid, _recenter_old_mask_bytes)
-	if _has_cached_player_map_px():
-		_sync_live_disc_uniforms(_cached_player_map_px, _was_moving_for_stamp)
+		begin_view_transition()
+	_recenter_buffer_body(old_origin, _recenter_old_mask_bytes, new_center)
 
 
 func _recenter_buffer(new_center: Vector2i, _pending_radius: int) -> void:
-	_recenter_old_origin_grid = _buffer_origin_grid
-	_recenter_old_mask_bytes = _mask_bytes.duplicate()
+	var old_origin: Vector2i = _buffer_origin_grid
+	_recenter_buffer_body(old_origin, _mask_bytes.duplicate(), new_center)
+
+
+func _recenter_buffer_body(
+	old_origin: Vector2i, old_mask: PackedByteArray, new_center: Vector2i
+) -> void:
 	_current_buffer_center_grid = new_center
 	_recompute_buffer_origin()
-	_recenter_buffer_body(_recenter_old_origin_grid, _recenter_old_mask_bytes)
-
-
-func _recenter_buffer_body(old_origin: Vector2i, old_mask: PackedByteArray) -> void:
 	var t_total: int = FogPerfProfileRes.begin(&"recenter_total")
 	var t_shift: int = FogPerfProfileRes.begin(&"recenter_shift")
 	_shift_mask_bytes_from(old_origin, old_mask)
@@ -528,8 +548,20 @@ func _recenter_buffer_body(old_origin: Vector2i, old_mask: PackedByteArray) -> v
 	FogPerfProfileRes.end(&"recenter_total", t_total)
 	_bind_buffer_layout_uniforms()
 	_log_recenter_completed(old_origin, restore_info)
+	end_view_transition()
 	_invalidate_projection_cache()
 	_push_projection_fallback()
+	_try_run_queued_cell_recenter()
+
+
+func _try_run_queued_cell_recenter() -> void:
+	if _queued_cell_recenter_center == QUEUED_CELL_RECENTER_NONE:
+		return
+	var center: Vector2i = _queued_cell_recenter_center
+	_queued_cell_recenter_center = QUEUED_CELL_RECENTER_NONE
+	if not _needs_recenter(center):
+		return
+	_schedule_recenter_buffer(center, &"cell")
 
 
 func _initial_square_overlaps_buffer() -> bool:
@@ -599,12 +631,6 @@ func _rebuild_buffer_storage(new_size: int) -> void:
 
 func _mask_size_cells() -> int:
 	return _buffer_size_cells
-
-
-func _required_buffer_size_for_current_zoom() -> int:
-	var zoom: float = ViewProjection.safe_zoom() if ViewProjection.are_viewport_metrics_ready() else FALLBACK_MIN_ZOOM
-	var required: int = _required_buffer_size_cells(zoom)
-	return maxi(required, _settings_buffer_floor)
 
 
 func _required_buffer_size_for_min_zoom() -> int:
@@ -1073,12 +1099,12 @@ func _sync_visibility_feather_from_settings() -> void:
 	_visibility.RevealStampFeatherCells = _disc_feather_cells()
 
 
-func _sync_live_disc_uniforms(map_px: Vector2, moving: bool) -> void:
+func _sync_live_disc_uniforms(map_px: Vector2) -> void:
 	if _shader_mat == null:
 		return
 	var radius_cells: float = float(PLAYER_REVEAL_RADIUS_CELLS)
 	var feather_cells: float = _disc_feather_cells()
-	var disc_enabled: bool = moving or _recenter_pending
+	var disc_enabled: bool = _view_settling
 	var changed: bool = (
 		not map_px.is_equal_approx(_cached_live_disc_map_px)
 		or disc_enabled != _cached_live_disc_enabled
@@ -1092,11 +1118,35 @@ func _sync_live_disc_uniforms(map_px: Vector2, moving: bool) -> void:
 	_shader_mat.set_shader_parameter(&"reveal_feather_cells", feather_cells)
 	_shader_mat.set_shader_parameter(&"live_disc_enabled", 1.0 if disc_enabled else 0.0)
 	_cached_live_disc_map_px = map_px
-	_cached_live_disc_moving = moving
+	_cached_live_disc_moving = false
 	_cached_live_disc_enabled = disc_enabled
 	_cached_live_disc_radius_cells = radius_cells
 	_cached_live_disc_feather_cells = feather_cells
 	_last_pushed_player_map_px = map_px
+
+
+func _reset_motion_disc_stamp_anchor(
+	map_px: Vector2 = Vector2(UNINITIALIZED_STAMP_MAP_PX, UNINITIALIZED_STAMP_MAP_PX)
+) -> void:
+	_last_motion_disc_stamp_map_px = map_px
+
+
+func _has_last_motion_disc_stamp_map_px() -> bool:
+	return _last_motion_disc_stamp_map_px.x > UNINITIALIZED_STAMP_MAP_PX + 1.0
+
+
+func _stamp_motion_disc_if_moved(map_px: Vector2) -> bool:
+	if (
+		_has_last_motion_disc_stamp_map_px()
+		and map_px.distance_to(_last_motion_disc_stamp_map_px) < MOTION_DISC_STAMP_MIN_DISTANCE_PX
+	):
+		return false
+	var t0: int = FogPerfProfileRes.begin(&"motion_disc_stamp")
+	_stamp_disc_at_map_px(map_px)
+	_schedule_mask_commit(_mask_bounds_for_disc_at_map_px(map_px), true)
+	_last_motion_disc_stamp_map_px = map_px
+	FogPerfProfileRes.end(&"motion_disc_stamp", t0)
+	return true
 
 
 func _mask_bounds_for_disc_at_map_px(map_px: Vector2) -> Vector4i:
@@ -1283,10 +1333,14 @@ func _refresh_initial_square_mask() -> void:
 
 
 func _bind_buffer_layout_uniforms() -> void:
+	_bind_buffer_layout_uniforms_with_origin(_buffer_origin_grid)
+
+
+func _bind_buffer_layout_uniforms_with_origin(origin_grid: Vector2i) -> void:
 	if _shader_mat == null:
 		return
 	var cell_px := float(ViewMetricsRes.CELL_SIZE_PX)
-	var world_buffer_origin_px := Vector2(_buffer_origin_grid) * cell_px
+	var world_buffer_origin_px := Vector2(origin_grid) * cell_px
 	_shader_mat.set_shader_parameter(&"world_buffer_origin_px", world_buffer_origin_px)
 	_shader_mat.set_shader_parameter(&"buffer_size_cells", Vector2(_buffer_size_cells, _buffer_size_cells))
 	_shader_mat.set_shader_parameter(&"cell_size_px", cell_px)
@@ -1308,6 +1362,9 @@ func _push_live_disc_layout_uniforms() -> void:
 func _push_projection_uniforms(frame: ViewFrameScript) -> void:
 	if _shutting_down or _shader_mat == null or frame == null:
 		return
+	if not is_equal_approx(frame.zoom, _cached_projection_zoom):
+		_invalidate_projection_cache()
+		_cached_projection_zoom = frame.zoom
 	_push_canvas_to_map_uniforms(frame.canvas_to_map_local)
 
 
@@ -1332,6 +1389,7 @@ func _push_canvas_to_map_uniforms(canvas_to_map: Transform2D) -> void:
 func _invalidate_projection_cache() -> void:
 	_cached_canvas_to_map = Transform2D.IDENTITY
 	_canvas_to_map_cached = false
+	_cached_projection_zoom = -1.0
 
 
 func _load_reveal_radii_from_settings() -> void:

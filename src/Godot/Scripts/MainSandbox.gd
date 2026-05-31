@@ -25,8 +25,11 @@ var _snap_scroll_to_pixel: bool = false
 
 const ZOOM_REBUILD_DELAY_SEC: float = 0.05
 
+const ZOOM_WHEEL_DEBOUNCE_SEC: float = 0.05
+
 var _zoom_rebuild_timer: SceneTreeTimer
 var _zoom_rebuild_scheduled_zoom: float = -1.0
+var _zoom_wheel_debounce_sec: float = 0.0
 
 var _cached_view_frame: ViewFrameScript
 var _last_applied_scroll: Vector2 = Vector2(-999999.0, -999999.0)
@@ -41,8 +44,8 @@ var _startup_view_frames_remaining: int = 3
 
 func _ready() -> void:
 	set_process(true)
-	# After PlayerController (10) so pixel snap survives set_camera_focus (F4/A3).
-	process_priority = 5
+	# After PlayerController (10): view apply runs at 15 so camera focus is current first.
+	process_priority = 15
 	y_sort_enabled = false
 	_map_scroll.y_sort_enabled = false
 	_snap_scroll_to_pixel = ProjectSettings.get_setting("rendering/2d/snap/snap_2d_transforms_to_pixel")
@@ -83,7 +86,7 @@ func _ready() -> void:
 	if not _player.map_position_changed.is_connected(_on_player_map_position_changed):
 		_player.map_position_changed.connect(_on_player_map_position_changed)
 
-	_player.position = ViewTransformsScript.grid_cell_center_to_map_local_px(float(player.X), float(player.Y))
+	_player.position = ViewTransformsScript.grid_to_map_local_px(float(player.X), float(player.Y))
 	ViewProjection.register_camera(_player)
 
 	if not _ensure_viewport_metrics_ready():
@@ -139,6 +142,12 @@ func _apply_internal_viewport_scale() -> void:
 	if vp.size != Vector2i(target_w, target_h):
 		vp.size = Vector2i(target_w, target_h)
 		ViewProjection.invalidate_viewport_metrics()
+		if _fog_overlay != null and _fog_overlay.is_configured():
+			var player_px: Vector2 = (
+				_player.position if _player != null and is_instance_valid(_player)
+				else Vector2(-999999.0, -999999.0)
+			)
+			_fog_overlay.ensure_buffer_for_viewport(player_px)
 
 
 func _finish_ready_after_viewport() -> void:
@@ -158,6 +167,8 @@ func _finish_ready_viewport_dependent() -> void:
 
 
 func _process(delta: float) -> void:
+	if _zoom_wheel_debounce_sec > 0.0:
+		_zoom_wheel_debounce_sec = maxf(_zoom_wheel_debounce_sec - delta, 0.0)
 	if _player != null and is_instance_valid(_player):
 		if _should_apply_view_frame_this_frame():
 			_apply_view_frame()
@@ -200,7 +211,11 @@ func _notification(what: int) -> void:
 		ViewProjection.notify_viewport_resized()
 		_sync_spawn_tracking_from_player()
 		if _fog_overlay != null:
-			_fog_overlay.ensure_buffer_for_viewport()
+			var player_px: Vector2 = (
+				_player.position if _player != null and is_instance_valid(_player)
+				else Vector2(-999999.0, -999999.0)
+			)
+			_fog_overlay.ensure_buffer_for_viewport(player_px)
 		_schedule_zoom_deferred_rebuild()
 
 
@@ -209,8 +224,9 @@ func _apply_view_frame() -> void:
 		return
 
 	var zoom: float = ViewProjection.safe_zoom()
+	var zoom_changed: bool = not is_equal_approx(zoom, _last_applied_zoom)
 	var camera_focus: Vector2 = ViewProjection.resolve_camera_focus_map_px(_player)
-	if ViewTransformsScript.is_zoom_pixel_aligned(zoom):
+	if ViewTransformsScript.is_zoom_pixel_aligned(zoom) and not zoom_changed:
 		camera_focus = ViewTransformsScript.snap_map_scroll_pixel_aligned(camera_focus, zoom)
 	ViewProjection.set_camera_focus(camera_focus)
 
@@ -249,9 +265,6 @@ func _should_snap_scroll_to_pixel() -> bool:
 
 func _on_view_changed() -> void:
 	_view_projection_dirty = true
-	if _fog_overlay != null and _fog != null and _fog.enabled:
-		_fog_overlay.ensure_buffer_for_current_zoom()
-		_fog_overlay.flush_pending_on_view_changed()
 	_schedule_zoom_deferred_rebuild()
 
 
@@ -387,11 +400,22 @@ func _verify_projection_canvas_parity(frame: ViewFrameScript) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			ViewProjection.adjust_zoom(1)
+			if _try_adjust_zoom(1):
+				get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			ViewProjection.adjust_zoom(-1)
+			if _try_adjust_zoom(-1):
+				get_viewport().set_input_as_handled()
 	if event.is_action_pressed("ui_cancel") or (event is InputEventKey and event.keycode == KEY_ESCAPE):
 		call_deferred("_request_quit")
+
+
+func _try_adjust_zoom(delta_steps: int) -> bool:
+	if _zoom_wheel_debounce_sec > 0.0:
+		return false
+	if not ViewProjection.adjust_zoom(delta_steps):
+		return false
+	_zoom_wheel_debounce_sec = ZOOM_WHEEL_DEBOUNCE_SEC
+	return true
 
 
 func _request_quit() -> void:

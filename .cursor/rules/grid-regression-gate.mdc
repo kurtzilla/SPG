@@ -15,6 +15,10 @@ alwaysApply: false
 
 Read `tools/GRID_REGRESSION.md` before editing grid overlay.
 
+## Required before editing grid
+
+1. Post **Self-Correction Step** per [coding-safety.mdc](../coding-safety.mdc) (regression traps + perf implications + minimal diff).
+
 ## Required before marking grid work done
 
 1. Run `.tools/run_grid_smoke.ps1` (or task **grid-smoke**) — must exit 0.

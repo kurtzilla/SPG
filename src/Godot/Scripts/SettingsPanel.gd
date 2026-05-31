@@ -8,6 +8,7 @@ const ARROW_EXPANDED: String = "▲"
 const ARROW_COLLAPSED: String = "▼"
 
 const ViewMetricsRes = preload("res://src/Godot/Scripts/ViewMetrics.gd")
+const ViewTransformsScript = preload("res://src/Godot/Scripts/ViewTransforms.gd")
 
 const PV: String = (
 	"HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox"
@@ -64,6 +65,8 @@ var _perf_controls_bound: bool = false
 var _mouse_inside_window: bool = true
 var _last_mouse_screen: Vector2 = MOUSE_SCREEN_UNSET
 var _cached_mouse_pos_text: String = "--"
+var _last_zoom_level_index: int = -1
+var _last_synced_zoom: float = -1.0
 
 
 func _ready() -> void:
@@ -113,6 +116,7 @@ var _stats_update_timer_sec: float = 0.0
 func _process(delta: float) -> void:
 	if not _main_body.visible:
 		return
+	_sync_zoom_label()
 	_stats_update_timer_sec -= delta
 	if _stats_update_timer_sec > 0.0:
 		return
@@ -300,7 +304,6 @@ func _update_stats_labels() -> void:
 		_fps_value.text = "%d / %.0fHz" % [fps, refresh_hz]
 	else:
 		_fps_value.text = "%d" % fps
-	_zoom_value.text = "%.1f" % ViewProjection.zoom
 
 	var character: CharacterModelGd = _party.GetSelectedCharacter() if _party != null else null
 	if character != null:
@@ -311,6 +314,28 @@ func _update_stats_labels() -> void:
 	_update_mouse_pos_label()
 	_update_speed_label()
 	_update_perf_labels()
+	_sync_zoom_label()
+
+
+func _sync_zoom_label() -> void:
+	if not _main_body.visible:
+		return
+	var zoom: float = ViewProjection.zoom
+	var level_index: int = ViewTransformsScript.nearest_zoom_level_index(zoom)
+	if level_index == _last_zoom_level_index and is_equal_approx(zoom, _last_synced_zoom):
+		return
+	_last_zoom_level_index = level_index
+	_last_synced_zoom = zoom
+	var cell_px: int = ViewTransformsScript.on_screen_cell_px_for_level(level_index)
+	var zoom_text: String = "%.4f" % zoom
+	if "." in zoom_text:
+		zoom_text = zoom_text.rstrip("0").rstrip(".")
+	_zoom_value.text = "%d px · %s (%d/%d)" % [
+		cell_px,
+		zoom_text,
+		level_index + 1,
+		ViewTransformsScript.zoom_level_count(),
+	]
 
 
 func _update_perf_labels() -> void:
@@ -335,6 +360,11 @@ func _on_setting_changed(path: String) -> void:
 	):
 		_sync_perf_controls_from_settings()
 	if not _main_body.visible:
+		return
+	if path == "view.zoom":
+		_last_zoom_level_index = -1
+		_last_synced_zoom = -1.0
+		_sync_zoom_label()
 		return
 	if (
 		path.begins_with("view.")
@@ -391,6 +421,10 @@ func _apply_panel_visibility(panel_visible: bool) -> void:
 	_main_body.visible = panel_visible
 	_panel_root.visible = true
 	_sync_collapse_button(_show_panel_toggle, panel_visible)
+	if panel_visible:
+		_last_zoom_level_index = -1
+		_last_synced_zoom = -1.0
+		_sync_zoom_label()
 	call_deferred("_update_hud_layout")
 
 
@@ -407,8 +441,9 @@ func _emit_settings_changed() -> void:
 
 
 func _on_view_changed() -> void:
-	if _main_body.visible:
-		_zoom_value.text = "%.1f" % ViewProjection.zoom
+	_last_zoom_level_index = -1
+	_last_synced_zoom = -1.0
+	_sync_zoom_label()
 
 
 func _on_show_panel_pressed() -> void:

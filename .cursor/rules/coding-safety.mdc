@@ -1,0 +1,54 @@
+---
+description: MANDATORY stop-before-edit gate for every coding task. Prevents overwriting working code and repeat regressions.
+globs: "**/*"
+alwaysApply: true
+---
+
+# MANDATORY: Stop before you edit (every coding task)
+
+You MUST follow this sequence on **every** task that reads, plans, or changes project files. No exceptions. User urgency, "just fix it", Plan mode, or agent-efficiency rules **do not** waive this.
+
+## 1. STOP — do not edit until complete
+
+Do **not** call write/search-replace/edit tools until you have finished steps 2–5 below. Trial-and-error edits on working systems are **forbidden**.
+
+## 2. READ working behavior first
+
+- Read the **full** target file(s) once (and callers/callees if touching a hot path or public API).
+- Use live repo (`Read`, `Grep`, `git`) — never stale snapshots.
+- State what **currently works** and what the user asked to change. If unclear, ask **before** editing.
+
+## 3. Self-Correction Step (required in chat before first edit)
+
+Post a short block titled **Self-Correction Step** with **all** of the following (every ask — feature, fix, refactor, config):
+
+1. **Regression traps** — what working behavior could break (wiring, frame order, interop, globals, partial commits).
+2. **Performance implications** — you MUST assess cost before implementing:
+   - **Costly operations** to avoid or bound: per-frame loops over large buffers, full texture/buffer uploads, synchronous work on `view_changed` / input / signals, unbounded `_revealed` or world scans, per-signal stamp+upload, nested tile/chunk iteration, blocking interop copies.
+   - **Hot path vs cold path** — what runs every frame vs what can be deferred/queued/budgeted.
+   - **Expected symptom if wrong** — hitch on zoom/move, FPS drop, memory spike, startup delay.
+   - If the ask adds or touches runtime work: state how cost stays bounded (budget, debounce, dirty regions, single commit/frame, GPU vs CPU). If none apply, say **"Perf: negligible (reason)"** — do not skip the bullet.
+3. **Minimal diff** — files you will touch; what you will **not** touch.
+4. **Holistic pipeline** (required when touching fog, chunks, grid, streaming, shaders, presentation tick) — hot/cold split, single `tick_frame` entry, merged commits; full rules in godot-performance.mdc.
+5. **Verification** — which regression gates you will run after (fog-smoke, grid-smoke, verify-spg, manual check, `[ChunkPerf]`/`[FogPerf]` if perf-sensitive).
+
+For small tasks, bullets still required — brevity is fine; **omission is not**.
+
+## 4. Preserve working code
+
+- **Do not** refactor, rename, reformat, or "clean up" unrelated code.
+- **Do not** delete `class_name`, Autoloads, `@onready` paths, or atomic file sets unless the user explicitly asked.
+- **Do not** re-solve a problem a different way when the existing solution already works — fix the stated issue only.
+- If your change breaks a regression gate, **revert and redesign** — do not stack patches on a broken approach.
+
+## 5. After edits
+
+- Run applicable gates (fog/grid smoke, build) before claiming done.
+- For perf-sensitive changes: confirm no new per-frame spikes (profiler logs or stated manual check).
+- Report what you verified; do not claim "should work" without running the gate.
+
+## Overrides
+
+- **agent-efficiency.mdc** conciseness does **not** allow skipping this block, perf assessment, or skipping reads.
+- **godot-performance.mdc** is the deep reference for hot-path pipeline design; **coding-safety.mdc** requires a perf bullet on **every** task, not only hot-path files.
+- Applies to **all** code changes including docs and config when they affect runtime behavior.

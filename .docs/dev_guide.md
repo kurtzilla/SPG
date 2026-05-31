@@ -29,6 +29,10 @@ The goal of this phase is strictly to achieve an isometric view with a 2-charact
 
 
 
+## Agent coding safety (mandatory)
+
+Every coding task (human or agent) must follow [`.cursor/rules/coding-safety.mdc`](../.cursor/rules/coding-safety.mdc): **STOP** before editing, read what already works, post a **Self-Correction Step** in chat (regression traps + **performance implications** + minimal diff), then change code. Fog/grid work also requires **fog-smoke** / **grid-smoke** or **verify-spg** before marking done (see `tools/FOG_REGRESSION.md`, `tools/GRID_REGRESSION.md`).
+
 ## 3. Toolchain
 
 | Tool | Version |

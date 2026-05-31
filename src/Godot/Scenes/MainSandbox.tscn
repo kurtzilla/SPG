@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://src/Godot/Scenes/Player.tscn" id="6_player"]
 [ext_resource type="Script" uid="uid://dmawn4jarjyxy" path="res://src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd" id="7_fog_exploration"]
 [ext_resource type="PackedScene" uid="uid://3fqp6ja8tdwe" path="res://src/Godot/Scenes/FogOverlay.tscn" id="8_fog_overlay"]
+[ext_resource type="Script" uid="uid://7ots6twoo5a5" path="res://src/Godot/Scripts/OriginMarker.gd" id="9_origin_marker"]
 
 [node name="MainSandbox" type="Node2D" unique_id=876572398]
 script = ExtResource("1_main_sandbox")
@@ -18,6 +19,9 @@ follow_viewport_enabled = true
 [node name="Tiles" type="Node2D" parent="WorldCanvas" unique_id=720362407]
 
 [node name="ChunkManager" parent="WorldCanvas/Tiles" unique_id=1303602726 instance=ExtResource("5_chunk_manager")]
+
+[node name="OriginMarker" type="Node2D" parent="WorldCanvas/Tiles" unique_id=1669731298]
+script = ExtResource("9_origin_marker")
 
 [node name="Player" parent="WorldCanvas/Tiles" unique_id=604040316 instance=ExtResource("6_player")]
 unique_name_in_owner = true

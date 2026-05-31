@@ -50,9 +50,58 @@ static func map_local_px_to_world_m(px: Vector2) -> Vector2:
 	return Vector2(pixels_to_meters(px.x), pixels_to_meters(px.y))
 
 
+## Discrete wheel ladder: 3 below default (32 px/cell), default, 3 above. Min/max match view.zoom limits.
+const ZOOM_LEVELS_ON_SCREEN_CELL_PX: Array[int] = [16, 24, 28, 32, 64, 96, 128]
+
+
 ## On-screen cell size in canvas px (map-local cell * zoom). Viewport metrics only.
 static func on_screen_cell_px(zoom: float) -> float:
 	return float(ViewMetrics.CELL_SIZE_PX) * maxf(zoom, 0.0001)
+
+
+static func zoom_level_count() -> int:
+	return ZOOM_LEVELS_ON_SCREEN_CELL_PX.size()
+
+
+static func on_screen_cell_px_for_level(level_index: int) -> int:
+	var clamped: int = clampi(level_index, 0, ZOOM_LEVELS_ON_SCREEN_CELL_PX.size() - 1)
+	return ZOOM_LEVELS_ON_SCREEN_CELL_PX[clamped]
+
+
+static func zoom_from_level_index(level_index: int) -> float:
+	var cell_size: int = ViewMetrics.CELL_SIZE_PX
+	if cell_size <= 0:
+		return 1.0
+	return float(on_screen_cell_px_for_level(level_index)) / float(cell_size)
+
+
+static func nearest_zoom_level_index(zoom: float) -> int:
+	var cell_size: int = ViewMetrics.CELL_SIZE_PX
+	if cell_size <= 0 or ZOOM_LEVELS_ON_SCREEN_CELL_PX.is_empty():
+		return 0
+	var on_screen: int = roundi(on_screen_cell_px(zoom))
+	var best_index: int = 0
+	var best_dist: int = absi(on_screen - ZOOM_LEVELS_ON_SCREEN_CELL_PX[0])
+	for i: int in range(ZOOM_LEVELS_ON_SCREEN_CELL_PX.size()):
+		var dist: int = absi(on_screen - ZOOM_LEVELS_ON_SCREEN_CELL_PX[i])
+		if dist < best_dist:
+			best_dist = dist
+			best_index = i
+	return best_index
+
+
+static func snap_zoom_to_level_ladder(zoom: float, min_zoom: float, max_zoom: float) -> float:
+	var clamped_zoom: float = clampf(zoom, min_zoom, max_zoom)
+	return zoom_from_level_index(nearest_zoom_level_index(clamped_zoom))
+
+
+## Wheel: step one rung on the discrete ladder (direction: +1 in, -1 out).
+static func adjacent_zoom_level(zoom: float, direction: int, min_zoom: float, max_zoom: float) -> float:
+	if direction == 0 or ZOOM_LEVELS_ON_SCREEN_CELL_PX.is_empty():
+		return snap_zoom_to_level_ladder(zoom, min_zoom, max_zoom)
+	var index: int = nearest_zoom_level_index(zoom)
+	index = clampi(index + direction, 0, ZOOM_LEVELS_ON_SCREEN_CELL_PX.size() - 1)
+	return clampf(zoom_from_level_index(index), min_zoom, max_zoom)
 
 
 ## True when each map cell maps to a whole canvas pixel (crisp nearest-neighbor tiles).

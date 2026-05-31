@@ -73,9 +73,9 @@ void fragment() {
 	}
 	float disc_revealed = live_disc_strength_at_px(world_px);
 	float revealed = mask_revealed;
-	if (live_disc_enabled > 0.5) {
-		// F1/A2: gap-fill only — baked mask wins where present; live disc fills stale trail.
-		revealed = mask_revealed + disc_revealed * (1.0 - mask_revealed);
+	if (live_disc_enabled > 0.5 && mask_revealed <= 0.0) {
+		// Gap-fill in fully hidden cells only; baked mask (incl. feather) is authoritative elsewhere.
+		revealed = disc_revealed;
 	}
 
 	float alpha_mask = 1.0 - revealed;

@@ -16,10 +16,15 @@ alwaysApply: false
 
 Read `tools/FOG_REGRESSION.md` before editing fog.
 
+## Required before editing fog
+
+1. Post **Self-Correction Step** per [coding-safety.mdc](../coding-safety.mdc) (regression traps + perf implications + minimal diff).
+2. Read `tools/FOG_REGRESSION.md` and preserve wiring invariants below.
+
 ## Required before marking fog work done
 
 1. Run `.tools/run_fog_smoke.ps1` (or task **fog-smoke**) — must exit 0.
-2. Commit **atomic set** together when changing presentation: `.gdshader` + `FogOverlay.gd` + `FogOverlay.tscn` (+ `MainSandbox.gd` if paths/bootstrap change).
+3. Commit **atomic set** together when changing presentation: `.gdshader` + `FogOverlay.gd` + `FogOverlay.tscn` (+ `MainSandbox.gd` if paths/bootstrap change).
 
 ## Forbidden
 

@@ -45,6 +45,22 @@ Also update `MainSandbox.gd` when changing `@onready` paths or bootstrap hooks.
 git checkout HEAD -- src/Godot/Shaders/FogOverlay.gdshader   # without matching .gd + .tscn
 ```
 
+## Zoom / view transition (manual)
+
+At spawn without moving: wheel zoom out through all levels below default — reveal must stay the same **world** size as default (tracks terrain); player stays visible. Wheel zoom in — same check.
+
+After changing fog buffer recenter or zoom hooks: zoom in/out stationary at spawn; reveal disc must track immediately (no pill trail); `[FogPerf] recenter_holes` should not spike 100ms+ per frame during wheel.
+
+Walk across a cell boundary while zooming: fog must still recenter (queued cell recenter runs after deferred zoom body — not dropped).
+
+## Move / stop edge parity (manual)
+
+Walk in any direction: reveal edge/feather must match **while moving** and after stopping — no snap-back at trail or player disc. Repeat at default zoom and at min/max zoom while walking.
+
+## East walk / recenter (manual)
+
+Walk east 60+ cells from spawn **without zooming**. After the first buffer recenter, expect no horizontal ghost strips and no detached revealed blocks separated by fog from the explored trail.
+
 ## What smoke checks
 
 1. `FogOverlay.gdshader` loads / compiles

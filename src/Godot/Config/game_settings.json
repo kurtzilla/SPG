@@ -211,13 +211,19 @@
 			"persist": false,
 			"value": true
 		},
+		"show_origin_marker": {
+			"comment": "Debug: draw map grid origin (0,0) cross under Tiles (scales with zoom)",
+			"context": "game",
+			"persist": false,
+			"value": true
+		},
 		"vsync_enabled": {
 			"comment": "When true, caps FPS to monitor refresh; disable to measure uncapped headroom",
 			"context": "game",
 			"value": true
 		},
 		"zoom": {
-			"comment": "Wheel snaps to pixel-aligned steps (n/64 on-screen px per cell); min 0.25 = 16px/cell",
+			"comment": "7-rung wheel ladder (px/cell): 16,24,28,32 default,64,96,128; zoom = px/64",
 			"context": "game",
 			"max": 2.0,
 			"min": 0.25,
@@ -225,7 +231,7 @@
 			"value": 0.5
 		},
 		"zoom_wheel_step": {
-			"comment": "Unused for wheel; zoom steps are adjacent pixel-aligned levels (see ViewTransforms.adjacent_pixel_aligned_zoom)",
+			"comment": "Deprecated — wheel uses ViewTransforms.ZOOM_LEVELS_ON_SCREEN_CELL_PX (7 rungs)",
 			"context": "game",
 			"value": 0.25
 		}

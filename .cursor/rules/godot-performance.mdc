@@ -32,6 +32,8 @@ For any hot-path system (chunk streaming, fog, procedural gen, large buffers):
 
 ## Self-Correction Step (required before implementation)
 
+Every coding task must post the Self-Correction block per [coding-safety.mdc](coding-safety.mdc) before the first file edit. For hot-path systems below, include full pipeline detail in that block.
+
 Before writing or materially changing a complex system, output a **Self-Correction Step**:
 
 - State performance traps (redundant work, wrong process order, per-signal heavy ops, full-buffer copies, unbounded loops).

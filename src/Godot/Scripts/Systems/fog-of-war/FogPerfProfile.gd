@@ -28,6 +28,7 @@ const _REPORT_SCOPE_ORDER: Array[StringName] = [
 	&"persist_player_reveal",
 	&"reveal_disc_path_stamp",
 	&"motion_bake_stamp",
+	&"motion_disc_stamp",
 	&"apply_overlay_projection",
 	&"commit_mask_gpu",
 ]
