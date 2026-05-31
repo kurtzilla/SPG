@@ -17,4 +17,3 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 [System.IO.File]::WriteAllText($hookPath, ($hookLines -join "`n") + "`n", $utf8NoBom)
 Write-Host "Installed: $hookPath"
 Write-Host "Fog/grid smoke runs on commit when staged paths touch those systems."
-Write-Host "Bypass atomic warning: `$env:FOG_SKIP_ATOMIC=1 or `$env:GRID_SKIP_ATOMIC=1 git commit ..."
