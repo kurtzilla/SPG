@@ -197,6 +197,130 @@ theme_override_font_sizes/font_size = 20
 text = "--"
 horizontal_alignment = 2
 
+[node name="PerfBlock" type="PanelContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_stats_body")
+
+[node name="PerfMargin" type="MarginContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock"]
+layout_mode = 2
+theme_override_constants/margin_bottom = 4
+
+[node name="PerfVBox" type="VBoxContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PerfTitle" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = "Performance"
+
+[node name="PerfGrid" type="GridContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 8
+columns = 2
+
+[node name="ViewportKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = "Viewport"
+
+[node name="ViewportValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = "--"
+horizontal_alignment = 2
+
+[node name="MaxFpsKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = "Max FPS"
+
+[node name="MaxFpsValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = "--"
+horizontal_alignment = 2
+
+[node name="PerfControlsGrid" type="GridContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 8
+columns = 3
+
+[node name="FogKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = "Fog Overlay"
+
+[node name="FogToggle" type="CheckButton" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="FogTogglePad" type="Control" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+
+[node name="GridKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = "Grid Overlay"
+
+[node name="GridToggle" type="CheckButton" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="GridTogglePad" type="Control" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+
+[node name="VsyncKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = "VSync"
+
+[node name="VsyncToggle" type="CheckButton" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VsyncTogglePad" type="Control" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+
+[node name="ScaleKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = "Internal Scale"
+
+[node name="ScaleSlider" type="HSlider" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.25
+max_value = 1.0
+step = 0.05
+tick_count = 0
+value = 1.0
+
+[node name="ScaleValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = "1.00"
+horizontal_alignment = 2
+
 [node name="MovementBlock" type="PanelContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox"]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_stats_body")
@@ -214,6 +338,12 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
 theme_override_font_sizes/font_size = 20
 text = "Player Movement"
+
+[node name="MovementNote" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.48, 0.52, 1)
+theme_override_font_sizes/font_size = 16
+text = "Max speed at default zoom (0.5); accel/friction scale with zoom."
 
 [node name="MovementGrid" type="GridContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox"]
 layout_mode = 2
@@ -242,55 +372,7 @@ custom_minimum_size = Vector2(56, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
 theme_override_font_sizes/font_size = 20
-text = "250"
-horizontal_alignment = 2
-
-[node name="AccelKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = "Acceleration"
-
-[node name="AccelSlider" type="HSlider" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid"]
-custom_minimum_size = Vector2(160, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-min_value = 0.0
-max_value = 1.0
-step = 0.1
-tick_count = 0
-value = 0.5
-
-[node name="AccelValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid"]
-custom_minimum_size = Vector2(56, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 20
-text = "25"
-horizontal_alignment = 2
-
-[node name="FrictionKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = "Friction"
-
-[node name="FrictionSlider" type="HSlider" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid"]
-custom_minimum_size = Vector2(160, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-min_value = 0.0
-max_value = 1.0
-step = 0.1
-tick_count = 0
-value = 0.5
-
-[node name="FrictionValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/MovementBlock/MovementMargin/MovementVBox/MovementGrid"]
-custom_minimum_size = Vector2(56, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 20
-text = "45"
+text = "600"
 horizontal_alignment = 2
 
 [node name="FogBlock" type="PanelContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox"]
@@ -317,61 +399,75 @@ theme_override_constants/h_separation = 16
 theme_override_constants/v_separation = 8
 columns = 3
 
-[node name="InitialRevealKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
+[node name="EdgeFeatherKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
 theme_override_font_sizes/font_size = 20
-text = "Initial Reveal Radius *"
+text = "Edge Feather (px)"
 
-[node name="InitialRevealSlider" type="HSlider" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
+[node name="EdgeFeatherSlider" type="HSlider" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
 custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-min_value = 1.0
+min_value = 0.0
 max_value = 256.0
-step = 1.0
+step = 4.0
 tick_count = 0
-value = 20.0
+value = 64.0
 
-[node name="InitialRevealValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
+[node name="EdgeFeatherValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
 custom_minimum_size = Vector2(56, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
 theme_override_font_sizes/font_size = 20
-text = "20"
+text = "64"
 horizontal_alignment = 2
 
-[node name="PlayerRevealKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
+[node name="TrailEdgeKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
 theme_override_font_sizes/font_size = 20
-text = "Player Reveal Radius *"
+text = "Trail Edge Soften (px)"
 
-[node name="PlayerRevealSlider" type="HSlider" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
+[node name="TrailEdgeSlider" type="HSlider" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
 custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-min_value = 1.0
+min_value = 0.0
 max_value = 256.0
-step = 1.0
+step = 4.0
 tick_count = 0
-value = 8.0
+value = 96.0
 
-[node name="PlayerRevealValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
+[node name="TrailEdgeValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
 custom_minimum_size = Vector2(56, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
 theme_override_font_sizes/font_size = 20
-text = "8"
+text = "96"
 horizontal_alignment = 2
 
-[node name="LegendMargin" type="MarginContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox"]
+[node name="RevealFadeKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
 layout_mode = 2
-theme_override_constants/margin_top = 8
+theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
+theme_override_font_sizes/font_size = 20
+text = "Reveal Fade (s)"
 
-[node name="LegendNote" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/LegendMargin"]
+[node name="RevealFadeSlider" type="HSlider" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
+custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.45, 0.48, 0.52, 1)
-theme_override_font_sizes/font_size = 16
-text = "* Requires restart to take effect."
-autowrap_mode = 3
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 2.0
+step = 0.05
+tick_count = 0
+value = 0.35
+
+[node name="RevealFadeValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+text = "0.35"
+horizontal_alignment = 2
+

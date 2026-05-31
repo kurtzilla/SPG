@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8fogsmoke01"]
+
+[ext_resource type="Script" path="res://tools/fog_smoke.gd" id="1_runner"]
+
+[node name="FogSmokeRunner" type="Node"]
+script = ExtResource("1_runner")

@@ -1,6 +1,7 @@
 extends Node
 
 ## Owns Core visibility state and drives the Godot sliding fog presentation buffer.
+## Receives the same FogOverlay instance as MainSandbox ($FogOverlay) — not FogRect.
 
 @export var enabled: bool = true
 
@@ -24,7 +25,7 @@ func _on_fog_settings_changed() -> void:
 	_apply_overlay_visibility()
 	if _visibility != null:
 		_visibility.InitialRevealRadius = Settings.initial_reveal_radius
-		_visibility.MovementRevealRadius = Settings.player_reveal_radius
+		_visibility.MovementRevealRadius = FogOverlay.PLAYER_REVEAL_RADIUS_CELLS
 
 
 func setup(_player: Node2D, fog_overlay: FogOverlay) -> void:
@@ -33,7 +34,7 @@ func setup(_player: Node2D, fog_overlay: FogOverlay) -> void:
 	_visibility = core.CreateVisibilityModel()
 	if _visibility != null:
 		_visibility.InitialRevealRadius = Settings.initial_reveal_radius
-		_visibility.MovementRevealRadius = Settings.player_reveal_radius
+		_visibility.MovementRevealRadius = FogOverlay.PLAYER_REVEAL_RADIUS_CELLS
 	_apply_overlay_visibility()
 
 
@@ -47,6 +48,12 @@ func on_player_cell_changed(cell: Vector2i) -> void:
 	if not enabled or _fog_overlay == null:
 		return
 	_fog_overlay.on_player_cell_changed(cell)
+
+
+func on_player_map_position_changed(map_px: Vector2) -> void:
+	if not enabled or _fog_overlay == null:
+		return
+	_fog_overlay.sync_player_disc_position(map_px)
 
 
 func _apply_overlay_visibility() -> void:

@@ -51,6 +51,15 @@ func _ready() -> void:
 		call_deferred("_connect_viewport_size_signal")
 	_update_projection()
 	_ensure_map_scroll_fallback()
+	_align_loaded_zoom_to_pixel_grid()
+
+
+func _align_loaded_zoom_to_pixel_grid() -> void:
+	var aligned_zoom: float = _snap_zoom_for_settings(Settings.zoom)
+	if is_equal_approx(aligned_zoom, Settings.zoom):
+		return
+	Settings.zoom = aligned_zoom
+	invalidate_viewport_metrics()
 
 
 func _connect_viewport_size_signal() -> void:
@@ -68,7 +77,7 @@ var zoom: float:
 	get:
 		return Settings.zoom
 	set(value):
-		Settings.zoom = value
+		Settings.zoom = _snap_zoom_for_settings(value)
 
 
 func invalidate_viewport_metrics() -> void:
@@ -325,15 +334,29 @@ func pin_screen_center_for_tests(center: Vector2) -> void:
 
 
 func adjust_zoom(delta_steps: int) -> bool:
-	var new_zoom: float = Settings.zoom + float(delta_steps) * _zoom_wheel_step
-	if _zoom_has_limits:
-		new_zoom = clampf(new_zoom, _zoom_min, _zoom_max)
+	if delta_steps == 0:
+		return false
+	var min_z: float = _zoom_min if _zoom_has_limits else 0.01
+	var max_z: float = _zoom_max if _zoom_has_limits else 100.0
+	var direction: int = 1 if delta_steps > 0 else -1
+	var new_zoom: float = Settings.zoom
+	var steps: int = absi(delta_steps)
+	for _step: int in range(steps):
+		new_zoom = ViewTransformsScript.adjacent_pixel_aligned_zoom(
+			new_zoom, direction, min_z, max_z
+		)
 	if is_equal_approx(new_zoom, Settings.zoom):
 		return false
 	invalidate_viewport_metrics()
-	Settings.zoom = new_zoom
+	Settings.zoom = _snap_zoom_for_settings(new_zoom)
 	view_changed.emit()
 	return true
+
+
+func _snap_zoom_for_settings(value: float) -> float:
+	if _zoom_has_limits:
+		return ViewTransformsScript.snap_zoom_pixel_aligned_clamped(value, _zoom_min, _zoom_max)
+	return ViewTransformsScript.snap_zoom_pixel_aligned(value)
 
 
 func _cache_view_settings() -> void:

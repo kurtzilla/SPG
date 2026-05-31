@@ -19,7 +19,7 @@ The goal of this phase is strictly to achieve an isometric view with a 2-charact
   - `Math/`: `GridMath`
 
 - **Interop (`src/Godot/Interop/`):** C# `RefCounted` wrappers + `CoreBridge` autoload. GDScript calls use **PascalCase** (e.g. `CoreBridge.CreatePartyModel()`, `character.MoveRelative()`).
-- **World streaming (`src/Godot/Scripts/World/`):** `ChunkManager` — 32×32 procedural chunks, 3×3 load window, `get_tile_type_at_global_pos()`. Follow `.cursor/rules/godot-performance.mdc` (Self-Correction Step for hot-path changes). Grid overlay sync is throttled to scroll movement, not idle frames.
+- **World streaming (`src/Godot/Scripts/World/`):** `ChunkManager` — 32×32 procedural chunks, 3×3 load window, `get_tile_type_at_global_pos()`. This is the **reference pattern** for holistic performance: budgeted job queue, hot/cold path split, merged work per frame. Fog and other presentation pipelines must follow the same shape — see `.cursor/rules/godot-performance.mdc` and **Performance architecture** in `architecture.md`. Grid overlay sync is throttled to scroll movement, not idle frames.
 
 - **Godot (`src/Godot/`):** GDScript scenes and visuals.
 

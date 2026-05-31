@@ -2,11 +2,18 @@
 
 [ext_resource type="Script" path="res://src/Godot/Scripts/GridOverlay.gd" id="1_grid_overlay"]
 
-[node name="GridLayer" type="CanvasLayer"]
+[node name="GridOverlay" type="CanvasLayer"]
 follow_viewport_enabled = true
 layer = 0
+script = ExtResource("1_grid_overlay")
 
-[node name="GridRect" type="ColorRect" parent="."]
+[node name="GridViewport" type="SubViewport" parent="."]
+transparent_bg = true
+handle_input_locally = false
+size = Vector2i(1920, 1080)
+render_target_update_mode = 0
+
+[node name="GridDrawRect" type="ColorRect" parent="GridViewport"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -14,4 +21,14 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0)
-script = ExtResource("1_grid_overlay")
+
+[node name="GridDisplay" type="TextureRect" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 0

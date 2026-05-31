@@ -8,14 +8,10 @@ const TerrainTileTexturesRes = preload("res://src/Godot/Scripts/TerrainTileTextu
 const TT = preload("res://src/Godot/Scripts/World/TerrainType.gd")
 
 const SOURCE_ID: int = 0
-const TERRAIN_SET: int = 0
 
 const ATLAS_LAND: Vector2i = Vector2i(0, 0)
 const ATLAS_WATER: Vector2i = Vector2i(1, 0)
 const ATLAS_MUD: Vector2i = Vector2i(2, 0)
-
-## Godot 4.3 TileSet.CellNeighbor peering slots (0..15); no TERRAIN_PEERING_BITS_COUNT.
-const PEERING_BIT_COUNT: int = 16
 
 
 static func atlas_for_terrain(terrain: int) -> Vector2i:
@@ -41,16 +37,6 @@ static func build() -> TileSet:
 	for atlas_coords in [ATLAS_LAND, ATLAS_WATER, ATLAS_MUD]:
 		atlas.create_tile(atlas_coords)
 
-	tile_set.add_terrain_set()
-	# add_terrain() returns void; terrain ids are 0..n in add order (matches Core ordinals).
-	tile_set.add_terrain(TERRAIN_SET)
-	tile_set.add_terrain(TERRAIN_SET)
-	tile_set.add_terrain(TERRAIN_SET)
-
-	_configure_terrain_tile(atlas, ATLAS_LAND, TT.LAND)
-	_configure_terrain_tile(atlas, ATLAS_WATER, TT.WATER)
-	_configure_terrain_tile(atlas, ATLAS_MUD, TT.MUD)
-
 	return tile_set
 
 
@@ -64,16 +50,3 @@ static func _build_atlas_texture(tile_size: int) -> Texture2D:
 	atlas_image.blit_rect(water, Rect2i(0, 0, tile_size, tile_size), Vector2i(tile_size, 0))
 	atlas_image.blit_rect(mud, Rect2i(0, 0, tile_size, tile_size), Vector2i(tile_size * 2, 0))
 	return ImageTexture.create_from_image(atlas_image)
-
-
-static func _configure_terrain_tile(
-	atlas: TileSetAtlasSource,
-	atlas_coords: Vector2i,
-	terrain_id: int
-) -> void:
-	var tile_data: TileData = atlas.get_tile_data(atlas_coords, 0)
-	tile_data.set_terrain_set(TERRAIN_SET)
-	tile_data.set_terrain(terrain_id)
-	for bit in range(PEERING_BIT_COUNT):
-		if tile_data.is_valid_terrain_peering_bit(bit):
-			tile_data.set_terrain_peering_bit(bit, terrain_id)

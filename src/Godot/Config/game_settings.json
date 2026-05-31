@@ -1,45 +1,101 @@
 {
 	"_comment": "Single source of truth for game tuning. Edit values here; user://settings.cfg is not used in this dev stage.",
 	"fog": {
+		"baked_edge_soften_px": {
+			"comment": "Deprecated: trail feather now uses edge_feather_px via unified radial shader feather",
+			"context": "game",
+			"max": 256.0,
+			"min": 0.0,
+			"step": 4.0,
+			"value": 96.0
+		},
 		"buffer_size_cells": {
-			"comment": "Sliding fog presentation buffer (1 texel = 1 grid cell)",
+			"comment": "Sliding fog window size in cells; fog texture is 1 texel per cell (radial edge feather in shader)",
 			"context": "game",
 			"min": 32.0,
 			"value": 128.0
+		},
+		"edge_aa_strength": {
+			"comment": "Optional screen-space edge AA on combined reveal (0 = off, restores pre-zoom-fix look)",
+			"context": "game",
+			"max": 1.0,
+			"min": 0.0,
+			"step": 0.05,
+			"value": 0.0
+		},
+		"edge_feather_px": {
+			"comment": "Fog edge softness in map px (baked mask + live disc); does not affect terrain",
+			"context": "game",
+			"max": 256.0,
+			"min": 0.0,
+			"step": 4.0,
+			"value": 48.0
 		},
 		"enabled": {
 			"context": "game",
 			"value": true
 		},
-		"initial_reveal_radius": {
-			"comment": "Spawn reveal radius. Mirrors VisibilityModel.DefaultInitialRevealRadius when not set from Godot.",
+		"initial_reveal_corner_radius": {
+			"comment": "Corner rounding (cells) for spawn rounded-square reveal; 0 = auto (~25% of initial radius). Keep small for square-with-filleted-corners.",
 			"context": "game",
 			"max": 256.0,
-			"min": 1.0,
-			"persist": false,
+			"min": 0.0,
 			"step": 1.0,
-			"value": 19
+			"value": 4.0
 		},
-		"player_reveal_radius": {
-			"comment": "Movement reveal radius. Mirrors VisibilityModel.DefaultMovementRevealRadius when not set from Godot.",
+		"initial_reveal_radius": {
+			"comment": "Spawn rounded-square reveal radius (cells); outer edge uses radius+0.5 cells for cell coverage; config-only, applied at bootstrap",
 			"context": "game",
 			"max": 256.0,
 			"min": 1.0,
 			"persist": false,
 			"step": 1.0,
-			"value": 13.0
+			"value": 20.0
+		},
+		"motion_bake_interval_sec": {
+			"comment": "Deprecated: motion trail uses live shader disc while moving; bake runs on stop/cell cross only",
+			"context": "game",
+			"max": 1.0,
+			"min": 0.0,
+			"step": 0.05,
+			"value": 0.0
+		},
+		"gpu_commit_min_interval_sec": {
+			"comment": "Min seconds between throttled GPU mask uploads; cell cross forces immediate flush",
+			"context": "game",
+			"max": 1.0,
+			"min": 0.0,
+			"step": 0.008,
+			"value": 0.016
+		},
+		"motion_bake_min_distance_px": {
+			"comment": "Min map pixels moved before throttled trail bake (~half cell at 64px)",
+			"context": "game",
+			"max": 128.0,
+			"min": 0.0,
+			"step": 4.0,
+			"value": 32.0
 		},
 		"recenter_margin_cells": {
 			"comment": "Re-center buffer when player is within this many cells of the buffer edge",
 			"context": "game",
 			"min": 4.0,
 			"value": 24.0
+		},
+		"reveal_fade_seconds": {
+			"comment": "Presentation fade from foggy to clear; 0 = instant snap",
+			"context": "game",
+			"max": 2.0,
+			"min": 0.0,
+			"step": 0.05,
+			"value": 0.0
 		}
 	},
 	"grid": {
 		"debug_grid_lines": {
+			"comment": "Fullscreen grid shader overlay; disable for higher idle FPS",
 			"context": "game",
-			"value": true
+			"value": false
 		},
 		"line_color": {
 			"context": "game",
@@ -53,24 +109,20 @@
 		"line_width_px": {
 			"context": "game",
 			"value": 1.0
-		},
-		"visual_radius_buffer": {
-			"context": "game",
-			"value": 2.0
 		}
 	},
 	"hud": {
-		"acceleration_slider_step": {
+		"fog_fade_slider_step": {
 			"context": "game",
-			"value": 1.0
+			"value": 0.05
+		},
+		"fog_feather_slider_step": {
+			"context": "game",
+			"value": 4.0
 		},
 		"font_size": {
 			"context": "game",
 			"value": 10.0
-		},
-		"friction_slider_step": {
-			"context": "game",
-			"value": 1.0
 		},
 		"max_speed_slider_step": {
 			"context": "game",
@@ -88,28 +140,31 @@
 	},
 	"player_movement": {
 		"acceleration": {
+			"comment": "Map-local px/s² at view.zoom default (0.5); PlayerController scales by (zoom/default)^2",
 			"context": "game",
-			"max": 60.0,
+			"max": 120.0,
 			"min": 5.0,
 			"persist": false,
 			"step": 1.0,
-			"value": 25.0
+			"value": 50.0
 		},
 		"friction": {
+			"comment": "Map-local px/s² at view.zoom default (0.5); PlayerController scales by (zoom/default)^2",
 			"context": "game",
-			"max": 60.0,
+			"max": 120.0,
 			"min": 5.0,
 			"persist": false,
 			"step": 1.0,
-			"value": 45.0
+			"value": 90.0
 		},
 		"max_speed": {
+			"comment": "Map-local px/s at view.zoom default (0.5); PlayerController scales by (zoom/default)^2",
 			"context": "game",
-			"max": 675.0,
-			"min": 68.0,
+			"max": 1350.0,
+			"min": 136.0,
 			"persist": true,
 			"step": 10.0,
-			"value": 650.0
+			"value": 600.0
 		},
 		"velocity_snap_threshold_sq": {
 			"context": "game",
@@ -131,6 +186,22 @@
 	},
 	"schema_version": 1.0,
 	"view": {
+		"internal_scale": {
+			"comment": "Render resolution scale (1.0 = native viewport; 0.5 = half pixels)",
+			"context": "game",
+			"max": 1.0,
+			"min": 0.25,
+			"step": 0.05,
+			"value": 1.0
+		},
+		"max_fps": {
+			"comment": "Engine frame cap; 0 = unlimited (respects vsync when enabled)",
+			"context": "game",
+			"max": 360.0,
+			"min": 0.0,
+			"step": 1.0,
+			"value": 0.0
+		},
 		"save_debounce_sec": {
 			"context": "game",
 			"value": 0.5
@@ -140,16 +211,23 @@
 			"persist": false,
 			"value": true
 		},
+		"vsync_enabled": {
+			"comment": "When true, caps FPS to monitor refresh; disable to measure uncapped headroom",
+			"context": "game",
+			"value": true
+		},
 		"zoom": {
+			"comment": "Wheel snaps to pixel-aligned steps (n/64 on-screen px per cell); min 0.25 = 16px/cell",
 			"context": "game",
 			"max": 2.0,
-			"min": 0.2,
+			"min": 0.25,
 			"persist": false,
 			"value": 0.5
 		},
 		"zoom_wheel_step": {
+			"comment": "Unused for wheel; zoom steps are adjacent pixel-aligned levels (see ViewTransforms.adjacent_pixel_aligned_zoom)",
 			"context": "game",
-			"value": 0.1
+			"value": 0.25
 		}
 	},
 	"world": {
@@ -186,12 +264,30 @@
 		"cells_per_frame": {
 			"context": "game",
 			"min": 1.0,
-			"value": 192.0
+			"value": 256.0
 		},
 		"chunk_frame_budget_usec": {
 			"context": "game",
 			"min": 500.0,
 			"value": 3500.0
+		},
+		"chunk_show_min_paint_cells": {
+			"comment": "Min cells painted before a streaming chunk TileMapLayer becomes visible; avoids hollow perimeter flash",
+			"context": "game",
+			"min": 1.0,
+			"value": 256.0
+		},
+		"max_paint_cells_per_frame": {
+			"comment": "Hard cap on set_cell calls per frame across all chunk paint jobs; burst raises job concurrency only",
+			"context": "game",
+			"min": 1.0,
+			"value": 64.0
+		},
+		"max_gen_cells_per_frame": {
+			"comment": "Hard cap on terrain gen cells per frame; burst raises job concurrency only",
+			"context": "game",
+			"min": 1.0,
+			"value": 128.0
 		},
 		"chunk_size": {
 			"context": "game",
@@ -204,9 +300,10 @@
 			"value": 2.0
 		},
 		"load_radius": {
+			"comment": "Chunk keep ring radius around player; 2 = 5x5 chunks minimum",
 			"context": "game",
 			"min": 0.0,
-			"value": 1.0
+			"value": 2.0
 		},
 		"load_radius_buffer": {
 			"context": "game",
@@ -221,7 +318,27 @@
 		"max_active_chunk_jobs": {
 			"context": "game",
 			"min": 1.0,
-			"value": 2.0
+			"value": 3.0
+		},
+		"motion_lead_chunks": {
+			"comment": "Prefetch ring shifted along velocity by this many chunks",
+			"context": "game",
+			"min": 0.0,
+			"value": 1.0
+		},
+		"motion_reprio_min_speed_px": {
+			"comment": "Map px/s; above this, pending chunk loads bias toward movement direction",
+			"context": "game",
+			"min": 0.0,
+			"value": 80.0
+		},
+		"motion_reprio_interval_sec": {
+			"comment": "Min seconds between in-chunk motion prefetch/burst refreshes (chunk cross still immediate)",
+			"context": "game",
+			"max": 1.0,
+			"min": 0.0,
+			"step": 0.05,
+			"value": 0.1
 		},
 		"mud_threshold": {
 			"context": "game",

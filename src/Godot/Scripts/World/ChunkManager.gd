@@ -10,6 +10,7 @@ const NO_CHUNK: Vector2i = Vector2i(999999, 999999)
 
 const ChunkDataScript = preload("res://src/Godot/Scripts/World/ChunkData.gd")
 const ChunkLoadJobScript = preload("res://src/Godot/Scripts/World/ChunkLoadJob.gd")
+const ChunkPerfProfileRes = preload("res://src/Godot/Scripts/World/ChunkPerfProfile.gd")
 const TT = preload("res://src/Godot/Scripts/World/TerrainType.gd")
 const ViewMetricsScript = preload("res://src/Godot/Scripts/ViewMetrics.gd")
 const TerrainSandboxTileSetScript = preload("res://src/Godot/Scripts/TerrainSandboxTileSet.gd")
@@ -27,6 +28,9 @@ var _water_threshold: float = 0.62
 var _mud_threshold: float = 0.45
 var _cells_per_frame: int = 192
 var _cells_paint_per_frame: int = 96
+var _max_paint_cells_per_frame: int = 64
+var _max_gen_cells_per_frame: int = 128
+var _chunk_show_min_paint_cells: int = 256
 var _chunk_frame_budget_usec: int = 3500
 var _bootstrap_cells_per_frame: int = 512
 var _bootstrap_cells_paint_per_frame: int = 256
@@ -40,6 +44,10 @@ var _bootstrap_phase: BootstrapPhase = BootstrapPhase.NONE
 var _spawn_safe_zone_x: int = 0
 var _spawn_safe_zone_y: int = 0
 var _safe_zone_radius: int = 2
+var _safe_zone_lo_x: int = 0
+var _safe_zone_hi_x: int = 0
+var _safe_zone_lo_y: int = 0
+var _safe_zone_hi_y: int = 0
 var _load_radius: int = 2
 var _load_radius_buffer: int = 1
 var _load_radius_view_padding: int = 2
@@ -49,11 +57,13 @@ var _tile_set: TileSet
 var _chunks: Dictionary = {}
 var _layers: Dictionary = {}
 var _last_center_chunk: Vector2i = NO_CHUNK
+var _last_load_center_chunk: Vector2i = NO_CHUNK
 var _tile_size: int = ViewMetricsScript.CELL_SIZE_PX
 
 var _atlas_land: Vector2i
 var _atlas_water: Vector2i
 var _atlas_mud: Vector2i
+var _atlas_by_terrain: Array[Vector2i] = []
 
 var _pending_coords: Array[Vector2i] = []
 var _pending_loads: Dictionary = {}
@@ -69,13 +79,30 @@ var _prewarm_remaining: int = 0
 const VIEW_REFRESH_BURST_FRAMES: int = 3
 const VIEW_REFRESH_BURST_JOB_MULT: int = 3
 const VIEW_REFRESH_BURST_ACQUIRE_MULT: int = 3
-const VIEW_REFRESH_BURST_CELL_MULT: int = 2
+
+const MOTION_BURST_FRAMES: int = 4
+const MOTION_BURST_JOB_MULT: int = 2
+const MOTION_BURST_ACQUIRE_MULT: int = 2
+const CHUNK_CROSS_BURST_MAX_FRAMES: int = 30
+const CHUNK_EDGE_PREFETCH_CELLS: int = 16
+const CHUNK_EDGE_URGENT_CELLS: int = 8
 
 var _view_refresh_burst_remaining: int = 0
 var _burst_max_active_jobs: int = 0
 var _burst_layer_acquires_per_frame: int = 0
-var _burst_cells_per_frame: int = 0
-var _burst_cells_paint_per_frame: int = 0
+
+var _motion_burst_remaining: int = 0
+var _motion_burst_max_active_jobs: int = 0
+var _motion_burst_layer_acquires_per_frame: int = 0
+var _chunk_cross_burst_remaining: int = 0
+var _chunk_cross_burst_elapsed: int = 0
+var _chunk_cross_burst_max_active_jobs: int = 0
+var _chunk_cross_burst_layer_acquires_per_frame: int = 0
+var _motion_lead_chunks: int = 1
+var _motion_reprio_min_speed_sq: float = 80.0 * 80.0
+var _motion_reprio_interval_sec: float = 0.1
+var _last_motion_reprio_sec: float = -999999.0
+var _load_priority_axis: Vector2i = Vector2i.ZERO
 
 
 func _ready() -> void:
@@ -89,6 +116,7 @@ func _ready() -> void:
 	_atlas_land = TerrainSandboxTileSetScript.atlas_for_terrain(TT.LAND)
 	_atlas_water = TerrainSandboxTileSetScript.atlas_for_terrain(TT.WATER)
 	_atlas_mud = TerrainSandboxTileSetScript.atlas_for_terrain(TT.MUD)
+	_atlas_by_terrain = [_atlas_land, _atlas_water, _atlas_mud]
 	_prewarm_remaining = mini(_keep_offsets.size(), 9)
 	call_deferred("_prewarm_layer_pool_tick")
 
@@ -102,6 +130,13 @@ func _read_world_settings() -> void:
 	_mud_threshold = Settings.get_float("world.mud_threshold")
 	_cells_per_frame = Settings.get_int("world.cells_per_frame")
 	_cells_paint_per_frame = Settings.get_int("world.cells_paint_per_frame")
+	_max_paint_cells_per_frame = maxi(Settings.get_int("world.max_paint_cells_per_frame"), 1)
+	_max_gen_cells_per_frame = maxi(Settings.get_int("world.max_gen_cells_per_frame"), 1)
+	_chunk_show_min_paint_cells = clampi(
+		Settings.get_int("world.chunk_show_min_paint_cells"),
+		1,
+		_chunk_size * _chunk_size
+	)
 	_chunk_frame_budget_usec = Settings.get_int("world.chunk_frame_budget_usec")
 	_unload_chunks_per_frame = Settings.get_int("world.unload_chunks_per_frame")
 	_max_active_jobs = maxi(Settings.get_int("world.max_active_chunk_jobs"), 1)
@@ -114,10 +149,18 @@ func _read_world_settings() -> void:
 	_spawn_safe_zone_x = Settings.get_int("world.spawn_safe_zone_x")
 	_spawn_safe_zone_y = Settings.get_int("world.spawn_safe_zone_y")
 	_safe_zone_radius = Settings.get_int("world.safe_zone_radius")
+	_safe_zone_lo_x = _spawn_safe_zone_x - _safe_zone_radius
+	_safe_zone_hi_x = _spawn_safe_zone_x + _safe_zone_radius
+	_safe_zone_lo_y = _spawn_safe_zone_y - _safe_zone_radius
+	_safe_zone_hi_y = _spawn_safe_zone_y + _safe_zone_radius
 	_load_radius = Settings.get_int("world.load_radius")
 	_load_radius_buffer = Settings.get_int("world.load_radius_buffer")
 	if Settings.has("world.load_radius_view_padding"):
 		_load_radius_view_padding = maxi(Settings.get_int("world.load_radius_view_padding"), 0)
+	_motion_lead_chunks = maxi(Settings.get_int("world.motion_lead_chunks"), 0)
+	var motion_speed: float = Settings.get_float("world.motion_reprio_min_speed_px")
+	_motion_reprio_min_speed_sq = motion_speed * motion_speed
+	_motion_reprio_interval_sec = maxf(Settings.get_float("world.motion_reprio_interval_sec"), 0.0)
 	_cells_paint_per_frame = mini(_cells_paint_per_frame, _cells_per_frame)
 	_bootstrap_cells_paint_per_frame = mini(_bootstrap_cells_paint_per_frame, _bootstrap_cells_per_frame)
 
@@ -148,15 +191,34 @@ func _build_chunk_offsets() -> void:
 	_pool_target_size = maxi(_keep_offsets.size(), _prefetch_offsets.size())
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	ChunkPerfProfileRes.notify_frame()
 	_layer_acquires_this_frame = 0
 	_try_start_jobs()
 	_step_active_jobs()
 	_advance_bootstrap_phase()
+	ChunkPerfProfileRes.maybe_report(delta)
 	if _view_refresh_burst_remaining > 0:
 		_view_refresh_burst_remaining -= 1
-	else:
+	if _motion_burst_remaining > 0:
+		_motion_burst_remaining -= 1
+	if _chunk_cross_burst_remaining > 0:
+		_chunk_cross_burst_elapsed += 1
+		if (
+			_chunk_cross_burst_elapsed >= CHUNK_CROSS_BURST_MAX_FRAMES
+			or not _leading_edge_streaming_incomplete()
+		):
+			_chunk_cross_burst_remaining = 0
+			_chunk_cross_burst_elapsed = 0
+	if (
+		_view_refresh_burst_remaining <= 0
+		and _motion_burst_remaining <= 0
+		and _chunk_cross_burst_remaining <= 0
+	):
 		_step_unload_budget()
+	elif _motion_burst_remaining > 0 or _chunk_cross_burst_remaining > 0:
+		# Defer unloads while catching up terrain ahead of movement / chunk cross.
+		_purge_unload_queue_for_wanted(_active_wanted_set())
 
 
 func force_viewport_chunk_refresh() -> void:
@@ -165,7 +227,10 @@ func force_viewport_chunk_refresh() -> void:
 	_purge_unload_queue_for_wanted(_prefetch_wanted)
 	_begin_view_refresh_burst()
 	if _last_center_chunk != NO_CHUNK:
-		_refresh_active_chunks(_last_center_chunk)
+		var load_center: Vector2i = _last_load_center_chunk
+		if load_center == NO_CHUNK:
+			load_center = _last_center_chunk
+		_refresh_active_chunks(_last_center_chunk, load_center)
 
 
 ## One-shot synchronous load of the keep ring on scene start.
@@ -204,20 +269,164 @@ func _begin_view_refresh_burst() -> void:
 	_view_refresh_burst_remaining = VIEW_REFRESH_BURST_FRAMES
 	_burst_max_active_jobs = _max_active_jobs * VIEW_REFRESH_BURST_JOB_MULT
 	_burst_layer_acquires_per_frame = _layer_acquires_per_frame * VIEW_REFRESH_BURST_ACQUIRE_MULT
-	_burst_cells_per_frame = _cells_per_frame * VIEW_REFRESH_BURST_CELL_MULT
-	_burst_cells_paint_per_frame = _cells_paint_per_frame * VIEW_REFRESH_BURST_CELL_MULT
+
+
+func _begin_motion_burst() -> void:
+	_motion_burst_remaining = MOTION_BURST_FRAMES
+	_motion_burst_max_active_jobs = _max_active_jobs * MOTION_BURST_JOB_MULT
+	_motion_burst_layer_acquires_per_frame = _layer_acquires_per_frame * MOTION_BURST_ACQUIRE_MULT
+
+
+func _begin_chunk_cross_burst() -> void:
+	_chunk_cross_burst_remaining = 1
+	_chunk_cross_burst_elapsed = 0
+	_chunk_cross_burst_max_active_jobs = _max_active_jobs * MOTION_BURST_JOB_MULT
+	_chunk_cross_burst_layer_acquires_per_frame = _layer_acquires_per_frame * MOTION_BURST_ACQUIRE_MULT
+
+
+func _leading_edge_streaming_incomplete() -> bool:
+	var load_center: Vector2i = _last_load_center_chunk
+	if load_center == NO_CHUNK:
+		load_center = _last_center_chunk
+	if load_center == NO_CHUNK:
+		return not _active_jobs.is_empty()
+	for job: ChunkLoadJob in _active_jobs:
+		if _is_leading_edge_coord(job.coord, load_center):
+			return true
+	for coord: Vector2i in _pending_coords:
+		if _is_leading_edge_coord(coord, load_center):
+			return true
+	return false
+
+
+func _is_leading_edge_coord(coord: Vector2i, load_center: Vector2i) -> bool:
+	if _load_priority_axis == Vector2i.ZERO:
+		return absi(coord.x - load_center.x) + absi(coord.y - load_center.y) <= 1
+	if _load_priority_axis.x > 0:
+		return coord.x >= load_center.x
+	if _load_priority_axis.x < 0:
+		return coord.x <= load_center.x
+	if _load_priority_axis.y > 0:
+		return coord.y >= load_center.y
+	return coord.y <= load_center.y
+
+
+func _load_priority(coord: Vector2i, load_center: Vector2i) -> int:
+	var priority: int = absi(coord.x - load_center.x) + absi(coord.y - load_center.y)
+	if _load_priority_axis.x > 0 and coord.x > load_center.x:
+		priority -= 2
+	elif _load_priority_axis.x < 0 and coord.x < load_center.x:
+		priority -= 2
+	if _load_priority_axis.y > 0 and coord.y > load_center.y:
+		priority -= 2
+	elif _load_priority_axis.y < 0 and coord.y < load_center.y:
+		priority -= 2
+	return priority
+
+
+func _reprioritize_pending(load_center: Vector2i) -> void:
+	if _pending_coords.is_empty():
+		return
+	_pending_coords.sort_custom(
+		func(a: Vector2i, b: Vector2i) -> bool:
+			return _load_priority(a, load_center) < _load_priority(b, load_center)
+	)
+
+
+func _velocity_chunk_axis(velocity_map_px: Vector2) -> Vector2i:
+	if velocity_map_px.length_squared() < _motion_reprio_min_speed_sq:
+		return Vector2i.ZERO
+	if absf(velocity_map_px.x) >= absf(velocity_map_px.y):
+		if is_zero_approx(velocity_map_px.x):
+			return Vector2i.ZERO
+		return Vector2i(signi(int(sign(velocity_map_px.x))), 0)
+	if is_zero_approx(velocity_map_px.y):
+		return Vector2i.ZERO
+	return Vector2i(0, signi(int(sign(velocity_map_px.y))))
 
 
 func sync_center_from_player_map_px(map_px: Vector2) -> void:
-	update_center_grid(world_px_to_grid_tile(map_px))
+	sync_center_from_player_motion(map_px, Vector2.ZERO)
 
 
-func update_center_grid(grid_tile: Vector2i) -> void:
-	var center_chunk := grid_to_chunk_coord(grid_tile)
-	if center_chunk == _last_center_chunk:
+## Keeps prefetch ahead of fast movement; throttled reprioritize while moving (not every frame).
+func sync_center_from_player_motion(map_px: Vector2, velocity_map_px: Vector2 = Vector2.ZERO) -> void:
+	_load_priority_axis = _velocity_chunk_axis(velocity_map_px)
+	var grid_tile: Vector2i = world_px_to_grid_tile(map_px)
+	var center_chunk: Vector2i = grid_to_chunk_coord(grid_tile)
+	var load_center: Vector2i = center_chunk
+	if _load_priority_axis != Vector2i.ZERO and _motion_lead_chunks > 0:
+		load_center = center_chunk + _load_priority_axis * _motion_lead_chunks
+
+	if center_chunk != _last_center_chunk:
+		update_center_grid(grid_tile, load_center)
+		return
+
+	_maybe_prefetch_chunk_edge(grid_tile, load_center, velocity_map_px)
+	_maybe_motion_prefetch(load_center, velocity_map_px)
+
+
+func _maybe_motion_prefetch(load_center: Vector2i, velocity_map_px: Vector2) -> void:
+	if velocity_map_px.length_squared() < _motion_reprio_min_speed_sq:
+		return
+	var now_sec: float = Time.get_ticks_msec() * 0.001
+	if _motion_reprio_interval_sec > 0.0 and now_sec - _last_motion_reprio_sec < _motion_reprio_interval_sec:
+		return
+	_last_motion_reprio_sec = now_sec
+	_reprioritize_pending(load_center)
+	_ensure_prefetch_at_load_center(load_center)
+	if _motion_burst_remaining <= 0:
+		_begin_motion_burst()
+
+
+func update_center_grid(grid_tile: Vector2i, load_center: Vector2i = NO_CHUNK) -> void:
+	var center_chunk: Vector2i = grid_to_chunk_coord(grid_tile)
+	if load_center == NO_CHUNK:
+		load_center = center_chunk
+	if center_chunk == _last_center_chunk and load_center == _last_load_center_chunk:
 		return
 	_last_center_chunk = center_chunk
-	_refresh_active_chunks(center_chunk)
+	_last_load_center_chunk = load_center
+	var t0: int = ChunkPerfProfileRes.begin(&"chunk_cross_refresh")
+	_refresh_active_chunks(center_chunk, load_center)
+	ChunkPerfProfileRes.end(&"chunk_cross_refresh", t0)
+	_reprioritize_pending(load_center)
+	_begin_chunk_cross_burst()
+
+
+func _maybe_prefetch_chunk_edge(grid_tile: Vector2i, load_center: Vector2i, velocity_map_px: Vector2) -> void:
+	if _bootstrap_phase == BootstrapPhase.KEEP:
+		return
+	if velocity_map_px.length_squared() < _motion_reprio_min_speed_sq:
+		return
+	var chunk_origin: Vector2i = grid_to_chunk_coord(grid_tile) * _chunk_size
+	var local: Vector2i = grid_tile - chunk_origin
+	var edge_limit: int = CHUNK_EDGE_PREFETCH_CELLS
+	var near_edge: bool = (
+		local.x <= edge_limit
+		or local.y <= edge_limit
+		or local.x >= _chunk_size - 1 - edge_limit
+		or local.y >= _chunk_size - 1 - edge_limit
+	)
+	if near_edge:
+		var urgent: bool = (
+			local.x <= CHUNK_EDGE_URGENT_CELLS
+			or local.y <= CHUNK_EDGE_URGENT_CELLS
+			or local.x >= _chunk_size - 1 - CHUNK_EDGE_URGENT_CELLS
+			or local.y >= _chunk_size - 1 - CHUNK_EDGE_URGENT_CELLS
+		)
+		if not urgent:
+			var now_sec: float = Time.get_ticks_msec() * 0.001
+			if (
+				_motion_reprio_interval_sec > 0.0
+				and now_sec - _last_motion_reprio_sec < _motion_reprio_interval_sec
+			):
+				return
+		_last_motion_reprio_sec = Time.get_ticks_msec() * 0.001
+		_reprioritize_pending(load_center)
+		_ensure_prefetch_at_load_center(load_center)
+		if _motion_burst_remaining <= 0 and _chunk_cross_burst_remaining <= 0:
+			_begin_motion_burst()
 
 
 func get_tile_type_at_grid(grid_tile: Vector2i) -> int:
@@ -248,7 +457,9 @@ func world_px_to_grid_tile(pos: Vector2) -> Vector2i:
 	)
 
 
-func _refresh_active_chunks(center: Vector2i) -> void:
+func _refresh_active_chunks(center: Vector2i, load_center: Vector2i = NO_CHUNK) -> void:
+	if load_center == NO_CHUNK:
+		load_center = center
 	if _layers.is_empty():
 		_bootstrap_phase = BootstrapPhase.KEEP
 
@@ -259,6 +470,9 @@ func _refresh_active_chunks(center: Vector2i) -> void:
 	_prefetch_wanted.clear()
 	for offset: Vector2i in _prefetch_offsets:
 		_prefetch_wanted[center + offset] = true
+	if load_center != center:
+		for offset: Vector2i in _prefetch_offsets:
+			_prefetch_wanted[load_center + offset] = true
 
 	if _bootstrap_phase == BootstrapPhase.KEEP:
 		_cancel_loads_not_in_prefetch(_keep_wanted)
@@ -277,33 +491,37 @@ func _refresh_active_chunks(center: Vector2i) -> void:
 				var coord: Vector2i = center + offset
 				if _layers.has(coord) or _is_chunk_pending(coord):
 					continue
-				_enqueue_load(coord, center)
+				_enqueue_load(coord, load_center)
 		BootstrapPhase.PREFETCH:
-			_enqueue_prefetch_ring(center)
+			_enqueue_prefetch_ring(load_center)
 		_:
-			for offset: Vector2i in _prefetch_offsets:
-				var coord: Vector2i = center + offset
-				if _layers.has(coord) or _is_chunk_pending(coord):
-					continue
-				_enqueue_load(coord, center)
+			_enqueue_prefetch_ring(load_center)
 
 
-func _enqueue_prefetch_ring(center: Vector2i) -> void:
+func _enqueue_prefetch_ring(load_center: Vector2i) -> void:
 	for offset: Vector2i in _prefetch_offsets:
-		var coord: Vector2i = center + offset
+		var coord: Vector2i = load_center + offset
 		if _layers.has(coord) or _is_chunk_pending(coord):
 			continue
-		_enqueue_load(coord, center)
+		_enqueue_load(coord, load_center)
 
 
-func _enqueue_load(coord: Vector2i, center: Vector2i) -> void:
+func _ensure_prefetch_at_load_center(load_center: Vector2i) -> void:
+	if _bootstrap_phase == BootstrapPhase.KEEP:
+		return
+	_enqueue_prefetch_ring(load_center)
+
+
+func _enqueue_load(coord: Vector2i, load_center: Vector2i) -> void:
 	if _pending_loads.has(coord):
 		return
-	var priority: int = 0 if coord == center and _bootstrap_phase == BootstrapPhase.KEEP else absi(coord.x - center.x) + absi(coord.y - center.y)
+	var priority: int = _load_priority(coord, load_center)
+	if coord == load_center and _bootstrap_phase == BootstrapPhase.KEEP:
+		priority = 0
 	var insert_at: int = _pending_coords.size()
 	for i: int in range(_pending_coords.size()):
 		var existing: Vector2i = _pending_coords[i]
-		var existing_priority: int = absi(existing.x - center.x) + absi(existing.y - center.y)
+		var existing_priority: int = _load_priority(existing, load_center)
 		if priority < existing_priority:
 			insert_at = i
 			break
@@ -365,41 +583,50 @@ func _cancel_loads_not_in_prefetch(prefetch_wanted: Dictionary) -> void:
 
 
 func _effective_gen_budget() -> int:
-	if _view_refresh_burst_remaining > 0:
-		return maxi(_burst_cells_per_frame, 1)
+	var budget: int = _cells_per_frame
 	if _bootstrap_phase == BootstrapPhase.KEEP:
-		return maxi(_bootstrap_cells_per_frame, 1)
-	return maxi(_cells_per_frame, 1)
+		budget = _bootstrap_cells_per_frame
+	return mini(maxi(budget, 1), _max_gen_cells_per_frame)
 
 
 func _effective_paint_budget() -> int:
-	if _view_refresh_burst_remaining > 0:
-		return maxi(_burst_cells_paint_per_frame, 1)
+	var budget: int = _cells_paint_per_frame
 	if _bootstrap_phase == BootstrapPhase.KEEP:
-		return maxi(_bootstrap_cells_paint_per_frame, 1)
-	return maxi(_cells_paint_per_frame, 1)
+		budget = _bootstrap_cells_paint_per_frame
+	return mini(maxi(budget, 1), _max_paint_cells_per_frame)
 
 
 func _effective_frame_budget_usec() -> int:
+	var budget: int = _chunk_frame_budget_usec
 	if _bootstrap_phase == BootstrapPhase.KEEP:
-		return _bootstrap_chunk_frame_budget_usec
-	return _chunk_frame_budget_usec
+		budget = _bootstrap_chunk_frame_budget_usec
+	return budget
 
 
 func _effective_max_active_jobs() -> int:
-	if _view_refresh_burst_remaining > 0:
-		return maxi(_burst_max_active_jobs, 1)
+	var jobs: int = _max_active_jobs
 	if _bootstrap_phase == BootstrapPhase.KEEP:
-		return _bootstrap_max_active_jobs
-	return _max_active_jobs
+		jobs = _bootstrap_max_active_jobs
+	if _view_refresh_burst_remaining > 0:
+		jobs = maxi(_burst_max_active_jobs, jobs)
+	if _motion_burst_remaining > 0:
+		jobs = maxi(_motion_burst_max_active_jobs, jobs)
+	if _chunk_cross_burst_remaining > 0:
+		jobs = maxi(_chunk_cross_burst_max_active_jobs, jobs)
+	return maxi(jobs, 1)
 
 
 func _effective_layer_acquires_per_frame() -> int:
-	if _view_refresh_burst_remaining > 0:
-		return maxi(_burst_layer_acquires_per_frame, 1)
+	var acquires: int = _layer_acquires_per_frame
 	if _bootstrap_phase == BootstrapPhase.KEEP:
-		return _bootstrap_layer_acquires_per_frame
-	return _layer_acquires_per_frame
+		acquires = _bootstrap_layer_acquires_per_frame
+	if _view_refresh_burst_remaining > 0:
+		acquires = maxi(_burst_layer_acquires_per_frame, acquires)
+	if _motion_burst_remaining > 0:
+		acquires = maxi(_motion_burst_layer_acquires_per_frame, acquires)
+	if _chunk_cross_burst_remaining > 0:
+		acquires = maxi(_chunk_cross_burst_layer_acquires_per_frame, acquires)
+	return maxi(acquires, 1)
 
 
 func _advance_bootstrap_phase() -> void:
@@ -485,22 +712,59 @@ func _step_active_jobs() -> void:
 	var deadline: int = Time.get_ticks_usec() + _effective_frame_budget_usec()
 	var gen_budget: int = _effective_gen_budget()
 	var paint_budget: int = _effective_paint_budget()
-	var job_index: int = 0
+	_step_job_list(_active_jobs_burst_ordered(), deadline, gen_budget, paint_budget)
 
-	while job_index < _active_jobs.size():
+
+func _resolve_load_center() -> Vector2i:
+	if _last_load_center_chunk != NO_CHUNK:
+		return _last_load_center_chunk
+	return _last_center_chunk
+
+
+func _active_jobs_burst_ordered() -> Array[ChunkLoadJob]:
+	if _chunk_cross_burst_remaining <= 0:
+		return _active_jobs
+	var load_center: Vector2i = _resolve_load_center()
+	if load_center == NO_CHUNK:
+		return _active_jobs
+	var leading_jobs: Array[ChunkLoadJob] = []
+	var other_jobs: Array[ChunkLoadJob] = []
+	for job: ChunkLoadJob in _active_jobs:
+		if _is_leading_edge_coord(job.coord, load_center):
+			leading_jobs.append(job)
+		else:
+			other_jobs.append(job)
+	var ordered: Array[ChunkLoadJob] = []
+	ordered.append_array(leading_jobs)
+	ordered.append_array(other_jobs)
+	return ordered
+
+
+func _step_job_list(
+	jobs: Array[ChunkLoadJob],
+	deadline: int,
+	gen_budget: int,
+	paint_budget: int
+) -> Dictionary:
+	var job_index: int = 0
+	while job_index < jobs.size():
 		if Time.get_ticks_usec() >= deadline:
 			break
 		if gen_budget <= 0 and paint_budget <= 0:
 			break
 
-		var job: ChunkLoadJob = _active_jobs[job_index]
+		var job: ChunkLoadJob = jobs[job_index]
 		var step := _step_job(job, deadline, gen_budget, paint_budget)
 		gen_budget = step.gen_budget
 		paint_budget = step.paint_budget
 		if step.finished:
-			_active_jobs.remove_at(job_index)
+			var active_index: int = _active_jobs.find(job)
+			if active_index >= 0:
+				_active_jobs.remove_at(active_index)
+			jobs.remove_at(job_index)
 			continue
 		job_index += 1
+	return {"gen_remaining": gen_budget, "paint_remaining": paint_budget}
 
 
 func _step_job(job: ChunkLoadJob, deadline: int, gen_budget: int, paint_budget: int) -> Dictionary:
@@ -519,6 +783,9 @@ func _step_job(job: ChunkLoadJob, deadline: int, gen_budget: int, paint_budget: 
 			result.gen_budget = gen_budget - gen_used
 			if job.cell_index >= _cells_per_chunk:
 				job.cell_index = 0
+				job.paint_axis = _load_priority_axis
+				job.cells_painted = 0
+				job.layer_shown = false
 				job.phase = ChunkLoadJobScript.Phase.PAINT
 			return result
 		ChunkLoadJobScript.Phase.PAINT:
@@ -536,6 +803,7 @@ func _step_job(job: ChunkLoadJob, deadline: int, gen_budget: int, paint_budget: 
 
 
 func _step_generate_job(job: ChunkLoadJob, deadline: int, cell_cap: int) -> int:
+	var t0: int = ChunkPerfProfileRes.begin(&"generate")
 	var processed: int = 0
 
 	if job.fill_land:
@@ -545,6 +813,7 @@ func _step_generate_job(job: ChunkLoadJob, deadline: int, cell_cap: int) -> int:
 			job.data.tiles[job.cell_index] = TT.LAND
 			job.cell_index += 1
 			processed += 1
+		ChunkPerfProfileRes.end(&"generate", t0)
 		return processed
 
 	var ly_start: int = int(job.cell_index / float(_chunk_size))
@@ -558,45 +827,117 @@ func _step_generate_job(job: ChunkLoadJob, deadline: int, cell_cap: int) -> int:
 		for lx: int in range(lx_begin, _chunk_size):
 			if processed >= cell_cap or Time.get_ticks_usec() >= deadline:
 				job.cell_index = row_base + lx
+				ChunkPerfProfileRes.end(&"generate", t0)
 				return processed
 			var gx: int = gx_row + lx
 			var idx: int = row_base + lx
 			if job.skip_safe_zone:
 				job.data.tiles[idx] = _terrain_noise_at_xy(gx, gy)
+			elif gx >= _safe_zone_lo_x and gx <= _safe_zone_hi_x and gy >= _safe_zone_lo_y and gy <= _safe_zone_hi_y:
+				job.data.tiles[idx] = TT.LAND
 			else:
-				job.data.tiles[idx] = _terrain_at_xy(gx, gy)
+				job.data.tiles[idx] = _terrain_noise_at_xy(gx, gy)
 			processed += 1
 
 	job.cell_index = _cells_per_chunk
+	ChunkPerfProfileRes.end(&"generate", t0)
 	return processed
 
 
 func _step_paint_job(job: ChunkLoadJob, deadline: int, cell_cap: int) -> int:
+	var t0: int = ChunkPerfProfileRes.begin(&"paint_cells")
 	var processed: int = 0
 	var source_id: int = TerrainSandboxTileSetScript.SOURCE_ID
+	var n: int = _chunk_size
+	var axis: Vector2i = job.paint_axis
+	var local: Vector2i = _paint_local_for_index(job, job.cell_index)
 
-	var ly_start: int = int(job.cell_index / float(_chunk_size))
-	var lx_start: int = job.cell_index % _chunk_size
+	while job.cell_index < _cells_per_chunk and processed < cell_cap:
+		if Time.get_ticks_usec() >= deadline:
+			break
+		var idx: int = local.y * n + local.x
+		var terrain: int = job.data.tiles[idx]
+		if terrain >= 0 and terrain < _atlas_by_terrain.size():
+			job.layer.set_cell(local, source_id, _atlas_by_terrain[terrain])
+		else:
+			job.layer.set_cell(local, source_id, _atlas_land)
+		job.cell_index += 1
+		job.cells_painted += 1
+		processed += 1
+		local = _advance_paint_local(local, axis, n)
 
-	for ly: int in range(ly_start, _chunk_size):
-		var row_base: int = ly * _chunk_size
-		var lx_begin: int = lx_start if ly == ly_start else 0
-		for lx: int in range(lx_begin, _chunk_size):
-			if processed >= cell_cap or Time.get_ticks_usec() >= deadline:
-				job.cell_index = row_base + lx
-				return processed
-			var idx: int = row_base + lx
-			var terrain: int = job.data.tiles[idx]
-			job.layer.set_cell(Vector2i(lx, ly), source_id, _atlas_for_terrain(terrain))
-			processed += 1
+	if processed > 0:
+		_maybe_show_layer(job)
 
-	job.cell_index = _cells_per_chunk
+	ChunkPerfProfileRes.record_paint_cells(processed)
+	ChunkPerfProfileRes.end(&"paint_cells", t0)
 	return processed
+
+
+func _advance_paint_local(local: Vector2i, axis: Vector2i, n: int) -> Vector2i:
+	if axis.x > 0:
+		var ly: int = local.y + 1
+		if ly >= n:
+			return Vector2i(local.x + 1, 0)
+		return Vector2i(local.x, ly)
+	if axis.x < 0:
+		var ly_neg: int = local.y + 1
+		if ly_neg >= n:
+			return Vector2i(local.x - 1, 0)
+		return Vector2i(local.x, ly_neg)
+	if axis.y < 0:
+		var lx_up: int = local.x + 1
+		if lx_up >= n:
+			return Vector2i(0, local.y - 1)
+		return Vector2i(lx_up, local.y)
+	var lx_down: int = local.x + 1
+	if lx_down >= n:
+		return Vector2i(0, local.y + 1)
+	return Vector2i(lx_down, local.y)
+
+
+## Movement-aware scan: leading row/column first, then fill outward (all cells, no hollow perimeter).
+func _paint_local_for_index(job: ChunkLoadJob, index: int) -> Vector2i:
+	var n: int = _chunk_size
+	var last: int = n - 1
+	var axis: Vector2i = job.paint_axis
+	if axis.x > 0:
+		var lx: int = index / n
+		var ly: int = index % n
+		return Vector2i(lx, ly)
+	if axis.x < 0:
+		var lx_neg: int = last - index / n
+		var ly_neg: int = index % n
+		return Vector2i(lx_neg, ly_neg)
+	if axis.y < 0:
+		var ly_up: int = last - index / n
+		var lx_up: int = index % n
+		return Vector2i(lx_up, ly_up)
+	var ly_down: int = index / n
+	var lx_down: int = index % n
+	return Vector2i(lx_down, ly_down)
+
+
+func _maybe_show_layer(job: ChunkLoadJob) -> void:
+	if job.layer_shown or job.layer == null:
+		return
+	if job.cells_painted < _chunk_show_min_paint_cells and job.cell_index < _cells_per_chunk:
+		return
+	var show_t0: int = ChunkPerfProfileRes.begin(&"layer_show")
+	job.layer.visible = true
+	job.layer_shown = true
+	ChunkPerfProfileRes.end(&"layer_show", show_t0)
 
 
 func _finish_job(job: ChunkLoadJob) -> void:
 	_chunks[job.coord] = job.data
 	_layers[job.coord] = job.layer
+	_maybe_show_layer(job)
+	if job.layer != null and not job.layer_shown:
+		var show_t0: int = ChunkPerfProfileRes.begin(&"layer_show")
+		job.layer.visible = true
+		job.layer_shown = true
+		ChunkPerfProfileRes.end(&"layer_show", show_t0)
 	job.phase = ChunkLoadJobScript.Phase.DONE
 
 
@@ -606,6 +947,7 @@ func _cancel_job(job: ChunkLoadJob) -> void:
 
 
 func _acquire_layer(chunk_coord: Vector2i) -> TileMapLayer:
+	var t0: int = ChunkPerfProfileRes.begin(&"layer_acquire")
 	var layer: TileMapLayer
 	if not _layer_pool.is_empty():
 		layer = _layer_pool.pop_back()
@@ -616,8 +958,10 @@ func _acquire_layer(chunk_coord: Vector2i) -> TileMapLayer:
 	layer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	layer.tile_set = _tile_set
 	_set_layer_chunk_origin(layer, chunk_coord)
+	layer.visible = false
 	if not layer.is_inside_tree():
 		add_child(layer)
+	ChunkPerfProfileRes.end(&"layer_acquire", t0)
 	return layer
 
 
@@ -629,6 +973,7 @@ func _set_layer_chunk_origin(layer: TileMapLayer, chunk_coord: Vector2i) -> void
 func _release_layer(layer: TileMapLayer) -> void:
 	if layer == null:
 		return
+	layer.visible = true
 	layer.position = Vector2.ZERO
 	layer.clear()
 	if _layer_pool.size() < _pool_target_size:
@@ -689,16 +1034,6 @@ func _terrain_at_xy(gx: int, gy: int) -> int:
 
 func _terrain_at_grid_tile(grid_tile: Vector2i) -> int:
 	return _terrain_at_xy(grid_tile.x, grid_tile.y)
-
-
-func _atlas_for_terrain(terrain: int) -> Vector2i:
-	match terrain:
-		TT.WATER:
-			return _atlas_water
-		TT.MUD:
-			return _atlas_mud
-		_:
-			return _atlas_land
 
 
 ## Canonical floor division; equivalent to int(floor(float(value) / float(divisor))).

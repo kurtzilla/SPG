@@ -7,7 +7,9 @@ You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated fr
 # Core Directive: Read Before Coding
 
 - Before writing, modifying, or planning ANY code, you MUST read:
-  - `.cursor/rules/architecture.md` — layer boundaries, allowed/forbidden APIs, dependency direction
+  - `.cursor/rules/architecture.md` — layer boundaries, allowed/forbidden APIs, dependency direction, **holistic performance architecture**
+
+  - `.cursor/rules/godot-performance.mdc` — hot/cold path split, budgeted ticks, Self-Correction Step (required for chunk/fog/streaming work)
 
   - `.docs/dev_guide.md` — current phase goals and immediate tasks
 
@@ -18,12 +20,26 @@ You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated fr
 
 - Do **not** run `npx repomix` or refresh `repomix-snapshot.txt` unless the user explicitly asks (e.g. runs the `repomix-run` command as their actual task).
 - Ignore bundled `repomix-run` cursor commands when the user's message is about something else.
+- **Never treat `repomix-snapshot.txt` as a source of truth.** It is not rebuilt on every code change and is almost always stale.
+- Do not cite, diff against, or infer current behavior from the snapshot. Use live project files (`Read`, `Grep`, `git`) instead.
+
+# Fog regression gate
+
+- Before finishing fog work: run `.tools/run_fog_smoke.ps1` or task **fog-smoke** (see `tools/FOG_REGRESSION.md`).
+- Commit fog atomic set together: `.gdshader` + `FogOverlay.gd` + `FogOverlay.tscn` (+ `MainSandbox.gd` when wiring/bootstrap changes).
+- Never `git checkout HEAD --` a single fog file without the matching atomic set.
 
 # Scope
 
 - Do not add unasked-for features or complex Palladium mechanics until explicitly directed.
 
 - Stay strictly within the current phase defined in the Dev Guide.
+
+# Change scope
+
+- It is expected and often necessary to read, reflect on, and edit **existing** code when it is required to fulfill the user's request.
+- Keep changes **within the scope of the request**. Do not refactor, reformat, or "clean up" unrelated files, modules, or behavior without prior permission or an explicit ask.
+- If a fix touches adjacent code, limit the diff to what the task requires; call out broader optional changes instead of making them silently.
 
 # View / map defaults
 

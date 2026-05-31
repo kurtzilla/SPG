@@ -7,9 +7,35 @@ alwaysApply: true
 You are an expert game developer specializing in high-performance Godot 4 (GDScript).
 Always prioritize GPU-bound or built-in server solutions over heavy CPU loops.
 
-CRITICAL WORKFLOW CONSTRAINT:
-Before writing any complex system (like chunk management, procedural generation, or data structures), you must always output a "Self-Correction Step".
+## Holistic performance design (required for complex systems)
 
-- Explicitly state any potential performance traps or inefficiencies in your initial thought process.
-- Explain how you are bypassing them (e.g., using Dictionaries instead of Arrays, avoiding per-frame node instantiations).
-- Only provide code that has passed your own internal performance audit.
+Do **not** fix performance with isolated micro-patches (lower a constant here, skip one call there). Design the **whole pipeline** before editing.
+
+For any hot-path system (chunk streaming, fog, procedural gen, large buffers):
+
+1. **Separate hot path from cold path**
+   - **Hot path (every frame):** GPU shaders, uniforms, cheap bookkeeping only.
+   - **Cold path (deferred):** CPU stamps, interop, texture uploads, buffer shifts — never inline on signals that fire during movement unless unavoidable.
+
+2. **One budgeted tick, correct frame order**
+   - Drain work through a **single entry point** per frame (e.g. `tick_frame`), scheduled **after** the systems that produce its inputs (player movement, cell cross).
+   - Cap CPU per frame with a settings-backed budget (mirror `chunk_frame_budget_usec` / `ChunkManager` job drain).
+   - Queue backlog across frames; the hot path must keep visuals correct while the queue drains.
+
+3. **Consolidate triggers**
+   - Multiple signal handlers must not each stamp/upload independently. **Enqueue** work; merge dirty regions; **at most one GPU commit per frame** unless bootstrap/recenter forces otherwise.
+
+4. **Minimize cross-boundary copies**
+   - Prefer session-owned buffers on the authoritative side (Core/C#) with dirty-region sync, not full `PackedByteArray` ↔ `byte[]` round-trips per operation. See [`INTEROP.md`](../../src/Godot/Interop/INTEROP.md).
+
+5. **Reference implementation:** [`ChunkManager.gd`](../../src/Godot/Scripts/World/ChunkManager.gd) — budgeted job loop, burst without unbounded spikes, deferred show. New streaming/presentation systems should follow the same shape.
+
+## Self-Correction Step (required before implementation)
+
+Before writing or materially changing a complex system, output a **Self-Correction Step**:
+
+- State performance traps (redundant work, wrong process order, per-signal heavy ops, full-buffer copies, unbounded loops).
+- State how the **holistic pipeline** avoids them (hot/cold split, queue, budget, merged commits).
+- Only provide code that passes this audit.
+
+Examples of traps to call out explicitly: per-frame node instantiation, nested loops over full buffers, stamping while a shader already covers the same visual, running presentation tick before player movement.

@@ -1,8 +1,9 @@
 extends CharacterBody2D
 
 ## Factorio-style top-down movement: snappy acceleration, active braking, tight reversal.
-## Zoom speed: normalize camera zoom, curve with pow(), lerp between min/max speeds (Inspector-tuned).
-## screen_px_s ≈ world_speed * zoom (map scroll scale in MainSandbox).
+## player_movement.* values in game_settings.json are tuned at view.zoom default (0.5).
+## Centered camera + Tiles.scale ≈ on-screen rate / zoom; scale map values by (z / z_default)^2:
+##   max_speed, acceleration, friction at runtime.
 
 const ZERO := Vector2.ZERO
 
@@ -12,20 +13,16 @@ const PlaceholderTextureGenerator = preload("res://src/Godot/Assets/PlaceholderT
 signal grid_cell_changed(cell: Vector2i)
 signal map_position_changed(map_px: Vector2)
 
-@export_group("Zoom speed")
-@export var min_zoom_speed: float = 68.0
-@export var max_zoom_speed: float = 1080.0
-@export var min_zoom_level: float = 0.2
-@export var max_zoom_level: float = 2.0
-@export var zoom_curve_exponent: float = 2.0
-
-var _acceleration: float = 25.0
-var _friction: float = 45.0
+var _base_acceleration: float = 50.0
+var _base_friction: float = 90.0
 var _velocity_snap_threshold_sq: float = 0.01
 var _last_grid_cell: Vector2i = Vector2i.ZERO
+var _zoom_min: float = 0.25
+var _zoom_max: float = 2.0
+var _zoom_default: float = 0.5
 var _cached_zoom: float = -1.0
 var _cached_base_max_speed: float = -1.0
-var _cached_max_speed: float = 650.0
+var _cached_movement_scale: float = 1.0
 
 @onready var _sprite: Sprite2D = $Sprite2D
 
@@ -41,10 +38,13 @@ func _ready() -> void:
 	_last_grid_cell = _grid_cell_from_position()
 	if not Settings.movement_changed.is_connected(_apply_movement_settings):
 		Settings.movement_changed.connect(_apply_movement_settings)
-	if not ViewProjection.view_changed.is_connected(_invalidate_zoom_speed_cache):
-		ViewProjection.view_changed.connect(_invalidate_zoom_speed_cache)
+	if not Settings.view_changed.is_connected(_on_view_settings_changed):
+		Settings.view_changed.connect(_on_view_settings_changed)
+	if not ViewProjection.view_changed.is_connected(_invalidate_movement_cache):
+		ViewProjection.view_changed.connect(_invalidate_movement_cache)
+	_cache_zoom_limits()
 	_apply_movement_settings()
-	_invalidate_zoom_speed_cache()
+	_invalidate_movement_cache()
 
 
 func apply_movement_settings() -> void:
@@ -52,28 +52,45 @@ func apply_movement_settings() -> void:
 
 
 func _apply_movement_settings() -> void:
-	_acceleration = Settings.acceleration
-	_friction = Settings.friction
+	_base_acceleration = Settings.acceleration
+	_base_friction = Settings.friction
 	_velocity_snap_threshold_sq = Settings.velocity_snap_threshold_sq
-	_invalidate_zoom_speed_cache()
+	_invalidate_movement_cache()
 
 
-func _invalidate_zoom_speed_cache() -> void:
+func _on_view_settings_changed() -> void:
+	_cache_zoom_limits()
+	_invalidate_movement_cache()
+
+
+func _cache_zoom_limits() -> void:
+	_zoom_min = float(Settings.get_min("view.zoom"))
+	_zoom_max = float(Settings.get_max("view.zoom"))
+	var default_zoom: Variant = Settings.get_default("view.zoom")
+	_zoom_default = float(default_zoom) if default_zoom != null else 0.5
+	if is_zero_approx(_zoom_default):
+		_zoom_default = 0.5
+
+
+func _invalidate_movement_cache() -> void:
 	_cached_zoom = -1.0
 	_cached_base_max_speed = -1.0
 
 
 func _process(delta: float) -> void:
-	var zoom: float = ViewProjection.zoom
+	var zoom: float = ViewProjection.safe_zoom()
 	var base_max_speed: float = Settings.max_speed
-	var max_speed: float = _max_speed_for_zoom_cached(zoom, base_max_speed)
+	var movement: Dictionary = _movement_for_zoom_cached(zoom, base_max_speed)
+	var max_speed: float = movement["max_speed"]
+	var acceleration: float = movement["acceleration"]
+	var friction: float = movement["friction"]
 
 	var input_dir := _read_input_direction()
 	if input_dir != ZERO:
 		var target := input_dir * max_speed
-		velocity = velocity.lerp(target, minf(_acceleration * delta, 1.0))
+		velocity = velocity.lerp(target, minf(acceleration * delta, 1.0))
 	else:
-		velocity = velocity.lerp(ZERO, minf(_friction * delta, 1.0))
+		velocity = velocity.lerp(ZERO, minf(friction * delta, 1.0))
 
 	if velocity.length_squared() < _velocity_snap_threshold_sq:
 		velocity = ZERO
@@ -86,26 +103,33 @@ func _process(delta: float) -> void:
 	_emit_grid_cell_if_changed()
 
 
-func _max_speed_for_zoom_cached(zoom: float, base_max_speed: float) -> float:
+func _movement_for_zoom_cached(zoom: float, base_max_speed: float) -> Dictionary:
 	if (
 		is_equal_approx(zoom, _cached_zoom)
 		and is_equal_approx(base_max_speed, _cached_base_max_speed)
 	):
-		return _cached_max_speed
+		return {
+			"max_speed": base_max_speed * _cached_movement_scale,
+			"acceleration": _base_acceleration * _cached_movement_scale,
+			"friction": _base_friction * _cached_movement_scale,
+		}
+	var movement_scale: float = _zoom_movement_scale(zoom)
 	_cached_zoom = zoom
 	_cached_base_max_speed = base_max_speed
-	_cached_max_speed = _max_speed_for_zoom(zoom, base_max_speed)
-	return _cached_max_speed
+	_cached_movement_scale = movement_scale
+	return {
+		"max_speed": base_max_speed * movement_scale,
+		"acceleration": _base_acceleration * movement_scale,
+		"friction": _base_friction * movement_scale,
+	}
 
 
-func _max_speed_for_zoom(zoom: float, base_max_speed: float) -> float:
-	var span: float = max_zoom_level - min_zoom_level
-	if is_zero_approx(span):
-		return base_max_speed
-	var t: float = clampf((zoom - min_zoom_level) / span, 0.0, 1.0)
-	var t_curved: float = pow(t, zoom_curve_exponent)
-	var floor_speed: float = base_max_speed * (min_zoom_speed / max_zoom_speed)
-	return lerpf(floor_speed, base_max_speed, t_curved)
+func _zoom_movement_scale(zoom: float) -> float:
+	var z: float = clampf(zoom, _zoom_min, _zoom_max)
+	if is_zero_approx(_zoom_default):
+		return 1.0
+	var t: float = z / _zoom_default
+	return t * t
 
 
 func _setup_sprite() -> void:

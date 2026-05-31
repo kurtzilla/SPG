@@ -1,0 +1,40 @@
+---
+description: Grid regression gate — atomic commits, smoke test, no partial reverts
+globs:
+  - src/Godot/Shaders/GridOverlay.gdshader
+  - src/Godot/Scenes/GridOverlay.tscn
+  - src/Godot/Scripts/GridOverlay.gd
+  - src/Godot/Scripts/GridPerfProfile.gd
+  - src/Godot/Scripts/MainSandbox.gd
+  - tools/grid_smoke.gd
+  - tools/GridSmokeRunner.tscn
+alwaysApply: false
+---
+
+# Grid regression gate
+
+Read `tools/GRID_REGRESSION.md` before editing grid overlay.
+
+## Required before marking grid work done
+
+1. Run `.tools/run_grid_smoke.ps1` (or task **grid-smoke**) — must exit 0.
+2. Commit **atomic set** together when changing presentation: `.gdshader` + `GridOverlay.gd` + `GridOverlay.tscn` (+ `MainSandbox.gd` if paths/bootstrap change).
+
+## Forbidden
+
+- `git checkout HEAD --` a single grid file without the rest of the atomic set
+- Moving `GridOverlay.gd` onto `GridDrawRect` or `GridDisplay`
+- Binding `MainSandbox` to `$GridOverlay/GridRect` (use `$GridOverlay` on CanvasLayer)
+
+## WIRING INVARIANT
+
+`GridOverlay.gd` on **CanvasLayer** `$GridOverlay`; shader material on `$GridViewport/GridDrawRect` only; `$GridDisplay` blits cached SubViewport texture.
+
+## Symptom → first check
+
+| Symptom | Check |
+|---------|--------|
+| Grid missing | `grid.debug_grid_lines` setting; `configure(true)` from MainSandbox |
+| Grid static / stale | `apply_view_frame` not called; projection cache not invalidated on resize |
+| Idle FPS drop with grid on | `[GridPerf] gpu_refresh_count` should be 0 while idle; SubViewport `UPDATE_ONCE` only on view dirty |
+| Shader error | Godot console `SHADER ERROR`; run grid-smoke |

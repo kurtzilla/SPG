@@ -11,7 +11,10 @@ var layer: TileMapLayer
 var data: ChunkData
 var origin: Vector2i
 var cell_index: int = 0
-## Chunk AABB does not overlap spawn safe zone — skip per-cell safe checks.
+## Movement axis when PAINT started; drives leading-edge scan order.
+var paint_axis: Vector2i = Vector2i.ZERO
+var cells_painted: int = 0
+var layer_shown: bool = false
 var skip_safe_zone: bool = false
 ## Chunk AABB is fully inside spawn safe zone — fill LAND without noise.
 var fill_land: bool = false

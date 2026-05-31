@@ -31,15 +31,18 @@ const VIEW_PATHS: Array[String] = [
 ]
 
 const FOG_PATHS: Array[String] = [
-	"fog.initial_reveal_radius",
-	"fog.player_reveal_radius",
+	"fog.enabled",
+	"fog.initial_reveal_corner_radius",
+	"fog.edge_feather_px",
+	"fog.reveal_fade_seconds",
+	"fog.motion_bake_interval_sec",
+	"fog.motion_bake_min_distance_px",
+	"fog.gpu_commit_min_interval_sec",
 ]
 
 const LEGACY_FOG_PATH_INITIAL: String = "fog.initial_reveal_radius_cells"
-const LEGACY_FOG_PATH_PLAYER: String = "fog.movement_reveal_radius_cells"
 const LEGACY_FOG_PATH_REVEAL_RADIUS: String = "fog.reveal_radius_cells"
 const FOG_DEFAULT_PATH_INITIAL: String = "fog.initial_reveal_radius"
-const FOG_DEFAULT_PATH_PLAYER: String = "fog.player_reveal_radius"
 
 var _schema: Dictionary = {}
 var _values: Dictionary = {}
@@ -110,11 +113,53 @@ var initial_reveal_radius: int:
 		set_int("fog.initial_reveal_radius", value)
 
 
-var player_reveal_radius: int:
+var initial_reveal_corner_radius: int:
 	get:
-		return get_int("fog.player_reveal_radius")
+		return get_int("fog.initial_reveal_corner_radius")
 	set(value):
-		set_int("fog.player_reveal_radius", value)
+		set_int("fog.initial_reveal_corner_radius", value)
+
+
+var fog_edge_feather_px: float:
+	get:
+		return get_float("fog.edge_feather_px")
+	set(value):
+		set_float("fog.edge_feather_px", value)
+
+
+var fog_reveal_fade_seconds: float:
+	get:
+		return get_float("fog.reveal_fade_seconds")
+	set(value):
+		set_float("fog.reveal_fade_seconds", value)
+
+
+var fog_baked_edge_soften_px: float:
+	get:
+		return get_float("fog.baked_edge_soften_px")
+	set(value):
+		set_float("fog.baked_edge_soften_px", value)
+
+
+var fog_motion_bake_interval_sec: float:
+	get:
+		return get_float("fog.motion_bake_interval_sec")
+	set(value):
+		set_float("fog.motion_bake_interval_sec", value)
+
+
+var fog_motion_bake_min_distance_px: float:
+	get:
+		return get_float("fog.motion_bake_min_distance_px")
+	set(value):
+		set_float("fog.motion_bake_min_distance_px", value)
+
+
+var fog_gpu_commit_min_interval_sec: float:
+	get:
+		return get_float("fog.gpu_commit_min_interval_sec")
+	set(value):
+		set_float("fog.gpu_commit_min_interval_sec", value)
 
 
 var velocity_snap_threshold_sq: float:
@@ -447,7 +492,7 @@ func _schedule_save() -> void:
 
 
 func _persist_fog_path_to_defaults(path: String, value: Variant) -> void:
-	if path != FOG_DEFAULT_PATH_INITIAL and path != FOG_DEFAULT_PATH_PLAYER:
+	if path != FOG_DEFAULT_PATH_INITIAL:
 		return
 	var serialized_path: String = ProjectSettings.globalize_path(DEFAULTS_PATH)
 	var read_file := FileAccess.open(serialized_path, FileAccess.READ)
@@ -552,15 +597,6 @@ func _migrate_legacy_fog_values_from_config(config: ConfigFile) -> bool:
 		_values["fog.initial_reveal_radius"] = _clamp_int(
 			"fog.initial_reveal_radius",
 			int(config.get_value(section, LEGACY_FOG_PATH_INITIAL))
-		)
-		migrated = true
-	if (
-		config.has_section_key(section, LEGACY_FOG_PATH_PLAYER)
-		and not config.has_section_key(section, "fog.player_reveal_radius")
-	):
-		_values["fog.player_reveal_radius"] = _clamp_int(
-			"fog.player_reveal_radius",
-			int(config.get_value(section, LEGACY_FOG_PATH_PLAYER))
 		)
 		migrated = true
 	if (

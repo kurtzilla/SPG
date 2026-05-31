@@ -11,7 +11,7 @@
       "port": 6007,
       "profiling": false,
       "editor_path": "C:\\Users\\Dev\\.gdvm\\installs\\4.3-stable-csharp\\Godot_v4.3-stable_mono_win64.exe",
-      "preLaunchTask": "build-spg"
+      "preLaunchTask": "verify-spg"
     },
     {
       "name": "Godot: Run Project (direct)",
@@ -22,7 +22,7 @@
       "runtimeArgs": ["--path", "${workspaceFolder}", "--debug-server", "6007"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "preLaunchTask": "build-spg"
+      "preLaunchTask": "verify-spg"
     },
     {
       "name": "GDScript: Launch Main Project (no build)",

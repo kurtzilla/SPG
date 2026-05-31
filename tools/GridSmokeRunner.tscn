@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c8gridsmoke01"]
+
+[ext_resource type="Script" path="res://tools/grid_smoke.gd" id="1_runner"]
+
+[node name="GridSmokeRunner" type="Node"]
+script = ExtResource("1_runner")
