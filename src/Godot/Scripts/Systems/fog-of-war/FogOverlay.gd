@@ -33,6 +33,9 @@ const INVALID_BOUNDS: Vector4i = Vector4i(0, 0, -1, -1)
 const FULL_MASK_UPLOAD_AREA_FRAC: float = 0.8
 const DEFAULT_GPU_COMMIT_MIN_INTERVAL_SEC: float = 1.0 / 60.0
 const PATH_STAMP_SINGLE_DISC_MAX_CHEBYSHEV: int = 2
+## Movement reveal invariant: Core/mask grow only along walked samples (motion discs + grid steps).
+## Exception: initial spawn rounded square. No long capsule chords across unvisited cells.
+## Future: path edge helpers and animated presentation may layer on top without changing this rule.
 const UNINITIALIZED_STAMP_CELL: int = 900000
 const QUEUED_CELL_RECENTER_NONE: Vector2i = Vector2i(900001, 900001)
 const UNINITIALIZED_STAMP_MAP_PX: float = -900000.0
@@ -758,6 +761,7 @@ func _persist_player_reveal(from_cell: Vector2i, to_cell: Vector2i, map_px: Vect
 
 	_last_stamp_cell = to_cell
 	_cached_player_map_px = map_px
+	_reset_motion_bake_anchor(map_px)
 	FogPerfProfileRes.end(&"persist_player_reveal", t0)
 
 
@@ -791,9 +795,6 @@ func _stamp_mask_segment(from_cell: Vector2i, to_cell: Vector2i, radius_cells: i
 	var t0: int = FogPerfProfileRes.begin(&"reveal_disc_path_stamp")
 	_stamp_path_reveal_native(from_center, to_center, radius_cells)
 	FogPerfProfileRes.end(&"reveal_disc_path_stamp", t0)
-	return
-	_reveal_core_disc_at(to_cell, radius_cells)
-	_fill_buffer_from_core()
 
 
 func _cells_on_segment(from_cell: Vector2i, to_cell: Vector2i) -> Array[Vector2i]:
@@ -1060,12 +1061,12 @@ func _restamp_soft_disc_at_player() -> void:
 		)
 
 
-func _stamp_disc_at_map_px(map_px: Vector2) -> void:
+func _stamp_disc_at_cell_center(cell: Vector2i, radius_cells: int) -> void:
 	if _visibility == null:
 		return
-	var center: Vector2 = _map_px_to_cell_center(map_px)
+	var center: Vector2 = Vector2(cell) + Vector2(0.5, 0.5)
 	if _visibility.has_method("RevealDisc"):
-		_visibility.RevealDisc(int(floor(center.x)), int(floor(center.y)), PLAYER_REVEAL_RADIUS_CELLS)
+		_visibility.RevealDisc(cell.x, cell.y, radius_cells)
 	if _visibility.has_method("RevealDiscStampNative"):
 		_assign_mask_from_native(
 			_visibility.RevealDiscStampNative(
@@ -1075,10 +1076,18 @@ func _stamp_disc_at_map_px(map_px: Vector2) -> void:
 				_buffer_size_cells,
 				center.x,
 				center.y,
-				PLAYER_REVEAL_RADIUS_CELLS,
+				radius_cells,
 				_mask_bytes
 			)
 		)
+
+
+func _stamp_disc_at_map_px(map_px: Vector2) -> void:
+	var center: Vector2 = _map_px_to_cell_center(map_px)
+	_stamp_disc_at_cell_center(
+		Vector2i(int(floor(center.x)), int(floor(center.y))),
+		PLAYER_REVEAL_RADIUS_CELLS
+	)
 
 
 func _map_px_to_cell_center(map_px: Vector2) -> Vector2:
@@ -1145,6 +1154,7 @@ func _stamp_motion_disc_if_moved(map_px: Vector2) -> bool:
 	_stamp_disc_at_map_px(map_px)
 	_schedule_mask_commit(_mask_bounds_for_disc_at_map_px(map_px), true)
 	_last_motion_disc_stamp_map_px = map_px
+	_reset_motion_bake_anchor(map_px)
 	FogPerfProfileRes.end(&"motion_disc_stamp", t0)
 	return true
 
@@ -1179,35 +1189,14 @@ func _stamp_path_reveal_native(
 	var t0: int = 0
 	if not perf_scope.is_empty():
 		t0 = FogPerfProfileRes.begin(perf_scope)
-	var stamped: Variant = null
-	if _visibility.has_method("RevealDiscCapsuleStampNative"):
-		stamped = _visibility.RevealDiscCapsuleStampNative(
-			_buffer_origin_grid.x,
-			_buffer_origin_grid.y,
-			_buffer_size_cells,
-			_buffer_size_cells,
-			from_center.x,
-			from_center.y,
-			to_center.x,
-			to_center.y,
-			radius_cells,
-			_mask_bytes
-		)
-	elif _visibility.has_method("RevealDiscPathStampNative"):
-		stamped = _visibility.RevealDiscPathStampNative(
-			_buffer_origin_grid.x,
-			_buffer_origin_grid.y,
-			_buffer_size_cells,
-			_buffer_size_cells,
-			from_center.x,
-			from_center.y,
-			to_center.x,
-			to_center.y,
-			radius_cells,
-			_mask_bytes
-		)
-	if stamped != null:
-		_assign_mask_from_native(stamped)
+	var from_cell := Vector2i(int(floor(from_center.x)), int(floor(from_center.y)))
+	var to_cell := Vector2i(int(floor(to_center.x)), int(floor(to_center.y)))
+	var chebyshev: int = maxi(absi(to_cell.x - from_cell.x), absi(to_cell.y - from_cell.y))
+	if chebyshev <= PATH_STAMP_SINGLE_DISC_MAX_CHEBYSHEV:
+		_stamp_disc_at_cell_center(to_cell, radius_cells)
+	else:
+		for cell: Vector2i in _cells_on_segment(from_cell, to_cell):
+			_stamp_disc_at_cell_center(cell, radius_cells)
 	if not perf_scope.is_empty():
 		FogPerfProfileRes.end(perf_scope, t0)
 
