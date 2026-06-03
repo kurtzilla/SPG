@@ -1,96 +1,5 @@
 {
 	"_comment": "Single source of truth for game tuning. Edit values here; user://settings.cfg is not used in this dev stage.",
-	"fog": {
-		"baked_edge_soften_px": {
-			"comment": "Deprecated: trail feather now uses edge_feather_px via unified radial shader feather",
-			"context": "game",
-			"max": 256.0,
-			"min": 0.0,
-			"step": 4.0,
-			"value": 96.0
-		},
-		"buffer_size_cells": {
-			"comment": "Sliding fog window size in cells; fog texture is 1 texel per cell (radial edge feather in shader)",
-			"context": "game",
-			"min": 32.0,
-			"value": 128.0
-		},
-		"edge_aa_strength": {
-			"comment": "Optional screen-space edge AA on combined reveal (0 = off, restores pre-zoom-fix look)",
-			"context": "game",
-			"max": 1.0,
-			"min": 0.0,
-			"step": 0.05,
-			"value": 0.0
-		},
-		"edge_feather_px": {
-			"comment": "Fog edge softness in map px (baked mask + live disc); does not affect terrain",
-			"context": "game",
-			"max": 256.0,
-			"min": 0.0,
-			"step": 4.0,
-			"value": 48.0
-		},
-		"enabled": {
-			"context": "game",
-			"value": true
-		},
-		"initial_reveal_corner_radius": {
-			"comment": "Corner rounding (cells) for spawn rounded-square reveal; 0 = auto (~25% of initial radius). Keep small for square-with-filleted-corners.",
-			"context": "game",
-			"max": 256.0,
-			"min": 0.0,
-			"step": 1.0,
-			"value": 4.0
-		},
-		"initial_reveal_radius": {
-			"comment": "Spawn rounded-square reveal radius (cells); outer edge uses radius+0.5 cells for cell coverage; config-only, applied at bootstrap",
-			"context": "game",
-			"max": 256.0,
-			"min": 1.0,
-			"persist": false,
-			"step": 1.0,
-			"value": 20.0
-		},
-		"motion_bake_interval_sec": {
-			"comment": "Deprecated: motion trail uses live shader disc while moving; bake runs on stop/cell cross only",
-			"context": "game",
-			"max": 1.0,
-			"min": 0.0,
-			"step": 0.05,
-			"value": 0.0
-		},
-		"gpu_commit_min_interval_sec": {
-			"comment": "Min seconds between throttled GPU mask uploads; cell cross forces immediate flush",
-			"context": "game",
-			"max": 1.0,
-			"min": 0.0,
-			"step": 0.008,
-			"value": 0.016
-		},
-		"motion_bake_min_distance_px": {
-			"comment": "Min map pixels moved before throttled trail bake (~half cell at 64px)",
-			"context": "game",
-			"max": 128.0,
-			"min": 0.0,
-			"step": 4.0,
-			"value": 32.0
-		},
-		"recenter_margin_cells": {
-			"comment": "Re-center buffer when player is within this many cells of the buffer edge",
-			"context": "game",
-			"min": 4.0,
-			"value": 24.0
-		},
-		"reveal_fade_seconds": {
-			"comment": "Presentation fade from foggy to clear; 0 = instant snap",
-			"context": "game",
-			"max": 2.0,
-			"min": 0.0,
-			"step": 0.05,
-			"value": 0.0
-		}
-	},
 	"grid": {
 		"debug_grid_lines": {
 			"comment": "Fullscreen grid shader overlay; disable for higher idle FPS",
@@ -112,14 +21,6 @@
 		}
 	},
 	"hud": {
-		"fog_fade_slider_step": {
-			"context": "game",
-			"value": 0.05
-		},
-		"fog_feather_slider_step": {
-			"context": "game",
-			"value": 4.0
-		},
 		"font_size": {
 			"context": "game",
 			"value": 10.0

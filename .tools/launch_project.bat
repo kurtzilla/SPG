@@ -2,17 +2,18 @@
 setlocal EnableExtensions EnableDelayedExpansion
 
 rem ============================================================================
-rem  Ensure Godot editor is running for this root project, then open Cursor.
+rem  Launch Godot headlessly for the language server (LSP), then open Cursor.
 rem  Targeting the parent directory (..) because this script is in .tools/
 rem ============================================================================
 
 for %%I in ("%~dp0..") do set "REPO=%%~fI"
 set "CURSOR_EXE=%LOCALAPPDATA%\Programs\cursor\Cursor.exe"
 
-rem Call EnsureGodotEditor out of the same .tools folder
-call "%~dp0ensure_godot_editor.bat"
+echo [Launch] Starting Godot headless language server...
+rem 'start /b' keeps the window attached silently instead of popping up a command window.
+start /b "" godot.exe --editor --headless --path "%REPO%"
 
-rem Brief pause to give the Godot LSP server a head start to open port 6008
+rem Brief pause to give the Godot LSP server a head start to open its port
 timeout /t 2 /nobreak >nul
 
 if exist "%CURSOR_EXE%" (

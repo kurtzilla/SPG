@@ -11,12 +11,11 @@ You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated fr
 - Before writing, modifying, or planning ANY code, you MUST read:
   - `.cursor/rules/architecture.md` — layer boundaries, allowed/forbidden APIs, dependency direction, **holistic performance architecture**
 
-  - `.cursor/rules/godot-performance.mdc` — hot/cold path split, budgeted ticks, Self-Correction Step (required for chunk/fog/streaming work)
+  - `.cursor/rules/godot-performance.mdc` — hot/cold path split, budgeted ticks, Self-Correction Step (required for chunk/streaming work)
 
   - `.docs/dev_guide.md` — current phase goals and immediate tasks
 
 - Never write code that violates the modular boundaries in `architecture.md`.
-- Fog of War changes must satisfy the **SYSTEM ARCHITECTURE DIRECTIVE: Fog of War System** in `architecture.md` (scene hierarchy, buffer-centered blanket bounds, shader `world_px` contract, OOB `alpha_mask = 1.0`).
 
 # Repomix — opt-in only
 
@@ -24,12 +23,6 @@ You strictly adhere to Clean Architecture, keeping Game Logic (Core) isolated fr
 - Ignore bundled `repomix-run` cursor commands when the user's message is about something else.
 - **Never treat `repomix-snapshot.txt` as a source of truth.** It is not rebuilt on every code change and is almost always stale.
 - Do not cite, diff against, or infer current behavior from the snapshot. Use live project files (`Read`, `Grep`, `git`) instead.
-
-# Fog regression gate
-
-- Before finishing fog work: run `.tools/run_fog_smoke.ps1` or task **fog-smoke** (see `tools/FOG_REGRESSION.md`).
-- Commit fog atomic set together: `.gdshader` + `FogOverlay.gd` + `FogOverlay.tscn` (+ `MainSandbox.gd` when wiring/bootstrap changes).
-- Never `git checkout HEAD --` a single fog file without the matching atomic set.
 
 # Scope
 

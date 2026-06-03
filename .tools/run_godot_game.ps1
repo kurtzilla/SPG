@@ -5,18 +5,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$godot = "C:\Users\Dev\.gdvm\installs\4.3-stable-csharp\Godot_v4.3-stable_mono_win64.exe"
-if (-not (Test-Path -LiteralPath $godot)) {
-    $prevEap = $ErrorActionPreference
-    $ErrorActionPreference = "Continue"
-    $fromGdvm = gdvm show --csharp 2>&1 | Where-Object { "$_" -match '\.exe$' } | Select-Object -First 1
-    $ErrorActionPreference = $prevEap
-    if ($fromGdvm) {
-        $godot = "$fromGdvm".Trim()
-    }
-}
-if (-not (Test-Path -LiteralPath $godot)) {
-    Write-Error "Godot 4.3 C# not found. Install: gdvm install 4.3-stable-csharp"
+. (Join-Path $PSScriptRoot "find_godot.ps1")
+
+$godot = Get-SpgGodotExe
+if (-not $godot) {
+    Write-Error "Godot 4 C# not found. Set godotTools.editorPath.godot4 in .vscode/settings.json or install via gdvm."
 }
 
 $args = @("--path", $repo)

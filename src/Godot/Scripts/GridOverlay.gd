@@ -1,7 +1,7 @@
 class_name GridOverlay
 extends CanvasLayer
 
-## Debug grid overlay; uses the same canvas_to_map transform as FogOverlay.
+## Debug grid overlay; uses canvas_to_map via ViewProjection uniforms.
 ##
 ## WIRING INVARIANT — script on CanvasLayer root; GridDrawRect/GridDisplay are display only.
 

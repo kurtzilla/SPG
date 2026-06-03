@@ -11,7 +11,7 @@ Always prioritize GPU-bound or built-in server solutions over heavy CPU loops.
 
 Do **not** fix performance with isolated micro-patches (lower a constant here, skip one call there). Design the **whole pipeline** before editing.
 
-For any hot-path system (chunk streaming, fog, procedural gen, large buffers):
+For any hot-path system (chunk streaming, procedural gen, large buffers):
 
 1. **Separate hot path from cold path**
    - **Hot path (every frame):** GPU shaders, uniforms, cheap bookkeeping only.

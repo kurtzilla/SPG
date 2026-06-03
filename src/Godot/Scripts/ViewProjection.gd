@@ -296,38 +296,6 @@ func safe_zoom(zoom_override: float = -1.0) -> float:
 	return z if not is_zero_approx(z) else 1.0
 
 
-func verify_fog_projection_parity(
-	viewport_center_px: Vector2,
-	camera_focus_map_px: Vector2,
-	zoom_override: float = -1.0,
-	margin_px: float = 1.0
-) -> bool:
-	var vp_size: Vector2 = get_viewport_size()
-	if vp_size.x < 1.0 or vp_size.y < 1.0:
-		return true
-	var z: float = safe_zoom(zoom_override)
-	var sample_points: Array[Vector2] = [
-		Vector2.ZERO,
-		Vector2(vp_size.x, 0.0),
-		vp_size,
-		Vector2(0.0, vp_size.y),
-		viewport_center_px,
-	]
-	for fragcoord: Vector2 in sample_points:
-		var from_screen: Vector2 = screen_to_world(fragcoord)
-		var from_fragcoord: Vector2 = camera_focus_map_px + ((fragcoord - viewport_center_px) / z)
-		if (
-			not from_screen.is_equal_approx(from_fragcoord)
-			and from_screen.distance_to(from_fragcoord) > margin_px
-		):
-			push_warning(
-				"[ViewProjection] fog projection parity mismatch fragcoord=%s screen=%s frag_path=%s zoom=%s"
-				% [fragcoord, from_screen, from_fragcoord, z]
-			)
-			return false
-	return true
-
-
 func pin_screen_center_for_tests(center: Vector2) -> void:
 	_cached_screen_center = center
 	_screen_center_cached = center.x > 0.0 and center.y > 0.0

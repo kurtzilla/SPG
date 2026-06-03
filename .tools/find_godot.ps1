@@ -1,10 +1,21 @@
-# Resolve Godot 4 mono executable for SPG tooling.
-$ErrorActionPreference = "Stop"
-
+# Resolve Godot 4 .NET executable for SPG tooling (grid-smoke, run game, etc.).
 function Get-SpgGodotExe {
-    $cmd = Get-Command godot -ErrorAction SilentlyContinue
-    if ($cmd -and (Test-Path -LiteralPath $cmd.Source)) {
-        return $cmd.Source
+    $repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+    $settingsPath = Join-Path $repo ".vscode\settings.json"
+
+    if (Test-Path -LiteralPath $settingsPath) {
+        try {
+            $raw = Get-Content -LiteralPath $settingsPath -Raw
+            if ($raw -match '"godotTools\.editorPath\.godot4"\s*:\s*"([^"]+)"') {
+                $fromSettings = $Matches[1] -replace '\\\\', '\'
+                if ($fromSettings -and (Test-Path -LiteralPath $fromSettings)) {
+                    return (Resolve-Path -LiteralPath $fromSettings).Path
+                }
+            }
+        }
+        catch {
+            Write-Warning "Could not read Godot path from $settingsPath`: $_"
+        }
     }
 
     $prevEap = $ErrorActionPreference
@@ -12,18 +23,9 @@ function Get-SpgGodotExe {
     $fromGdvm = gdvm show --csharp 2>&1 | Where-Object { "$_" -match '\.exe$' } | Select-Object -First 1
     $ErrorActionPreference = $prevEap
     if ($fromGdvm) {
-        $path = "$fromGdvm".Trim()
-        if (Test-Path -LiteralPath $path) {
-            return $path
-        }
-    }
-
-    $gdvmRoot = Join-Path $env:USERPROFILE ".gdvm\installs"
-    if (Test-Path -LiteralPath $gdvmRoot) {
-        $candidates = Get-ChildItem -LiteralPath $gdvmRoot -Recurse -Filter "Godot*_mono_win64.exe" -ErrorAction SilentlyContinue |
-            Sort-Object LastWriteTime -Descending
-        if ($candidates) {
-            return $candidates[0].FullName
+        $candidate = "$fromGdvm".Trim()
+        if (Test-Path -LiteralPath $candidate) {
+            return (Resolve-Path -LiteralPath $candidate).Path
         }
     }
 

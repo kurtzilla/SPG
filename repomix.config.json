@@ -4,9 +4,9 @@
     "maxFileSize": 52428800
   },
   "output": {
-    "filePath": "repomix-snapshot.txt",
+    "filePath": "D:/source/SPG-repomix/repomix-snapshot.txt",
     "style": "xml",
-    "instructionFilePath": "repomix-instructions.md",
+    "instructionFilePath": "D:/source/SPG-repomix/repomix-instructions.md",
     "parsableStyle": true,
     "fileSummary": true,
     "directoryStructure": true,

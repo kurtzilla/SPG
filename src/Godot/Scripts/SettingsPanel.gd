@@ -18,9 +18,6 @@ const PERF_GRID: String = PV + "/PerfBlock/PerfMargin/PerfVBox/PerfGrid"
 const PERF_CONTROLS_GRID: String = PV + "/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"
 const PATH_INTERNAL_SCALE: String = "view.internal_scale"
 const MOVEMENT_GRID: String = PV + "/MovementBlock/MovementMargin/MovementVBox/MovementGrid"
-const FOG_GRID: String = PV + "/FogBlock/FogMargin/FogVBox/FogGrid"
-const PATH_EDGE_FEATHER: String = "fog.edge_feather_px"
-const PATH_REVEAL_FADE: String = "fog.reveal_fade_seconds"
 const MOUSE_SCREEN_UNSET: Vector2 = Vector2(-1, -1)
 
 const TOOLTIP_TPS: String = "Tiles per second — grid cells traversed per second"
@@ -44,23 +41,17 @@ enum SpeedUnit { TPS, MPS }
 @onready var _speed_value: Label = get_node(STATS_GRID + "/SpeedValue") as Label
 @onready var _viewport_value: Label = get_node(PERF_GRID + "/ViewportValue") as Label
 @onready var _max_fps_value: Label = get_node(PERF_GRID + "/MaxFpsValue") as Label
-@onready var _fog_toggle: CheckButton = get_node(PERF_CONTROLS_GRID + "/FogToggle") as CheckButton
 @onready var _grid_toggle: CheckButton = get_node(PERF_CONTROLS_GRID + "/GridToggle") as CheckButton
 @onready var _vsync_toggle: CheckButton = get_node(PERF_CONTROLS_GRID + "/VsyncToggle") as CheckButton
 @onready var _scale_slider: HSlider = get_node(PERF_CONTROLS_GRID + "/ScaleSlider") as HSlider
 @onready var _scale_value: Label = get_node(PERF_CONTROLS_GRID + "/ScaleValue") as Label
 @onready var _max_speed_slider: HSlider = get_node(MOVEMENT_GRID + "/MaxSpeedSlider") as HSlider
 @onready var _max_speed_value: Label = get_node(MOVEMENT_GRID + "/MaxSpeedValue") as Label
-@onready var _edge_feather_slider: HSlider = get_node(FOG_GRID + "/EdgeFeatherSlider") as HSlider
-@onready var _edge_feather_value: Label = get_node(FOG_GRID + "/EdgeFeatherValue") as Label
-@onready var _reveal_fade_slider: HSlider = get_node(FOG_GRID + "/RevealFadeSlider") as HSlider
-@onready var _reveal_fade_value: Label = get_node(FOG_GRID + "/RevealFadeValue") as Label
 
 var _party: PartyModelGd = null
 var _player: CharacterBody2D = null
 var _speed_unit: SpeedUnit = SpeedUnit.TPS
 var _movement_sliders_bound: bool = false
-var _fog_sliders_bound: bool = false
 var _perf_controls_bound: bool = false
 var _mouse_inside_window: bool = true
 var _last_mouse_screen: Vector2 = MOUSE_SCREEN_UNSET
@@ -78,8 +69,6 @@ func _ready() -> void:
 		ViewProjection.view_changed.connect(_on_view_changed)
 	if not Settings.movement_changed.is_connected(_on_movement_settings_changed):
 		Settings.movement_changed.connect(_on_movement_settings_changed)
-	if not Settings.fog_changed.is_connected(_on_fog_settings_changed):
-		Settings.fog_changed.connect(_on_fog_settings_changed)
 	if not Settings.view_changed.is_connected(_on_settings_view_changed):
 		Settings.view_changed.connect(_on_settings_view_changed)
 	if not Settings.setting_changed.is_connected(_on_setting_changed):
@@ -102,7 +91,6 @@ func setup(
 	_party = party
 	_player = player
 	_bind_movement_sliders()
-	_bind_fog_sliders()
 	_bind_perf_controls()
 	_apply_panel_visibility(ViewProjection.get_settings_panel_visible())
 	call_deferred("_update_hud_layout")
@@ -199,7 +187,6 @@ func _bind_perf_controls() -> void:
 	_scale_slider.max_value = float(Settings.get_max(PATH_INTERNAL_SCALE))
 	_scale_slider.step = float(Settings.get_step(PATH_INTERNAL_SCALE))
 
-	_fog_toggle.toggled.connect(_on_fog_toggle_changed)
 	_grid_toggle.toggled.connect(_on_grid_toggle_changed)
 	_vsync_toggle.toggled.connect(_on_vsync_toggle_changed)
 	_scale_slider.value_changed.connect(_on_scale_slider_changed)
@@ -208,16 +195,11 @@ func _bind_perf_controls() -> void:
 
 
 func _sync_perf_controls_from_settings() -> void:
-	_fog_toggle.set_pressed_no_signal(Settings.get_bool("fog.enabled"))
 	_grid_toggle.set_pressed_no_signal(Settings.get_bool("grid.debug_grid_lines"))
 	_vsync_toggle.set_pressed_no_signal(Settings.get_bool("view.vsync_enabled"))
 	var internal_scale: float = Settings.get_float(PATH_INTERNAL_SCALE)
 	_scale_slider.set_value_no_signal(internal_scale)
 	_scale_value.text = "%.2f" % internal_scale
-
-
-func _on_fog_toggle_changed(pressed: bool) -> void:
-	Settings.set_bool("fog.enabled", pressed)
 
 
 func _on_grid_toggle_changed(pressed: bool) -> void:
@@ -231,61 +213,6 @@ func _on_vsync_toggle_changed(pressed: bool) -> void:
 func _on_scale_slider_changed(value: float) -> void:
 	_scale_value.text = "%.2f" % value
 	Settings.set_float(PATH_INTERNAL_SCALE, value)
-
-
-func _bind_fog_sliders() -> void:
-	if _fog_sliders_bound:
-		_sync_fog_sliders_from_settings()
-		return
-
-	_edge_feather_slider.min_value = float(Settings.get_min(PATH_EDGE_FEATHER))
-	_edge_feather_slider.max_value = float(Settings.get_max(PATH_EDGE_FEATHER))
-	_edge_feather_slider.step = Settings.get_float("hud.fog_feather_slider_step")
-	_edge_feather_slider.tooltip_text = (
-		"Fog reveal edge softness (map px). Affects fog mask and live disc; not terrain tiles."
-	)
-	_reveal_fade_slider.min_value = float(Settings.get_min(PATH_REVEAL_FADE))
-	_reveal_fade_slider.max_value = float(Settings.get_max(PATH_REVEAL_FADE))
-	_reveal_fade_slider.step = Settings.get_float("hud.fog_fade_slider_step")
-	_hide_deprecated_trail_edge_controls()
-
-	_edge_feather_slider.value_changed.connect(_on_edge_feather_slider_changed)
-	_reveal_fade_slider.value_changed.connect(_on_reveal_fade_slider_changed)
-	_fog_sliders_bound = true
-	_sync_fog_sliders_from_settings()
-
-
-func _sync_fog_sliders_from_settings() -> void:
-	_edge_feather_slider.set_value_no_signal(Settings.fog_edge_feather_px)
-	_edge_feather_value.text = "%.0f" % Settings.fog_edge_feather_px
-	_reveal_fade_slider.set_value_no_signal(Settings.fog_reveal_fade_seconds)
-	_reveal_fade_value.text = "%.2f" % Settings.fog_reveal_fade_seconds
-
-
-func _on_edge_feather_slider_changed(value: float) -> void:
-	_edge_feather_value.text = "%.0f" % value
-	Settings.fog_edge_feather_px = value
-
-
-func _hide_deprecated_trail_edge_controls() -> void:
-	for node_name: String in ["TrailEdgeKey", "TrailEdgeSlider", "TrailEdgeValue"]:
-		var node: Node = get_node_or_null(FOG_GRID + "/" + node_name)
-		if node != null:
-			node.visible = false
-
-
-func _on_reveal_fade_slider_changed(value: float) -> void:
-	_reveal_fade_value.text = "%.2f" % value
-	Settings.fog_reveal_fade_seconds = value
-
-
-func _on_fog_settings_changed() -> void:
-	if _fog_sliders_bound:
-		_sync_fog_sliders_from_settings()
-	if _perf_controls_bound:
-		_sync_perf_controls_from_settings()
-	if _main_body.visible:
-		_update_perf_labels()
 
 
 func _sync_collapse_button(btn: Button, expanded: bool) -> void:
@@ -356,7 +283,6 @@ func _on_setting_changed(path: String) -> void:
 	if _perf_controls_bound and (
 		path.begins_with("view.")
 		or path.begins_with("grid.")
-		or path == "fog.enabled"
 	):
 		_sync_perf_controls_from_settings()
 	if not _main_body.visible:
@@ -369,7 +295,6 @@ func _on_setting_changed(path: String) -> void:
 	if (
 		path.begins_with("view.")
 		or path.begins_with("grid.")
-		or path == "fog.enabled"
 	):
 		_update_perf_labels()
 

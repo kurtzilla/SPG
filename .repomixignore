@@ -1,4 +1,46 @@
-# Add patterns to ignore here, one per line
-# Example:
-# *.log
-# tmp/
+# ==============================================================================
+
+# REPOMIX EXCLUSIONS (D:\source\SPG)
+
+# ==============================================================================
+
+# 1. Redundant Backup & Legacy Files
+
+# Your file tree shows old project configurations.
+
+# If the AI reads multiple csproj layouts, it gets confused about the active setup.
+
+_.csproj.old
+_.csproj.old.\*
+\*.sln.old
+
+# 2. Build & Deploy Folders
+
+# If your "artifacts" folder contains builds, logs, or pipeline outputs, block it.
+
+artifacts/
+bin/
+obj/
+
+# 3. Godot Text-Data Bloat (Crucial for Token Saving)
+
+# Godot .tscn (scenes) and .tres (resources) are technically text files,
+
+# so Repomix will pack them. However, large scenes contain thousands of lines of
+
+# raw node transforms, collision arrays, and vector bakes that choke LLM context.
+
+_.tscn
+_.tres
+
+# 4. Auto-Generated or Transient Scripts
+
+# From your screenshot, these look like transient/baked shader or engine scripts.
+
+_fog_\*.gd
+
+# 5. Non-Code Metadata (Optional Token Savers)
+
+LICENSE
+\*.txt
+!repomix-snapshot.txt # Handled externally now anyway

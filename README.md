@@ -26,7 +26,7 @@ SPG/
   src/
     SPG.Core.csproj
     Core/
-      Models/     # PartyModel, CharacterModel, VisibilityModel
+      Models/     # PartyModel, CharacterModel
       Math/       # GridMath
     Godot/
       Interop/    # C# CoreBridge + *Gd wrappers

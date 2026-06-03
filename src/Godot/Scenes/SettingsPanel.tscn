@@ -255,20 +255,6 @@ theme_override_constants/h_separation = 16
 theme_override_constants/v_separation = 8
 columns = 3
 
-[node name="FogKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = "Fog Overlay"
-
-[node name="FogToggle" type="CheckButton" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="FogTogglePad" type="Control" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
-custom_minimum_size = Vector2(56, 0)
-layout_mode = 2
-
 [node name="GridKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/PerfBlock/PerfMargin/PerfVBox/PerfControlsGrid"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
@@ -373,101 +359,5 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
 theme_override_font_sizes/font_size = 20
 text = "600"
-horizontal_alignment = 2
-
-[node name="FogBlock" type="PanelContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox"]
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_stats_body")
-
-[node name="FogMargin" type="MarginContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock"]
-layout_mode = 2
-theme_override_constants/margin_bottom = 4
-
-[node name="FogVBox" type="VBoxContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="FogTitle" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = "Fog of War"
-
-[node name="FogGrid" type="GridContainer" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox"]
-layout_mode = 2
-theme_override_constants/h_separation = 16
-theme_override_constants/v_separation = 8
-columns = 3
-
-[node name="EdgeFeatherKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = "Edge Feather (px)"
-
-[node name="EdgeFeatherSlider" type="HSlider" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
-custom_minimum_size = Vector2(160, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-min_value = 0.0
-max_value = 256.0
-step = 4.0
-tick_count = 0
-value = 64.0
-
-[node name="EdgeFeatherValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
-custom_minimum_size = Vector2(56, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 20
-text = "64"
-horizontal_alignment = 2
-
-[node name="TrailEdgeKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = "Trail Edge Soften (px)"
-
-[node name="TrailEdgeSlider" type="HSlider" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
-custom_minimum_size = Vector2(160, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-min_value = 0.0
-max_value = 256.0
-step = 4.0
-tick_count = 0
-value = 96.0
-
-[node name="TrailEdgeValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
-custom_minimum_size = Vector2(56, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 20
-text = "96"
-horizontal_alignment = 2
-
-[node name="RevealFadeKey" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
-theme_override_font_sizes/font_size = 20
-text = "Reveal Fade (s)"
-
-[node name="RevealFadeSlider" type="HSlider" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
-custom_minimum_size = Vector2(160, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-min_value = 0.0
-max_value = 2.0
-step = 0.05
-tick_count = 0
-value = 0.35
-
-[node name="RevealFadeValue" type="Label" parent="HudRoot/TopRightVBox/SettingsPanelRoot/ContentMargin/PanelVBox/MainBodyVBox/FogBlock/FogMargin/FogVBox/FogGrid"]
-custom_minimum_size = Vector2(56, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
-theme_override_font_sizes/font_size = 20
-text = "0.35"
 horizontal_alignment = 2
 

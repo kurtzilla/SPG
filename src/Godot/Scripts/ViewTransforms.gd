@@ -33,7 +33,7 @@ static func grid_to_map_local_px(gx: float, gy: float) -> Vector2:
 	return Vector2(gx * float(ViewMetrics.CELL_SIZE_PX), gy * float(ViewMetrics.CELL_SIZE_PX))
 
 
-## Map-local px at the center of a grid cell (matches Core stamp centers and fog bootstrap).
+## Map-local px at the center of a grid cell (matches Core stamp centers).
 static func grid_cell_center_to_map_local_px(gx: float, gy: float) -> Vector2:
 	return grid_to_map_local_px(gx + 0.5, gy + 0.5)
 

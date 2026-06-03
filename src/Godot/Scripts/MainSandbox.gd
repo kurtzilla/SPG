@@ -3,14 +3,10 @@ extends Node2D
 const ViewTransformsScript = preload("res://src/Godot/Scripts/ViewTransforms.gd")
 const ViewFrameScript = preload("res://src/Godot/Scripts/ViewFrame.gd")
 const PlayerControllerScript = preload("res://src/Godot/Scripts/PlayerController.gd")
-const FogExplorationMapScript = preload("res://src/Godot/Scripts/Systems/fog-of-war/FogExplorationMap.gd")
 
 @onready var _world_canvas: CanvasLayer = $WorldCanvas
 @onready var _map_scroll: Node2D = $WorldCanvas/Tiles
 @onready var _chunk_manager: Node2D = $WorldCanvas/Tiles/ChunkManager
-@onready var _fog: FogExplorationMapScript = $FogExploration
-## Must be the CanvasLayer with FogOverlay.gd ($FogOverlay), NOT $FogOverlay/FogRect — see FogOverlay.gd WIRING INVARIANT.
-@onready var _fog_overlay: FogOverlay = $FogOverlay
 @onready var _grid_overlay: GridOverlay = $GridOverlay
 @onready var _settings_ui: CanvasLayer = $SettingsUi
 @onready var _player: PlayerControllerScript = %Player
@@ -142,12 +138,6 @@ func _apply_internal_viewport_scale() -> void:
 	if vp.size != Vector2i(target_w, target_h):
 		vp.size = Vector2i(target_w, target_h)
 		ViewProjection.invalidate_viewport_metrics()
-		if _fog_overlay != null and _fog_overlay.is_configured():
-			var player_px: Vector2 = (
-				_player.position if _player != null and is_instance_valid(_player)
-				else Vector2(-999999.0, -999999.0)
-			)
-			_fog_overlay.ensure_buffer_for_viewport(player_px)
 
 
 func _finish_ready_after_viewport() -> void:
@@ -160,7 +150,6 @@ func _finish_ready_after_viewport() -> void:
 
 func _finish_ready_viewport_dependent() -> void:
 	_apply_view_frame()
-	_bootstrap_fog()
 	_sync_spawn_tracking_from_player()
 	if _chunk_manager != null:
 		_chunk_manager.force_viewport_chunk_refresh()
@@ -174,9 +163,6 @@ func _process(delta: float) -> void:
 			_apply_view_frame()
 			if _startup_view_frames_remaining > 0:
 				_startup_view_frames_remaining -= 1
-		if _fog_overlay != null and _fog != null and _fog.enabled and _fog_overlay.is_configured():
-			_fog_overlay.update_player_reveal(_player.position, _player.velocity)
-			_fog_overlay.tick_presentation(delta)
 		if _grid_overlay != null and _debug_grid_enabled:
 			_grid_overlay.tick_presentation(delta)
 
@@ -210,12 +196,6 @@ func _notification(what: int) -> void:
 		_view_projection_dirty = true
 		ViewProjection.notify_viewport_resized()
 		_sync_spawn_tracking_from_player()
-		if _fog_overlay != null:
-			var player_px: Vector2 = (
-				_player.position if _player != null and is_instance_valid(_player)
-				else Vector2(-999999.0, -999999.0)
-			)
-			_fog_overlay.ensure_buffer_for_viewport(player_px)
 		_schedule_zoom_deferred_rebuild()
 
 
@@ -244,8 +224,6 @@ func _apply_view_frame() -> void:
 
 	if _grid_overlay != null and _debug_grid_enabled:
 		_grid_overlay.apply_view_frame(frame)
-	if _fog_overlay != null and _fog != null and _fog.enabled:
-		_fog_overlay.apply_view_frame(frame)
 
 	if OS.is_debug_build():
 		_verify_projection_canvas_parity(frame)
@@ -279,15 +257,11 @@ func _on_player_grid_cell_changed(cell: Vector2i) -> void:
 	_chunk_manager.sync_center_from_player_map_px(_player.position)
 	_last_tracked_x = cell.x
 	_last_tracked_y = cell.y
-	if _fog != null:
-		_fog.on_player_cell_changed(cell)
 
 
 func _on_player_map_position_changed(map_px: Vector2) -> void:
 	if _chunk_manager != null and _player != null:
 		_chunk_manager.sync_center_from_player_motion(map_px, _player.velocity)
-	if _fog != null:
-		_fog.on_player_map_position_changed(map_px)
 
 
 func _bootstrap_after_frame() -> void:
@@ -299,32 +273,9 @@ func _bootstrap_after_frame() -> void:
 		return
 	_sync_spawn_tracking_from_player()
 	_apply_view_frame()
-	if _fog_overlay != null and not _fog_overlay.is_configured():
-		_bootstrap_fog()
 	if _chunk_manager != null:
 		var spawn_grid: Vector2i = ViewProjection.get_camera_center_map()
 		_chunk_manager.force_immediate_startup_pass(spawn_grid)
-
-
-func _bootstrap_fog() -> void:
-	if _fog == null or _fog_overlay == null or _player == null or not is_instance_valid(_player):
-		return
-	if not FogOverlay.validate_host_node(_fog_overlay):
-		push_error(
-			"Fog wiring broken: MainSandbox._fog_overlay must be $FogOverlay (CanvasLayer + FogOverlay.gd). "
-			+ "Pointing at FogRect causes full-black fog with no setup. See FogOverlay.gd WIRING INVARIANT."
-		)
-		return
-	_fog.setup(_player, _fog_overlay)
-	if _chunk_manager != null:
-		_chunk_manager.sync_center_from_player_map_px(_player.position)
-	var spawn_grid: Vector2i = ViewProjection.get_camera_center_map()
-	if spawn_grid == Vector2i.ZERO:
-		spawn_grid = ViewProjection.map_local_px_to_grid_cell(_player.position)
-	_fog.bootstrap_exploration(spawn_grid)
-	_fog.on_player_cell_changed(spawn_grid)
-	_fog_overlay.set_enabled_visible(_fog.enabled)
-	_apply_view_frame()
 
 
 func _log_perf_baseline_diagnostics() -> void:
@@ -334,13 +285,12 @@ func _log_perf_baseline_diagnostics() -> void:
 		DisplayServer.window_get_current_screen()
 	)
 	print(
-		"[PerfBaseline] vsync=%s max_fps=%d internal_scale=%.2f grid=%s fog=%s viewport=%s refresh=%.0fHz — toggle settings to measure idle FPS split"
+		"[PerfBaseline] vsync=%s max_fps=%d internal_scale=%.2f grid=%s viewport=%s refresh=%.0fHz — toggle settings to measure idle FPS split"
 		% [
 			Settings.get_bool("view.vsync_enabled"),
 			Settings.get_int("view.max_fps"),
 			Settings.get_float("view.internal_scale"),
 			Settings.get_bool("grid.debug_grid_lines"),
-			Settings.get_bool("fog.enabled"),
 			ViewProjection.get_viewport_size(),
 			refresh_hz,
 		]
@@ -390,11 +340,6 @@ func _verify_projection_canvas_parity(frame: ViewFrameScript) -> void:
 			"ViewProjection canvas parity mismatch: node=%s projection=%s"
 			% [from_node, from_projection]
 		)
-	ViewProjection.verify_fog_projection_parity(
-		frame.viewport_center,
-		frame.camera_focus_map_px,
-		frame.zoom
-	)
 
 
 func _unhandled_input(event: InputEvent) -> void:

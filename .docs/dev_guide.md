@@ -14,12 +14,12 @@ The goal of this phase is strictly to achieve an isometric view with a 2-charact
 
 - **Core (`src/Core/`, project [`src/SPG.Core.csproj`](../src/SPG.Core.csproj)):** C# class library — no Godot references.
 
-  - `Models/`: `PartyModel`, `CharacterModel`, `VisibilityModel`
+  - `Models/`: `PartyModel`, `CharacterModel`
 
   - `Math/`: `GridMath`
 
 - **Interop (`src/Godot/Interop/`):** C# `RefCounted` wrappers + `CoreBridge` autoload. GDScript calls use **PascalCase** (e.g. `CoreBridge.CreatePartyModel()`, `character.MoveRelative()`).
-- **World streaming (`src/Godot/Scripts/World/`):** `ChunkManager` — 32×32 procedural chunks, 3×3 load window, `get_tile_type_at_global_pos()`. This is the **reference pattern** for holistic performance: budgeted job queue, hot/cold path split, merged work per frame. Fog and other presentation pipelines must follow the same shape — see `.cursor/rules/godot-performance.mdc` and **Performance architecture** in `architecture.md`. Grid overlay sync is throttled to scroll movement, not idle frames.
+- **World streaming (`src/Godot/Scripts/World/`):** `ChunkManager` — 32×32 procedural chunks, 3×3 load window, `get_tile_type_at_global_pos()`. This is the **reference pattern** for holistic performance: budgeted job queue, hot/cold path split, merged work per frame. Other presentation pipelines must follow the same shape — see `.cursor/rules/godot-performance.mdc` and **Performance architecture** in `architecture.md`. Grid overlay sync is throttled to scroll movement, not idle frames.
 
 - **Godot (`src/Godot/`):** GDScript scenes and visuals.
 
@@ -31,7 +31,7 @@ The goal of this phase is strictly to achieve an isometric view with a 2-charact
 
 ## Agent coding safety (mandatory)
 
-Every coding task (human or agent) must follow [`.cursor/rules/coding-safety.mdc`](../.cursor/rules/coding-safety.mdc): **STOP** before editing, read what already works, post a **Self-Correction Step** in chat (regression traps + **performance implications** + minimal diff), then change code. Fog/grid work also requires **fog-smoke** / **grid-smoke** or **verify-spg** before marking done (see `tools/FOG_REGRESSION.md`, `tools/GRID_REGRESSION.md`).
+Every coding task (human or agent) must follow [`.cursor/rules/coding-safety.mdc`](../.cursor/rules/coding-safety.mdc): **STOP** before editing, read what already works, post a **Self-Correction Step** in chat (regression traps + **performance implications** + minimal diff), then change code. Grid work also requires **grid-smoke** or **verify-spg** before marking done (see `tools/GRID_REGRESSION.md`).
 
 ## 3. Toolchain
 

@@ -29,8 +29,8 @@ Post a short block titled **Self-Correction Step** with **all** of the following
    - **Expected symptom if wrong** — hitch on zoom/move, FPS drop, memory spike, startup delay.
    - If the ask adds or touches runtime work: state how cost stays bounded (budget, debounce, dirty regions, single commit/frame, GPU vs CPU). If none apply, say **"Perf: negligible (reason)"** — do not skip the bullet.
 3. **Minimal diff** — files you will touch; what you will **not** touch.
-4. **Holistic pipeline** (required when touching fog, chunks, grid, streaming, shaders, presentation tick) — hot/cold split, single `tick_frame` entry, merged commits; full rules in godot-performance.mdc.
-5. **Verification** — which regression gates you will run after (fog-smoke, grid-smoke, verify-spg, manual check, `[ChunkPerf]`/`[FogPerf]` if perf-sensitive).
+4. **Holistic pipeline** (required when touching chunks, grid, streaming, shaders, presentation tick) — hot/cold split, single `tick_frame` entry, merged commits; full rules in godot-performance.mdc.
+5. **Verification** — which regression gates you will run after (grid-smoke, verify-spg, manual check, `[ChunkPerf]` if perf-sensitive).
 
 For small tasks, bullets still required — brevity is fine; **omission is not**.
 
@@ -43,7 +43,7 @@ For small tasks, bullets still required — brevity is fine; **omission is not**
 
 ## 5. After edits
 
-- Run applicable gates (fog/grid smoke, build) before claiming done.
+- Run applicable gates (grid smoke, build) before claiming done.
 - For perf-sensitive changes: confirm no new per-frame spikes (profiler logs or stated manual check).
 - Report what you verified; do not claim "should work" without running the gate.
 

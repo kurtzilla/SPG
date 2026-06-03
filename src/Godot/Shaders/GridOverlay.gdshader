@@ -1,4 +1,4 @@
-// Grid overlay in world/map-local space via canvas_to_map (same path as FogOverlay).
+// Grid overlay in world/map-local space via canvas_to_map.
 shader_type canvas_item;
 render_mode unshaded, blend_mix;
 

@@ -21,24 +21,6 @@
       "problemMatcher": "$msCompile"
     },
     {
-      "label": "fog-smoke",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/.tools/run_fog_smoke.ps1"
-      ],
-      "group": "test",
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared"
-      },
-      "problemMatcher": []
-    },
-    {
       "label": "grid-smoke",
       "type": "shell",
       "command": "powershell",
@@ -58,11 +40,7 @@
     },
     {
       "label": "verify-spg",
-      "dependsOn": [
-        "build-spg",
-        "fog-smoke",
-        "grid-smoke"
-      ],
+      "dependsOn": ["build-spg", "grid-smoke"],
       "dependsOrder": "sequence",
       "group": "test",
       "problemMatcher": []

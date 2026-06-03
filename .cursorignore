@@ -1,0 +1,68 @@
+# ==========================================
+# 📦 REPOMIX & MONOLITHIC TEXT BUNDLES
+# ==========================================
+# Blocks the AI from accidentally reading a giant text file of your entire repo
+repomix-snapshot.txt
+repomix.txt
+*repomix*
+*-output.txt
+repomix-instructions.md
+
+# ==========================================
+# 🛑 HEAVY CACHES & DEPENDENCIES
+# ==========================================
+# Keeps the background search engine from getting stuck in dependency hell
+node_modules/
+.npm/
+.yarn/
+vendor/
+.pnpm-store/
+
+# ==========================================
+# 🛠️ BUILD OUTPUTS, ARTIFACTS & LOGS
+# ==========================================
+# Prevents Cursor from reading massive minified production code or endless error logs
+.git/
+dist/
+build/
+.next/
+.nuxt/
+out/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.vscdb-journal
+# Shield the workspace from compiler layout / binary game builds
+artifacts/
+package-lock.json
+yarn.lock
+
+# ==========================================
+# 🗄️ DATABASES & MEDIA
+# ==========================================
+# Prevents the agent from pulling huge binary data or local DB files into context
+*.db
+*.sqlite
+*.mp4
+*.png
+*.jpg
+*.jpeg
+*.svg
+
+# ==========================================
+# 🤖 ENVIRONMENT & CLOUD INFRASTRUCTURE
+# ==========================================
+.env
+.env.*
+.terraform/
+.serverless/
+
+# Godot 4 specific bloat
+.godot/
+*.translation
+.import/
+export_presets.cfg
+
+# Block all machine-generated fog graph cache files
+_fog_*.gd
