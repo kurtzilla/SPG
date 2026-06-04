@@ -456,7 +456,7 @@ func _request_explicit_save(save_kind: String) -> void:
 
 func _run_explicit_save_async(payload_string: String) -> void:
 	_save_in_flight = true
-	var ok: bool = await serializer.SaveStateExplicitAsync(payload_string)
+	var ok: bool = await serializer.SaveStateExplicitAsync([payload_string])
 	_save_in_flight = false
 	if OS.is_debug_build():
-		print("[Save] explicit save ok=%s bytes=%d" % [ok, payload_string.length()])
+		print("[Save] explicit save ok: ", ok)

@@ -22,6 +22,9 @@ var _texture_max_bound: Vector2i = Vector2i(-99999, -99999)
 var _texture_size: Vector2i = Vector2i.ZERO
 var _history_dirty: bool = false
 
+var _last_stamped_cell: Vector2i = Vector2i(-999999, -999999)
+var _debug_center_cell: Vector2i = Vector2i.ZERO
+
 const FOG_SHADER_CODE = """
 shader_type canvas_item;
 
@@ -119,20 +122,15 @@ func bind_player(player_node: Node2D) -> void:
 func _on_player_position_changed(map_px: Vector2) -> void:
 	# Immediately assign the player vector to prevent lookups from trailing behind actual frame state
 	_player_pixel_position = map_px
-	var grid_pos = Vector2i(floori(map_px.x / _cell_size), floori(map_px.y / _cell_size))
-	update_fog_around_player(grid_pos)
 
 func update_fog_around_player(player_grid_pos: Vector2i) -> void:
-	var active_radius = max(sight_radius_pixels, 480.0)
-	var tile_radius = ceil(active_radius / _cell_size)
-	
-	for x in range(player_grid_pos.x - tile_radius, player_grid_pos.x + tile_radius + 1):
-		for y in range(player_grid_pos.y - tile_radius, player_grid_pos.y + tile_radius + 1):
-			var cell = Vector2i(x, y)
-			var cell_center = Vector2(cell.x * _cell_size + _cell_size/2.0, cell.y * _cell_size + _cell_size/2.0)
-			if cell_center.distance_to(_player_pixel_position) <= active_radius:
+	var active_radius := maxf(sight_radius_pixels, 480.0)
+	var tile_radius := int(ceili(active_radius / _cell_size))
+	for dx in range(-tile_radius, tile_radius + 1):
+		for dy in range(-tile_radius, tile_radius + 1):
+			if (dx * dx) + (dy * dy) <= (tile_radius * tile_radius):
+				var cell := Vector2i(player_grid_pos.x + dx, player_grid_pos.y + dy)
 				_mark_cell_revealed(cell)
-	
 	_update_history_texture()
 	_update_shader_uniforms()
 	queue_redraw()
@@ -173,11 +171,20 @@ func shroud_new_chunk_region(_chunk_coord: Vector2i, _chunk_size: int) -> void:
 
 func _process(_delta: float) -> void:
 	if is_instance_valid(_player):
-		var current_pos = _player.position
+		var current_pos := _player.position
 		if not current_pos.is_equal_approx(_player_pixel_position):
 			_player_pixel_position = current_pos
 			_update_shader_uniforms()
-			queue_redraw()
+
+	var current_cell := Vector2i(
+		floori(_player_pixel_position.x / _cell_size),
+		floori(_player_pixel_position.y / _cell_size)
+	)
+	if current_cell != _last_stamped_cell:
+		_last_stamped_cell = current_cell
+		_debug_center_cell = current_cell
+		update_fog_around_player(current_cell)
+		queue_redraw()
 
 func _update_history_texture() -> void:
 	if not _history_dirty: return
@@ -220,3 +227,10 @@ func _draw() -> void:
 	)
 	
 	draw_rect(adaptive_render_rect, Color.WHITE, true)
+
+	if OS.is_debug_build():
+		var cell_world_origin := Vector2(
+			_debug_center_cell.x * _cell_size,
+			_debug_center_cell.y * _cell_size
+		)
+		draw_rect(Rect2(cell_world_origin, Vector2(_cell_size, _cell_size)), Color(1, 1, 0, 0.4), true)
