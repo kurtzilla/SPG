@@ -1,60 +1,45 @@
 shader_type canvas_item;
 
+// Enforce linear filtering so the edges of our 50x50 tile block interpolate smoothly
+uniform sampler2D history_texture : hint_default_black, filter_linear;
 uniform vec2 player_pixel_pos;
 uniform float sight_radius;
-uniform float feather_width;
-uniform float realtime_radius;
-uniform float realtime_feather_px = 16.0;
 uniform float shroud_opacity = 0.85;
-
-uniform sampler2D history_texture: filter_linear, repeat_disable;
 uniform vec2 map_texture_origin_tiles;
 uniform vec2 map_texture_size_tiles;
 uniform float cell_size = 32.0;
 
-varying vec2 world_position_coordinate;
+varying vec2 world_coord;
 
 void vertex() {
-	world_position_coordinate = VERTEX;
-}
-
-float sample_history_blurred(vec2 history_uv) {
-	vec2 texel = 0.5 / map_texture_size_tiles;
-	float s00 = texture(history_texture, history_uv - vec2(texel.x, texel.y)).r;
-	float s10 = texture(history_texture, history_uv + vec2(texel.x, -texel.y)).r;
-	float s01 = texture(history_texture, history_uv + vec2(-texel.x, texel.y)).r;
-	float s11 = texture(history_texture, history_uv + texel).r;
-	return (s00 + s10 + s01 + s11) * 0.25;
+	world_coord = VERTEX;
 }
 
 void fragment() {
-	vec2 world_pos = world_position_coordinate;
-	vec2 tile_coord_f = world_pos / cell_size;
-	vec2 history_uv = (tile_coord_f - map_texture_origin_tiles) / map_texture_size_tiles;
+	// 1. Force base canvas color to pure black shroud
+	COLOR.rgb = vec3(0.0);
 
-	float history_sample = 0.0;
-	if (history_uv.x >= 0.0 && history_uv.x <= 1.0 && history_uv.y >= 0.0 && history_uv.y <= 1.0) {
-		float blurred = sample_history_blurred(history_uv);
-		history_sample = smoothstep(0.15, 0.85, blurred);
-	}
+	// 2. Real-time movement circle evaluation in pixel-space
+	float dist = length(world_coord - player_pixel_pos);
+	float visual_softness = 8.0;
+	float in_smooth_circle = smoothstep(sight_radius, max(0.0, sight_radius - visual_softness), dist);
 
-	vec2 diff = world_pos - player_pixel_pos;
-	float current_alpha = shroud_opacity;
+	// 3. Sample history texture using established tile-space UV mapping
+	vec2 history_uv = (world_coord / cell_size - map_texture_origin_tiles) / map_texture_size_tiles;
+	vec4 historical_sample = texture(history_texture, history_uv);
 
-	float dist = length(diff);
-	float min_visible = sight_radius - feather_width;
-	if (dist < min_visible) {
-		current_alpha = 0.0;
-	} else if (dist < sight_radius) {
-		float weight = (dist - min_visible) / feather_width;
-		current_alpha = mix(0.0, shroud_opacity, weight);
-	}
+	// Read the tracking data channel (matching FogManager's CPU format)
+	float raw_history = historical_sample.r;
+	float smoothed_history = smoothstep(0.1, 0.8, raw_history);
 
-	float outer_edge = realtime_radius;
-	float inner_edge = max(0.0, realtime_radius - realtime_feather_px);
-	float realtime_reveal = smoothstep(outer_edge, inner_edge, dist);
-	float combined_reveal = max(history_sample, realtime_reveal);
-	current_alpha = min(current_alpha, shroud_opacity * (1.0 - combined_reveal));
+	// 4. INVERT VISIBILITY MASK:
+	// Maps stamped CPU values to a cleared window (0.0 fog)
+	// and unvisited coordinates to solid shroud (1.0 fog)
+	float fog_history = 1.0 - smoothed_history;
 
-	COLOR = vec4(0.0, 0.0, 0.0, current_alpha);
+	// 5. Combine real-time active vision disk with the tracking trail
+	float final_mask = min(fog_history, 1.0 - in_smooth_circle);
+
+	// 6. Write out final visibility to the fog layer's opacity channel
+	COLOR.a = final_mask * shroud_opacity;
 }

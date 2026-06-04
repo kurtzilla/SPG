@@ -49,40 +49,47 @@ func bind_player(player_node: Node2D) -> void:
 	_fog_player_ready = false
 	if _player and _player.has_signal("map_position_changed"):
 		_player.map_position_changed.disconnect(_on_player_position_changed)
-		
+
 	_player = player_node
-	if _player:
-		_player_pixel_position = _player.position
-		if _player.has_signal("map_position_changed"):
-			_player.map_position_changed.connect(_on_player_position_changed)
-		
-		var starting_grid := Vector2i(
-			floori(_player_pixel_position.x / _cell_size),
-			floori(_player_pixel_position.y / _cell_size)
-		)
-		_last_stamped_cell = starting_grid
-		_debug_center_cell = starting_grid
+	_revealed_cells.clear()
 
-		var origin_cell := Vector2i.ZERO
-		var square_half := initial_square_diameter_tiles / 2
-		var window_padding := Vector2i(30, 30) + Vector2i(square_half, square_half)
+	if _player.has_signal("map_position_changed") and not _player.map_position_changed.is_connected(_on_player_position_changed):
+		_player.map_position_changed.connect(_on_player_position_changed)
 
-		# History window anchored at world grid origin (fixed startup square, not player)
-		_texture_min_bound = origin_cell - window_padding
-		_texture_max_bound = origin_cell + window_padding
-		_texture_size = (_texture_max_bound - _texture_min_bound) + Vector2i(1, 1)
+	_player_pixel_position = _player.position
 
-		_history_image = Image.create(_texture_size.x, _texture_size.y, false, Image.FORMAT_R8)
-		_history_image.fill(Color(0, 0, 0, 1))
-		_history_texture = ImageTexture.create_from_image(_history_image)
+	if _cell_size <= 0.0:
+		return
 
-		if _cell_size > 0.0:
-			_stamp_initial_square_history(origin_cell, initial_square_diameter_tiles)
+	var startup_cell := Vector2i(
+		floori(_player_pixel_position.x / _cell_size),
+		floori(_player_pixel_position.y / _cell_size)
+	)
+	_last_stamped_cell = startup_cell
+	_debug_center_cell = startup_cell
 
-		_fog_player_ready = true
-		_update_history_texture()
-		_update_shader_uniforms()
-		queue_redraw()
+	var square_half := initial_square_diameter_tiles / 2
+	var window_padding := Vector2i(30, 30) + Vector2i(square_half, square_half)
+	_texture_min_bound = startup_cell - window_padding
+	_texture_max_bound = startup_cell + window_padding
+	_texture_size = (_texture_max_bound - _texture_min_bound) + Vector2i(1, 1)
+
+	_history_image = Image.create(_texture_size.x, _texture_size.y, false, Image.FORMAT_R8)
+	_history_image.fill(Color(0, 0, 0, 1))
+	_history_texture = ImageTexture.create_from_image(_history_image)
+
+	# BAKE THE 50x50 START SQUARE DATA
+	# Loops across the wide layout region on startup to carve a permanent historical
+	# starting box. The shader's linear filtering handles the visual softening.
+	for dx in range(-25, 26):
+		for dy in range(-25, 26):
+			var target_cell := Vector2i(startup_cell.x + dx, startup_cell.y + dy)
+			_mark_cell_revealed(target_cell)
+
+	_fog_player_ready = true
+	_update_history_texture()
+	_update_shader_uniforms()
+	queue_redraw()
 
 func _on_player_position_changed(new_pixel_pos: Vector2) -> void:
 	if not _fog_player_ready or _cell_size <= 0.0:
@@ -98,12 +105,6 @@ func _on_player_position_changed(new_pixel_pos: Vector2) -> void:
 func _reveal_radius_tiles() -> int:
 	return int(ceili(maxf(sight_radius_pixels, 480.0) / _cell_size))
 
-func _stamp_initial_square_history(center_cell: Vector2i, size_tiles: int) -> void:
-	var half := size_tiles / 2
-	for dx in range(-half, half):
-		for dy in range(-half, half):
-			_mark_cell_revealed(Vector2i(center_cell.x + dx, center_cell.y + dy))
-
 func _force_cold_path_stamp(cell: Vector2i) -> void:
 	_last_stamped_cell = cell
 	_debug_center_cell = cell
@@ -116,12 +117,14 @@ func update_fog_around_player(player_grid_pos: Vector2i, radius: int = -1) -> vo
 		var active_radius := maxf(sight_radius_pixels, 480.0)
 		tile_radius = int(ceili(active_radius / _cell_size))
 
-	var radius_squared := float(tile_radius * tile_radius)
-	for dx in range(-tile_radius, tile_radius + 1):
-		for dy in range(-tile_radius, tile_radius + 1):
-			var cx := float(dx) + 0.5
-			var cy := float(dy) + 0.5
-			if (cx * cx) + (cy * cy) <= radius_squared:
+	var effective_radius := float(tile_radius) + 0.5
+	var radius_squared := effective_radius * effective_radius
+
+	for dx in range(-tile_radius - 1, tile_radius + 2):
+		for dy in range(-tile_radius - 1, tile_radius + 2):
+			var check_x := float(dx) + 0.5 if dx >= 0 else float(dx) - 0.5
+			var check_y := float(dy) + 0.5 if dy >= 0 else float(dy) - 0.5
+			if (check_x * check_x) + (check_y * check_y) <= radius_squared:
 				_mark_cell_revealed(Vector2i(player_grid_pos.x + dx, player_grid_pos.y + dy))
 	_update_history_texture()
 	_update_shader_uniforms()
@@ -162,19 +165,18 @@ func shroud_new_chunk_region(_chunk_coord: Vector2i, _chunk_size: int) -> void:
 	queue_redraw()
 
 func _process(_delta: float) -> void:
-	# Hot path: frame-rate GPU presentation (sub-pixel)
+	# Hot path: push precise sub-pixel tracking to GPU every frame
 	if is_instance_valid(_player):
 		_player_pixel_position = _player.position
 
 	if _shader_material:
 		_shader_material.set_shader_parameter("player_pixel_pos", _player_pixel_position)
+		# Enforce unified, uninflated scaling across both systems.
+		# This stops the shader mask from ballooning past the data corridor.
+		var clean_radius := float(_reveal_radius_tiles()) * _cell_size
+		_shader_material.set_shader_parameter("sight_radius", clean_radius)
 
-		var active_radius := maxf(sight_radius_pixels, 480.0)
-		var reveal_radius_tiles := int(ceili(active_radius / _cell_size))
-		var visual_radius := (reveal_radius_tiles + smooth_visual_radius_padding) * _cell_size
-		_shader_material.set_shader_parameter("realtime_radius", visual_radius)
-
-	# Cold path: discrete cell-cross stamping (unchanged)
+	# Cold path: discrete cell-cross stamping
 	if not _fog_player_ready or not is_instance_valid(_player):
 		return
 	var current_cell := Vector2i(
@@ -184,9 +186,7 @@ func _process(_delta: float) -> void:
 	if current_cell != _last_stamped_cell:
 		_last_stamped_cell = current_cell
 		_debug_center_cell = current_cell
-		var active_radius := maxf(sight_radius_pixels, 480.0)
-		var reveal_radius_tiles := int(ceili(active_radius / _cell_size))
-		update_fog_around_player(current_cell, reveal_radius_tiles)
+		update_fog_around_player(current_cell, _reveal_radius_tiles())
 		queue_redraw()
 
 func _update_history_texture() -> void:
@@ -202,13 +202,9 @@ func _update_history_texture() -> void:
 func _update_shader_uniforms() -> void:
 	if not _shader_material: return
 	
-	var active_radius = max(sight_radius_pixels, 480.0)
-	var active_feather = max(feather_width_pixels, 120.0)
-	
+	var clean_radius := float(_reveal_radius_tiles()) * _cell_size
 	_shader_material.set_shader_parameter("player_pixel_pos", _player_pixel_position)
-	_shader_material.set_shader_parameter("sight_radius", active_radius)
-	_shader_material.set_shader_parameter("feather_width", active_feather)
-	_shader_material.set_shader_parameter("realtime_feather_px", maxf(feather_width_pixels, _cell_size * 0.5))
+	_shader_material.set_shader_parameter("sight_radius", clean_radius)
 	_shader_material.set_shader_parameter("cell_size", _cell_size)
 	_shader_material.set_shader_parameter("shroud_opacity", shroud_opacity)
 
