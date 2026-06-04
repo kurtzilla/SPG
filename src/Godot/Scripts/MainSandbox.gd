@@ -456,6 +456,7 @@ func _request_explicit_save(save_kind: String) -> void:
 
 func _run_explicit_save_async(payload_string: String) -> void:
 	_save_in_flight = true
+	# Maps natively to the explicit Variant[] parameter layout on the C# side
 	var ok: bool = await serializer.SaveStateExplicitAsync([payload_string])
 	_save_in_flight = false
 	if OS.is_debug_build():

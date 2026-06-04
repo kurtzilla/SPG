@@ -3,7 +3,7 @@ class_name FogManager
 
 @export var sight_radius_pixels: float = 480.0
 @export var feather_width_pixels: float = 120.0
-@export var initial_square_diameter_tiles: int = 24
+@export var initial_square_diameter_tiles: int = 50
 @export var shroud_opacity: float = 0.85
 @export var smooth_visual_radius_padding: float = 1.5 # Padding tiles to seamlessly mask the grid pop-in
 
@@ -25,6 +25,7 @@ var _history_dirty: bool = false
 
 var _last_stamped_cell: Vector2i = Vector2i(-999999, -999999)
 var _debug_center_cell: Vector2i = Vector2i.ZERO
+var _fog_player_ready: bool = false
 
 const FOG_SHADER: Shader = preload("res://src/Godot/Shaders/FogOverlay.gdshader")
 
@@ -42,6 +43,10 @@ func _ready() -> void:
 	self.material = _shader_material
 
 func bind_player(player_node: Node2D) -> void:
+	if not player_node:
+		return
+
+	_fog_player_ready = false
 	if _player and _player.has_signal("map_position_changed"):
 		_player.map_position_changed.disconnect(_on_player_position_changed)
 		
@@ -51,27 +56,59 @@ func bind_player(player_node: Node2D) -> void:
 		if _player.has_signal("map_position_changed"):
 			_player.map_position_changed.connect(_on_player_position_changed)
 		
-		var starting_grid = Vector2i(floori(_player_pixel_position.x / _cell_size), floori(_player_pixel_position.y / _cell_size))
-		
-		# Set an initial baseline padding surrounding the player spawn location
-		_texture_min_bound = starting_grid - Vector2i(30, 30)
-		_texture_max_bound = starting_grid + Vector2i(30, 30)
+		var starting_grid := Vector2i(
+			floori(_player_pixel_position.x / _cell_size),
+			floori(_player_pixel_position.y / _cell_size)
+		)
+		_last_stamped_cell = starting_grid
+		_debug_center_cell = starting_grid
+
+		var origin_cell := Vector2i.ZERO
+		var square_half := initial_square_diameter_tiles / 2
+		var window_padding := Vector2i(30, 30) + Vector2i(square_half, square_half)
+
+		# History window anchored at world grid origin (fixed startup square, not player)
+		_texture_min_bound = origin_cell - window_padding
+		_texture_max_bound = origin_cell + window_padding
 		_texture_size = (_texture_max_bound - _texture_min_bound) + Vector2i(1, 1)
-		
+
 		_history_image = Image.create(_texture_size.x, _texture_size.y, false, Image.FORMAT_R8)
 		_history_image.fill(Color(0, 0, 0, 1))
 		_history_texture = ImageTexture.create_from_image(_history_image)
-		
-		var fill_radius := int(ceili(initial_square_diameter_tiles / 2.0))
-		update_fog_around_player(starting_grid, fill_radius)
-		
+
+		if _cell_size > 0.0:
+			_stamp_initial_square_history(origin_cell, initial_square_diameter_tiles)
+
+		_fog_player_ready = true
 		_update_history_texture()
 		_update_shader_uniforms()
 		queue_redraw()
 
-func _on_player_position_changed(map_px: Vector2) -> void:
-	# Immediately assign the player vector to prevent lookups from trailing behind actual frame state
-	_player_pixel_position = map_px
+func _on_player_position_changed(new_pixel_pos: Vector2) -> void:
+	if not _fog_player_ready or _cell_size <= 0.0:
+		return
+	_player_pixel_position = new_pixel_pos
+	var current_cell := Vector2i(
+		floori(_player_pixel_position.x / _cell_size),
+		floori(_player_pixel_position.y / _cell_size)
+	)
+	if current_cell != _last_stamped_cell:
+		_force_cold_path_stamp(current_cell)
+
+func _reveal_radius_tiles() -> int:
+	return int(ceili(maxf(sight_radius_pixels, 480.0) / _cell_size))
+
+func _stamp_initial_square_history(center_cell: Vector2i, size_tiles: int) -> void:
+	var half := size_tiles / 2
+	for dx in range(-half, half):
+		for dy in range(-half, half):
+			_mark_cell_revealed(Vector2i(center_cell.x + dx, center_cell.y + dy))
+
+func _force_cold_path_stamp(cell: Vector2i) -> void:
+	_last_stamped_cell = cell
+	_debug_center_cell = cell
+	update_fog_around_player(cell, _reveal_radius_tiles())
+	queue_redraw()
 
 func update_fog_around_player(player_grid_pos: Vector2i, radius: int = -1) -> void:
 	var tile_radius := radius
@@ -138,6 +175,8 @@ func _process(_delta: float) -> void:
 		_shader_material.set_shader_parameter("realtime_radius", visual_radius)
 
 	# Cold path: discrete cell-cross stamping (unchanged)
+	if not _fog_player_ready or not is_instance_valid(_player):
+		return
 	var current_cell := Vector2i(
 		floori(_player_pixel_position.x / _cell_size),
 		floori(_player_pixel_position.y / _cell_size)

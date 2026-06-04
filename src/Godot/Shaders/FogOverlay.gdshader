@@ -50,11 +50,9 @@ void fragment() {
 		current_alpha = mix(0.0, shroud_opacity, weight);
 	}
 
-	float realtime_reveal = 1.0 - smoothstep(
-		realtime_radius - realtime_feather_px,
-		realtime_radius,
-		dist
-	);
+	float outer_edge = realtime_radius;
+	float inner_edge = max(0.0, realtime_radius - realtime_feather_px);
+	float realtime_reveal = smoothstep(outer_edge, inner_edge, dist);
 	float combined_reveal = max(history_sample, realtime_reveal);
 	current_alpha = min(current_alpha, shroud_opacity * (1.0 - combined_reveal));
 
