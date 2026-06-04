@@ -3,7 +3,7 @@ extends RefCounted
 
 ## Solid terrain tiles for grid rendering.
 
-const ViewMetrics = preload("res://src/Godot/Scripts/ViewMetrics.gd")
+const ViewMetricsRes = preload("res://src/Godot/Scripts/ViewMetrics.gd")
 
 const SOLID_LAND_COLOR: Color = Color(0.35, 0.45, 0.32)
 const SOLID_WATER_COLOR: Color = Color(0.22, 0.38, 0.55)
@@ -23,7 +23,7 @@ static func create_solid_mud_texture() -> ImageTexture:
 
 
 static func _create_solid_fill_texture(fill: Color) -> ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
+	var size: int = ViewMetricsRes.CELL_SIZE_PX
 	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
 	image.fill(fill)
 	return _image_to_texture(image)

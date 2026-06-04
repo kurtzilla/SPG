@@ -16,6 +16,8 @@ const ViewMetricsScript = preload("res://src/Godot/Scripts/ViewMetrics.gd")
 const TerrainSandboxTileSetScript = preload("res://src/Godot/Scripts/TerrainSandboxTileSet.gd")
 enum BootstrapPhase {NONE, KEEP, PREFETCH, DONE}
 
+signal chunk_finished(chunk_coord: Vector2i)
+
 var _chunk_size: int = 32
 var _cells_per_chunk: int = 1024
 var _keep_offsets: Array[Vector2i] = []
@@ -901,21 +903,18 @@ func _paint_local_for_index(job: ChunkLoadJob, index: int) -> Vector2i:
 	var n: int = _chunk_size
 	var last: int = n - 1
 	var axis: Vector2i = job.paint_axis
+	var row: int = floori(float(index) / float(n))
 	if axis.x > 0:
-		var lx: int = index / n
 		var ly: int = index % n
-		return Vector2i(lx, ly)
+		return Vector2i(row, ly)
 	if axis.x < 0:
-		var lx_neg: int = last - index / n
 		var ly_neg: int = index % n
-		return Vector2i(lx_neg, ly_neg)
+		return Vector2i(last - row, ly_neg)
 	if axis.y < 0:
-		var ly_up: int = last - index / n
 		var lx_up: int = index % n
-		return Vector2i(lx_up, ly_up)
-	var ly_down: int = index / n
+		return Vector2i(lx_up, last - row)
 	var lx_down: int = index % n
-	return Vector2i(lx_down, ly_down)
+	return Vector2i(lx_down, row)
 
 
 func _maybe_show_layer(job: ChunkLoadJob) -> void:
@@ -939,6 +938,7 @@ func _finish_job(job: ChunkLoadJob) -> void:
 		job.layer_shown = true
 		ChunkPerfProfileRes.end(&"layer_show", show_t0)
 	job.phase = ChunkLoadJobScript.Phase.DONE
+	chunk_finished.emit(job.coord)
 
 
 func _cancel_job(job: ChunkLoadJob) -> void:

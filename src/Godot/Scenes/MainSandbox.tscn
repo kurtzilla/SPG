@@ -6,6 +6,8 @@
 [ext_resource type="PackedScene" path="res://src/Godot/Scenes/World/ChunkManager.tscn" id="5_chunk_manager"]
 [ext_resource type="PackedScene" path="res://src/Godot/Scenes/Player.tscn" id="6_player"]
 [ext_resource type="Script" uid="uid://7ots6twoo5a5" path="res://src/Godot/Scripts/OriginMarker.gd" id="9_origin_marker"]
+[ext_resource type="Script" uid="uid://cn5ru37m35seb" path="res://src/Godot/Scripts/World/FogManager.gd" id="10_fog_manager"]
+[ext_resource type="Script" uid="uid://jm7f5j6fgio8" path="res://src/Godot/Core/FogDiskSerializer.cs" id="11_fog_disk_serializer"]
 
 [node name="MainSandbox" type="Node2D" unique_id=876572398]
 script = ExtResource("1_main_sandbox")
@@ -18,6 +20,9 @@ follow_viewport_enabled = true
 
 [node name="ChunkManager" parent="WorldCanvas/Tiles" unique_id=1303602726 instance=ExtResource("5_chunk_manager")]
 
+[node name="FogLayer" type="Node2D" parent="WorldCanvas/Tiles" unique_id=203968796]
+script = ExtResource("10_fog_manager")
+
 [node name="OriginMarker" type="Node2D" parent="WorldCanvas/Tiles" unique_id=1669731298]
 script = ExtResource("9_origin_marker")
 
@@ -27,3 +32,6 @@ unique_name_in_owner = true
 [node name="GridOverlay" parent="." unique_id=316111383 instance=ExtResource("2_grid_overlay")]
 
 [node name="SettingsUi" parent="." unique_id=16521539 instance=ExtResource("4_settings_panel")]
+
+[node name="FogDiskSerializer" type="Node" parent="." unique_id=1204624517]
+script = ExtResource("11_fog_disk_serializer")

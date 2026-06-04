@@ -1,36 +1,36 @@
 class_name ViewTransforms
 extends RefCounted
 
-## View-layer coordinate conversions. Grid rules mirror Core GridMath; scale from ViewMetrics.
+## View-layer coordinate conversions. Grid rules mirror Core GridMath; scale from ViewMetricsRes.
 
-const ViewMetrics = preload("res://src/Godot/Scripts/ViewMetrics.gd")
+const ViewMetricsRes = preload("res://src/Godot/Scripts/ViewMetrics.gd")
 
 
 static func meters_to_pixels(meters: float) -> float:
-	return meters * float(ViewMetrics.PIXELS_PER_METER)
+	return meters * float(ViewMetricsRes.PIXELS_PER_METER)
 
 
 static func pixels_to_meters(pixels: float) -> float:
-	return pixels / float(ViewMetrics.PIXELS_PER_METER)
+	return pixels / float(ViewMetricsRes.PIXELS_PER_METER)
 
 
 static func grid_to_world_m(gx: float, gy: float) -> Vector2:
-	return Vector2(gx * ViewMetrics.METERS_PER_CELL, gy * ViewMetrics.METERS_PER_CELL)
+	return Vector2(gx * ViewMetricsRes.METERS_PER_CELL, gy * ViewMetricsRes.METERS_PER_CELL)
 
 
 static func world_m_to_grid(world_m: Vector2) -> Vector2:
-	return Vector2(world_m.x / ViewMetrics.METERS_PER_CELL, world_m.y / ViewMetrics.METERS_PER_CELL)
+	return Vector2(world_m.x / ViewMetricsRes.METERS_PER_CELL, world_m.y / ViewMetricsRes.METERS_PER_CELL)
 
 
 static func world_m_to_grid_i(world_m: Vector2) -> Vector2i:
 	return Vector2i(
-		int(floor(world_m.x / ViewMetrics.METERS_PER_CELL)),
-		int(floor(world_m.y / ViewMetrics.METERS_PER_CELL))
+		int(floor(world_m.x / ViewMetricsRes.METERS_PER_CELL)),
+		int(floor(world_m.y / ViewMetricsRes.METERS_PER_CELL))
 	)
 
 
 static func grid_to_map_local_px(gx: float, gy: float) -> Vector2:
-	return Vector2(gx * float(ViewMetrics.CELL_SIZE_PX), gy * float(ViewMetrics.CELL_SIZE_PX))
+	return Vector2(gx * float(ViewMetricsRes.CELL_SIZE_PX), gy * float(ViewMetricsRes.CELL_SIZE_PX))
 
 
 ## Map-local px at the center of a grid cell (matches Core stamp centers).
@@ -39,7 +39,7 @@ static func grid_cell_center_to_map_local_px(gx: float, gy: float) -> Vector2:
 
 
 static func map_local_px_to_grid(px: Vector2) -> Vector2:
-	return Vector2(px.x / float(ViewMetrics.CELL_SIZE_PX), px.y / float(ViewMetrics.CELL_SIZE_PX))
+	return Vector2(px.x / float(ViewMetricsRes.CELL_SIZE_PX), px.y / float(ViewMetricsRes.CELL_SIZE_PX))
 
 
 static func world_m_to_map_local_px(world_m: Vector2) -> Vector2:
@@ -56,7 +56,7 @@ const ZOOM_LEVELS_ON_SCREEN_CELL_PX: Array[int] = [16, 24, 28, 32, 64, 96, 128]
 
 ## On-screen cell size in canvas px (map-local cell * zoom). Viewport metrics only.
 static func on_screen_cell_px(zoom: float) -> float:
-	return float(ViewMetrics.CELL_SIZE_PX) * maxf(zoom, 0.0001)
+	return float(ViewMetricsRes.CELL_SIZE_PX) * maxf(zoom, 0.0001)
 
 
 static func zoom_level_count() -> int:
@@ -69,14 +69,14 @@ static func on_screen_cell_px_for_level(level_index: int) -> int:
 
 
 static func zoom_from_level_index(level_index: int) -> float:
-	var cell_size: int = ViewMetrics.CELL_SIZE_PX
+	var cell_size: int = ViewMetricsRes.CELL_SIZE_PX
 	if cell_size <= 0:
 		return 1.0
 	return float(on_screen_cell_px_for_level(level_index)) / float(cell_size)
 
 
 static func nearest_zoom_level_index(zoom: float) -> int:
-	var cell_size: int = ViewMetrics.CELL_SIZE_PX
+	var cell_size: int = ViewMetricsRes.CELL_SIZE_PX
 	if cell_size <= 0 or ZOOM_LEVELS_ON_SCREEN_CELL_PX.is_empty():
 		return 0
 	var on_screen: int = roundi(on_screen_cell_px(zoom))
@@ -117,7 +117,7 @@ static func snap_map_scroll_pixel_aligned(map_scroll: Vector2, zoom: float) -> V
 	var screen_cell_px: float = roundf(on_screen_cell_px(zoom))
 	if screen_cell_px <= 0.0:
 		return map_scroll
-	var step: float = float(ViewMetrics.CELL_SIZE_PX) / screen_cell_px
+	var step: float = float(ViewMetricsRes.CELL_SIZE_PX) / screen_cell_px
 	return Vector2(
 		roundf(map_scroll.x / step) * step,
 		roundf(map_scroll.y / step) * step
@@ -126,7 +126,7 @@ static func snap_map_scroll_pixel_aligned(map_scroll: Vector2, zoom: float) -> V
 
 ## Nearest zoom where CELL_SIZE_PX * zoom is an integer (zoom = n / CELL_SIZE_PX).
 static func snap_zoom_pixel_aligned(zoom: float) -> float:
-	var cell_size: int = ViewMetrics.CELL_SIZE_PX
+	var cell_size: int = ViewMetricsRes.CELL_SIZE_PX
 	if cell_size <= 0:
 		return zoom
 	var n: int = maxi(1, roundi(float(cell_size) * zoom))
@@ -146,7 +146,7 @@ static func adjacent_pixel_aligned_zoom(
 	min_zoom: float,
 	max_zoom: float
 ) -> float:
-	var cell_size: int = ViewMetrics.CELL_SIZE_PX
+	var cell_size: int = ViewMetricsRes.CELL_SIZE_PX
 	if cell_size <= 0 or direction == 0:
 		return snap_zoom_pixel_aligned_clamped(zoom, min_zoom, max_zoom)
 	var min_n: int = maxi(1, int(ceil(min_zoom * float(cell_size) - 0.001)))

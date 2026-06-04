@@ -66,3 +66,5 @@ export_presets.cfg
 
 # Block all machine-generated fog graph cache files
 _fog_*.gd
+
+.cursor/plans/archive/

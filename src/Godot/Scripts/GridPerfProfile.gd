@@ -11,7 +11,7 @@ static var _report_timer: float = 0.0
 const REPORT_INTERVAL_SEC: float = 2.0
 
 
-static func begin(scope_name: StringName) -> int:
+static func begin(_scope_name: StringName) -> int:
 	if not _enabled:
 		return 0
 	return Time.get_ticks_usec()

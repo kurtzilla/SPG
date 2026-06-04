@@ -1,0 +1,222 @@
+extends Node2D
+class_name FogManager
+
+@export var sight_radius_pixels: float = 480.0
+@export var feather_width_pixels: float = 120.0
+@export var initial_square_diameter_tiles: int = 24
+@export var shroud_opacity: float = 0.85
+
+var _revealed_cells: Dictionary = {}
+
+var _player: Node2D = null
+var _player_pixel_position: Vector2 = Vector2.ZERO
+var _cell_size: float = 32.0
+
+var _shader_material: ShaderMaterial
+
+# Dynamic History Texture sliding window tracking parameters
+var _history_image: Image
+var _history_texture: ImageTexture
+var _texture_min_bound: Vector2i = Vector2i(99999, 99999)
+var _texture_max_bound: Vector2i = Vector2i(-99999, -99999)
+var _texture_size: Vector2i = Vector2i.ZERO
+var _history_dirty: bool = false
+
+const FOG_SHADER_CODE = """
+shader_type canvas_item;
+
+uniform vec2 player_pixel_pos;
+uniform float sight_radius;
+uniform float feather_width;
+uniform float shroud_opacity = 0.85;
+
+uniform sampler2D history_texture: filter_linear, repeat_disable;
+uniform vec2 map_texture_origin_tiles;
+uniform vec2 map_texture_size_tiles;
+uniform float cell_size = 32.0;
+
+varying vec2 world_position_coordinate;
+
+void vertex() {
+    world_position_coordinate = VERTEX;
+}
+
+void fragment() {
+    vec2 world_pos = world_position_coordinate; 
+    vec2 tile_coord = floor(world_pos / cell_size);
+    
+    vec2 history_uv = (tile_coord - map_texture_origin_tiles) / map_texture_size_tiles;
+    
+    float history_sample = 0.0;
+    if (history_uv.x >= 0.0 && history_uv.x <= 1.0 && history_uv.y >= 0.0 && history_uv.y <= 1.0) {
+        history_sample = texture(history_texture, history_uv).r;
+    }
+
+    vec2 diff = world_pos - player_pixel_pos;
+    float current_alpha = shroud_opacity;
+    
+    float dist = length(diff);
+    float min_visible = sight_radius - feather_width;
+    if (dist < min_visible) {
+        current_alpha = 0.0;
+    } else if (dist < sight_radius) {
+        float weight = (dist - min_visible) / feather_width;
+        current_alpha = mix(0.0, shroud_opacity, weight);
+    }
+    
+    current_alpha = min(current_alpha, shroud_opacity * (1.0 - history_sample));
+    
+    COLOR = vec4(0.0, 0.0, 0.0, current_alpha);
+}
+"""
+
+func _ready() -> void:
+	z_index = 20
+	z_as_relative = true
+	set_process(true)
+	
+	var metrics = load("res://src/Godot/Scripts/ViewMetrics.gd")
+	if metrics and "CELL_SIZE_PX" in metrics:
+		_cell_size = float(metrics.CELL_SIZE_PX)
+		
+	var shader = Shader.new()
+	shader.code = FOG_SHADER_CODE
+	
+	_shader_material = ShaderMaterial.new()
+	_shader_material.shader = shader
+	self.material = _shader_material
+
+func bind_player(player_node: Node2D) -> void:
+	if _player and _player.has_signal("map_position_changed"):
+		_player.map_position_changed.disconnect(_on_player_position_changed)
+		
+	_player = player_node
+	if _player:
+		_player_pixel_position = _player.position
+		if _player.has_signal("map_position_changed"):
+			_player.map_position_changed.connect(_on_player_position_changed)
+		
+		var starting_grid = Vector2i(floori(_player_pixel_position.x / _cell_size), floori(_player_pixel_position.y / _cell_size))
+		
+		# Set an initial baseline padding surrounding the player spawn location
+		_texture_min_bound = starting_grid - Vector2i(30, 30)
+		_texture_max_bound = starting_grid + Vector2i(30, 30)
+		_texture_size = (_texture_max_bound - _texture_min_bound) + Vector2i(1, 1)
+		
+		_history_image = Image.create(_texture_size.x, _texture_size.y, false, Image.FORMAT_R8)
+		_history_image.fill(Color(0, 0, 0, 1))
+		_history_texture = ImageTexture.create_from_image(_history_image)
+		
+		var fill_radius = ceili(initial_square_diameter_tiles / 2.0)
+		for x in range(starting_grid.x - fill_radius, starting_grid.x + fill_radius + 1):
+			for y in range(starting_grid.y - fill_radius, starting_grid.y + fill_radius + 1):
+				_mark_cell_revealed(Vector2i(x, y))
+		
+		_update_history_texture()
+		_update_shader_uniforms()
+		queue_redraw()
+
+func _on_player_position_changed(map_px: Vector2) -> void:
+	# Immediately assign the player vector to prevent lookups from trailing behind actual frame state
+	_player_pixel_position = map_px
+	var grid_pos = Vector2i(floori(map_px.x / _cell_size), floori(map_px.y / _cell_size))
+	update_fog_around_player(grid_pos)
+
+func update_fog_around_player(player_grid_pos: Vector2i) -> void:
+	var active_radius = max(sight_radius_pixels, 480.0)
+	var tile_radius = ceil(active_radius / _cell_size)
+	
+	for x in range(player_grid_pos.x - tile_radius, player_grid_pos.x + tile_radius + 1):
+		for y in range(player_grid_pos.y - tile_radius, player_grid_pos.y + tile_radius + 1):
+			var cell = Vector2i(x, y)
+			var cell_center = Vector2(cell.x * _cell_size + _cell_size/2.0, cell.y * _cell_size + _cell_size/2.0)
+			if cell_center.distance_to(_player_pixel_position) <= active_radius:
+				_mark_cell_revealed(cell)
+	
+	_update_history_texture()
+	_update_shader_uniforms()
+	queue_redraw()
+
+func _mark_cell_revealed(cell: Vector2i) -> void:
+	if not _revealed_cells.has(cell):
+		_revealed_cells[cell] = true
+		_history_dirty = true
+		
+		# If the player reaches the window boundary edge, expand the tracking window matrix
+		if cell.x < _texture_min_bound.x or cell.y < _texture_min_bound.y or cell.x > _texture_max_bound.x or cell.y > _texture_max_bound.y:
+			# Apply a generous buffer padding increment to minimize frequent allocations
+			_texture_min_bound.x = min(_texture_min_bound.x, cell.x - 30)
+			_texture_min_bound.y = min(_texture_min_bound.y, cell.y - 30)
+			_texture_max_bound.x = max(_texture_max_bound.x, cell.x + 30)
+			_texture_max_bound.y = max(_texture_max_bound.y, cell.y + 30)
+			
+			_texture_size = (_texture_max_bound - _texture_min_bound) + Vector2i(1, 1)
+			_history_image = Image.create(_texture_size.x, _texture_size.y, false, Image.FORMAT_R8)
+			_history_image.fill(Color(0, 0, 0, 1))
+			
+			# Re-map our historical context matrix coordinates onto the fresh texture canvas array
+			for old_cell in _revealed_cells:
+				var local_pos = old_cell - _texture_min_bound
+				if local_pos.x >= 0 and local_pos.x < _texture_size.x and local_pos.y >= 0 and local_pos.y < _texture_size.y:
+					_history_image.set_pixel(local_pos.x, local_pos.y, Color(1, 1, 1, 1))
+					
+			_history_texture = ImageTexture.create_from_image(_history_image)
+		else:
+			# Direct single pixel update if we remain safely within bounds
+			if _history_image:
+				var local_pos = cell - _texture_min_bound
+				_history_image.set_pixel(local_pos.x, local_pos.y, Color(1, 1, 1, 1))
+
+func shroud_new_chunk_region(_chunk_coord: Vector2i, _chunk_size: int) -> void:
+	_history_dirty = true
+	queue_redraw()
+
+func _process(_delta: float) -> void:
+	if is_instance_valid(_player):
+		var current_pos = _player.position
+		if not current_pos.is_equal_approx(_player_pixel_position):
+			_player_pixel_position = current_pos
+			_update_shader_uniforms()
+			queue_redraw()
+
+func _update_history_texture() -> void:
+	if not _history_dirty: return
+	if not _history_texture or not _history_image: return
+	
+	_history_texture.update(_history_image)
+	_shader_material.set_shader_parameter("history_texture", _history_texture)
+	_shader_material.set_shader_parameter("map_texture_origin_tiles", Vector2(_texture_min_bound))
+	_shader_material.set_shader_parameter("map_texture_size_tiles", Vector2(_texture_size))
+	_history_dirty = false
+
+func _update_shader_uniforms() -> void:
+	if not _shader_material: return
+	
+	var active_radius = max(sight_radius_pixels, 480.0)
+	var active_feather = max(feather_width_pixels, 120.0)
+	
+	_shader_material.set_shader_parameter("player_pixel_pos", _player_pixel_position)
+	_shader_material.set_shader_parameter("sight_radius", active_radius)
+	_shader_material.set_shader_parameter("feather_width", active_feather)
+	_shader_material.set_shader_parameter("cell_size", _cell_size)
+	_shader_material.set_shader_parameter("shroud_opacity", shroud_opacity)
+
+func _draw() -> void:
+	var transform_inverse = get_canvas_transform().affine_inverse()
+	var viewport_dimensions = get_viewport_rect()
+	
+	var world_top_left = transform_inverse * viewport_dimensions.position
+	var world_bottom_right = transform_inverse * (viewport_dimensions.position + viewport_dimensions.size)
+	
+	var view_w = world_bottom_right.x - world_top_left.x
+	var view_h = world_bottom_right.y - world_top_left.y
+	
+	# Massive 16x canvas safety factor ensures the shroud completely covers the window even at ultra-deep zoom outs
+	var adaptive_render_rect = Rect2(
+		world_top_left.x - view_w * 7.5,
+		world_top_left.y - view_h * 7.5,
+		view_w * 16.0,
+		view_h * 16.0
+	)
+	
+	draw_rect(adaptive_render_rect, Color.WHITE, true)

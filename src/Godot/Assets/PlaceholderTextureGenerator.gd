@@ -3,10 +3,10 @@ extends RefCounted
 ## Procedural placeholder textures sized via ViewMetrics constants.
 ## Ground tile: CELL_SIZE_PX (1m x 1m). Billboard: 0.5m wide x 1m tall.
 
-const ViewMetrics = preload("res://src/Godot/Scripts/ViewMetrics.gd")
+const ViewMetricsRes = preload("res://src/Godot/Scripts/ViewMetrics.gd")
 
 static func create_ground_tile_texture() -> ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
+	var size: int = ViewMetricsRes.CELL_SIZE_PX
 	var fill: Color = Color(0.35, 0.45, 0.32)
 	var border: Color = Color(0.18, 0.24, 0.16)
 	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
@@ -16,7 +16,7 @@ static func create_ground_tile_texture() -> ImageTexture:
 
 
 static func create_blocked_tile_texture() -> ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
+	var size: int = ViewMetricsRes.CELL_SIZE_PX
 	var fill: Color = Color(0.42, 0.42, 0.48)
 	var border: Color = Color(0.22, 0.22, 0.28)
 	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
@@ -26,7 +26,7 @@ static func create_blocked_tile_texture() -> ImageTexture:
 
 
 static func create_water_tile_texture() -> ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
+	var size: int = ViewMetricsRes.CELL_SIZE_PX
 	var fill: Color = Color(0.22, 0.38, 0.55)
 	var border: Color = Color(0.12, 0.22, 0.35)
 	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
@@ -36,7 +36,7 @@ static func create_water_tile_texture() -> ImageTexture:
 
 
 static func create_mud_tile_texture() -> ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
+	var size: int = ViewMetricsRes.CELL_SIZE_PX
 	var fill: Color = Color(0.45, 0.32, 0.22)
 	var border: Color = Color(0.28, 0.18, 0.12)
 	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
@@ -46,7 +46,7 @@ static func create_mud_tile_texture() -> ImageTexture:
 
 
 static func create_splat_land_pattern_texture() -> ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
+	var size: int = ViewMetricsRes.CELL_SIZE_PX
 	var fill: Color = Color(0.35, 0.45, 0.32)
 	var accent: Color = Color(0.28, 0.38, 0.26)
 	var border: Color = Color(0.18, 0.24, 0.16)
@@ -58,7 +58,7 @@ static func create_splat_land_pattern_texture() -> ImageTexture:
 
 
 static func create_splat_water_pattern_texture() -> ImageTexture:
-	var size: int = ViewMetrics.CELL_SIZE_PX
+	var size: int = ViewMetricsRes.CELL_SIZE_PX
 	var fill: Color = Color(0.22, 0.38, 0.55)
 	var accent: Color = Color(0.18, 0.32, 0.48)
 	var border: Color = Color(0.12, 0.22, 0.35)

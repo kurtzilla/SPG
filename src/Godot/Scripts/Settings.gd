@@ -2,8 +2,8 @@ extends Node
 
 ## Central settings autoload. Single source of truth: game_settings.json (see USE_USER_SETTINGS_FILE).
 
-const SettingsContext = preload("res://src/Godot/Scripts/SettingsContext.gd")
-const ViewMetrics = preload("res://src/Godot/Scripts/ViewMetrics.gd")
+const SettingsContextRes = preload("res://src/Godot/Scripts/SettingsContext.gd")
+const ViewMetricsRes = preload("res://src/Godot/Scripts/ViewMetrics.gd")
 
 signal setting_changed(path: String)
 signal movement_changed
@@ -152,8 +152,8 @@ func get_step(path: String) -> Variant:
 
 func get_context(path: String) -> SettingsContext.Context:
 	if not _schema.has(path):
-		return SettingsContext.Context.GAME
-	return _schema[path].get("context", SettingsContext.Context.GAME)
+		return SettingsContextRes.Context.GAME
+	return _schema[path].get("context", SettingsContextRes.Context.GAME)
 
 
 func has(path: String) -> bool:
@@ -223,7 +223,7 @@ func load_user_settings() -> void:
 		var entry: Dictionary = _schema[path]
 		if not entry.get("persist", false):
 			continue
-		var section: String = SettingsContext.to_section_name(entry.get("context", SettingsContext.Context.GAME))
+		var section: String = SettingsContextRes.to_section_name(entry.get("context", SettingsContextRes.Context.GAME))
 		if not config.has_section_key(section, path):
 			continue
 		_values[path] = _coerce_value(path, config.get_value(section, path))
@@ -240,7 +240,7 @@ func save_user_settings() -> void:
 		var entry: Dictionary = _schema[path]
 		if not entry.get("persist", false):
 			continue
-		var section: String = SettingsContext.to_section_name(entry.get("context", SettingsContext.Context.GAME))
+		var section: String = SettingsContextRes.to_section_name(entry.get("context", SettingsContextRes.Context.GAME))
 		config.set_value(section, path, _values.get(path, entry.get("default")))
 	config.save(USER_PATH)
 
@@ -299,7 +299,7 @@ func _register_schema_entry(path: String, raw: Dictionary) -> void:
 	var entry: Dictionary = {
 		"default": default_value,
 		"type": _infer_type(default_value),
-		"context": SettingsContext.from_string(str(raw.get("context", "game"))),
+		"context": SettingsContextRes.from_string(str(raw.get("context", "game"))),
 		"persist": bool(raw.get("persist", false)),
 	}
 	if raw.has("min"):
@@ -405,7 +405,7 @@ func _to_color(raw: Variant) -> Color:
 
 
 func _apply_scale_snapshot() -> void:
-	ViewMetrics.apply_scale(get_int("scale.pixels_per_meter"), get_float("scale.meters_per_cell"))
+	ViewMetricsRes.apply_scale(get_int("scale.pixels_per_meter"), get_float("scale.meters_per_cell"))
 
 
 func _schedule_save() -> void:

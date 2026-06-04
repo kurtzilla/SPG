@@ -1,0 +1,14 @@
+---
+description: Restricts planning context to the explicitly mentioned file.
+globs: .cursor/plans/*
+---
+
+# Context Isolation Rule
+
+- You must ONLY read, reference, or modify a plan file if the user has explicitly attached it to the current chat session (using `@filename`).
+- If a plan file is in the `.cursor/plans/` directory but has NOT been tagged in this specific chat thread, you must treat it as inactive history/backlog.
+- NEVER pull context from untagged plan files, even if they are in the same folder.
+
+# Storage Location
+
+- All plan files must be saved locally in `.cursor/plans/`. Never save them to the global user directory.

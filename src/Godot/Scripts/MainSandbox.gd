@@ -3,15 +3,22 @@ extends Node2D
 const ViewTransformsScript = preload("res://src/Godot/Scripts/ViewTransforms.gd")
 const ViewFrameScript = preload("res://src/Godot/Scripts/ViewFrame.gd")
 const PlayerControllerScript = preload("res://src/Godot/Scripts/PlayerController.gd")
+const FogManagerScript = preload("res://src/Godot/Scripts/World/FogManager.gd")
 
 @onready var _world_canvas: CanvasLayer = $WorldCanvas
 @onready var _map_scroll: Node2D = $WorldCanvas/Tiles
 @onready var _chunk_manager: Node2D = $WorldCanvas/Tiles/ChunkManager
+@onready var _fog_manager: FogManagerScript = $WorldCanvas/Tiles/FogLayer
 @onready var _grid_overlay: GridOverlay = $GridOverlay
 @onready var _settings_ui: CanvasLayer = $SettingsUi
 @onready var _player: PlayerControllerScript = %Player
+@onready var serializer: Node = $FogDiskSerializer
+
+@export var autosave_interval_sec: float = 300.0
 
 var _party: PartyModelGd
+var _autosave_timer: Timer
+var _save_in_flight: bool = false
 var _debug_grid_enabled: bool = false
 
 var _last_tracked_x: int = 0
@@ -27,13 +34,10 @@ var _zoom_rebuild_timer: SceneTreeTimer
 var _zoom_rebuild_scheduled_zoom: float = -1.0
 var _zoom_wheel_debounce_sec: float = 0.0
 
-var _cached_view_frame: ViewFrameScript
 var _last_applied_scroll: Vector2 = Vector2(-999999.0, -999999.0)
 var _last_applied_player_pos: Vector2 = Vector2(-999999.0, -999999.0)
 var _last_applied_zoom: float = -1.0
 var _last_applied_viewport_size: Vector2 = Vector2.ZERO
-var _last_canvas_to_map: Transform2D = Transform2D.IDENTITY
-var _canvas_to_map_initialized: bool = false
 var _view_projection_dirty: bool = true
 var _startup_view_frames_remaining: int = 3
 
@@ -70,6 +74,11 @@ func _ready() -> void:
 	if _player == null:
 		push_error("MainSandbox: Player node missing — check Player.tscn instance in MainSandbox.tscn")
 		return
+	if serializer == null:
+		push_error("MainSandbox: FogDiskSerializer node missing — check MainSandbox.tscn")
+		return
+
+	_setup_autosave_timer()
 
 	ViewProjection.register_viewport_provider(self)
 	ViewProjection.try_seed_viewport_metrics(get_viewport())
@@ -77,12 +86,15 @@ func _ready() -> void:
 	_grid_overlay.configure(_debug_grid_enabled)
 	_settings_ui.setup(_party, _player)
 
-	if not _player.grid_cell_changed.is_connected(_on_player_grid_cell_changed):
-		_player.grid_cell_changed.connect(_on_player_grid_cell_changed)
+	if not _player.grid_cell_changed.is_connected(_on_player_grid_step):
+		_player.grid_cell_changed.connect(_on_player_grid_step)
 	if not _player.map_position_changed.is_connected(_on_player_map_position_changed):
 		_player.map_position_changed.connect(_on_player_map_position_changed)
+	_connect_fog_manager()
 
 	_player.position = ViewTransformsScript.grid_to_map_local_px(float(player.X), float(player.Y))
+	if _fog_manager != null:
+		_fog_manager.bind_player(_player)
 	ViewProjection.register_camera(_player)
 
 	if not _ensure_viewport_metrics_ready():
@@ -246,22 +258,36 @@ func _on_view_changed() -> void:
 	_schedule_zoom_deferred_rebuild()
 
 
-func _on_player_grid_cell_changed(cell: Vector2i) -> void:
-	if cell.x == _last_tracked_x and cell.y == _last_tracked_y:
+func _on_player_grid_step(new_cell: Vector2i) -> void:
+	if new_cell.x == _last_tracked_x and new_cell.y == _last_tracked_y:
 		return
 
 	var character: CharacterModelGd = _party.GetSelectedCharacter() if _party != null else null
 	if character != null:
-		character.MoveTo(cell.x, cell.y)
+		character.MoveTo(new_cell.x, new_cell.y)
 
 	_chunk_manager.sync_center_from_player_map_px(_player.position)
-	_last_tracked_x = cell.x
-	_last_tracked_y = cell.y
+	_last_tracked_x = new_cell.x
+	_last_tracked_y = new_cell.y
 
 
 func _on_player_map_position_changed(map_px: Vector2) -> void:
 	if _chunk_manager != null and _player != null:
 		_chunk_manager.sync_center_from_player_motion(map_px, _player.velocity)
+
+
+func _connect_fog_manager() -> void:
+	if _fog_manager == null:
+		return
+	if _chunk_manager != null and not _chunk_manager.chunk_finished.is_connected(_on_chunk_finished):
+		_chunk_manager.chunk_finished.connect(_on_chunk_finished)
+
+
+func _on_chunk_finished(chunk_coord: Vector2i) -> void:
+	if _fog_manager == null:
+		return
+	var chunk_size: int = Settings.get_int("world.chunk_size")
+	_fog_manager.call_deferred("shroud_new_chunk_region", chunk_coord, chunk_size)
 
 
 func _bootstrap_after_frame() -> void:
@@ -295,6 +321,12 @@ func _log_perf_baseline_diagnostics() -> void:
 			refresh_hz,
 		]
 	)
+	var max_fps: int = Settings.get_int("view.max_fps")
+	if max_fps > 0 and refresh_hz > 1.0 and max_fps < int(refresh_hz):
+		push_warning(
+			"[PerfBaseline] view.max_fps=%d is below monitor refresh %.0fHz — raise or set 0 (uncapped)"
+			% [max_fps, refresh_hz]
+		)
 
 
 func _sync_spawn_tracking_from_player() -> void:
@@ -365,3 +397,66 @@ func _try_adjust_zoom(delta_steps: int) -> bool:
 
 func _request_quit() -> void:
 	get_tree().quit()
+
+
+func _setup_autosave_timer() -> void:
+	_autosave_timer = Timer.new()
+	_autosave_timer.one_shot = false
+	_autosave_timer.wait_time = autosave_interval_sec
+	_autosave_timer.autostart = true
+	_autosave_timer.timeout.connect(_on_autosave_timer_timeout)
+	add_child(_autosave_timer)
+
+
+func _on_player_clicked_save_game() -> void:
+	_request_explicit_save("manual")
+
+
+func _on_autosave_timer_timeout() -> void:
+	_request_explicit_save("autosave")
+
+
+func _collect_save_snapshot(save_kind: String) -> Dictionary:
+	var player_map_px: Array = []
+	if _player != null and is_instance_valid(_player):
+		player_map_px = [_player.position.x, _player.position.y]
+
+	var chunk_layer_count: int = 0
+	if _chunk_manager != null:
+		chunk_layer_count = _chunk_manager.get_child_count()
+
+	var placeholder_nodes: Array[String] = []
+	for child in get_children():
+		placeholder_nodes.append(child.name)
+
+	return {
+		"schema_version": 1,
+		"save_kind": save_kind,
+		"saved_at_unix": Time.get_unix_time_from_system(),
+		"saved_at_msec": Time.get_ticks_msec(),
+		"player_grid": {"x": _last_tracked_x, "y": _last_tracked_y},
+		"player_map_px": player_map_px,
+		"view_zoom": ViewProjection.zoom,
+		"viewport_size": [ViewProjection.get_viewport_size().x, ViewProjection.get_viewport_size().y],
+		"chunk_layer_count": chunk_layer_count,
+		"placeholder_nodes": placeholder_nodes,
+	}
+
+
+func _request_explicit_save(save_kind: String) -> void:
+	if serializer == null:
+		push_error("MainSandbox: FogDiskSerializer node missing")
+		return
+	if _save_in_flight:
+		return
+	var state_snapshot: Dictionary = _collect_save_snapshot(save_kind)
+	var payload_string: String = JSON.stringify(state_snapshot)
+	_run_explicit_save_async(payload_string)
+
+
+func _run_explicit_save_async(payload_string: String) -> void:
+	_save_in_flight = true
+	var ok: bool = await serializer.SaveStateExplicitAsync(payload_string)
+	_save_in_flight = false
+	if OS.is_debug_build():
+		print("[Save] explicit save ok=%s bytes=%d" % [ok, payload_string.length()])

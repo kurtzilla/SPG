@@ -23,13 +23,13 @@ config/features=PackedStringArray("4.6", "C#", "Forward Plus")
 CoreBridge="*res://src/Godot/Interop/CoreBridge.cs"
 Settings="*res://src/Godot/Scripts/Settings.gd"
 ViewProjection="*res://src/Godot/Scripts/ViewProjection.gd"
+WindowSnapper="*uid://cynb4003860p4"
 
 [display]
 
 window/size/viewport_width=3840
 window/size/viewport_height=2160
 window/size/mode=3
-window/size/initial_position_type=3
 window/size/window_width_override=3840
 window/size/window_height_override=2160
 window/stretch/mode="viewport"
